@@ -1,0 +1,13 @@
+[project]
+name = "audiomorph-sidecar"
+version = "0.1.0"
+description = "AudioMorph Studio FastAPI sidecar"
+requires-python = ">=3.12,<3.13"
+dependencies = []
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.uv]
+dev-dependencies = []

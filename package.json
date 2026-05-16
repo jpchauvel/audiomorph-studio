@@ -1,0 +1,6 @@
+{
+  "name": "audiomorph-studio",
+  "private": true,
+  "packageManager": "pnpm@9.15.0",
+  "workspaces": ["apps/desktop", "apps/web", "packages/*"]
+}
