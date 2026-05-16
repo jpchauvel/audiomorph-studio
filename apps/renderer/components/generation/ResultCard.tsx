@@ -1,13 +1,22 @@
 'use client'
 
+import { useState } from 'react'
 import { useGenerationStore } from '@/lib/stores/generation'
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
+import dynamic from 'next/dynamic'
+
+const WaveformPlayer = dynamic(
+  () => import('@/components/player/WaveformPlayer').then(m => m.WaveformPlayer),
+  { ssr: false }
+)
 
 export function ResultCard() {
   const { phase, resultJobId } = useGenerationStore()
 
   if (phase !== 'done' || !resultJobId) return null
+
+  const mockAudioUrl = 'https://www.w3schools.com/html/horse.ogg'
 
   return (
     <Card className="mt-6 border border-[var(--color-success)] bg-[var(--color-success)]/5">
@@ -24,9 +33,7 @@ export function ResultCard() {
           </code>
         </div>
         
-        <Button variant="default" className="w-full" onClick={() => console.log('Play', resultJobId)}>
-          Play
-        </Button>
+        <WaveformPlayer audioUrl={mockAudioUrl} />
       </CardContent>
     </Card>
   )
