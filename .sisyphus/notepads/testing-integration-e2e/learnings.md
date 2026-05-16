@@ -173,3 +173,40 @@
   `NodeNext` resolution requires the runtime extension in source.
 - `waitForSidecarReady(baseUrl, token, timeoutMs=10000)` polls `GET /health` every
   200ms with `X-Audiomorph-Token` header (NOT Bearer). Matches sidecar auth contract.
+
+## T9 — Electron launch helper (2026-05-16)
+
+- Playwright's `_electron.launch()` accepts `executablePath`, `args`, `env`,
+  `timeout`. The first positional arg in `args` is the path to the Electron
+  main JS entry; everything after is forwarded to the app.
+- `app.evaluate(fn)` runs `fn` in the Electron **main** process, receiving
+  the `electron` module as its arg. We use `ipcMain.listeners(channel)` to
+  pull the registered handler and invoke it directly — this avoids needing
+  a renderer round-trip for test introspection.
+- Test-mode IPC channel `__audiomorph_test:get-sidecar-info` lives in
+  `apps/shell/src/ipc/bridge.ts` and is gated by
+  `process.env.AUDIOMORPH_TEST_MODE === '1'`. It is **never** exposed via
+  `contextBridge` in preload — only the main process can invoke it. This
+  keeps the renderer attack surface unchanged in production builds.
+- Electron binary resolution order: env override
+  (`AUDIOMORPH_TEST_ELECTRON_BIN`) → platform-specific path inside
+  `apps/shell/node_modules/electron/dist/` → `.bin/electron`. macOS uses
+  the `Electron.app/Contents/MacOS/Electron` symlink target.
+- Sidecar cleanup verification uses `/healthz` polling against the
+  reported sidecar port. Default timeout is 10s with 200ms polling
+  interval, overridable via `cleanupTimeoutMs` per-call (essential for
+  fast unit tests that simulate cleanup failure).
+- Avoid `vi.spyOn(http, 'request')` for testing internal http polling —
+  `node:http` exports are non-configurable in ESM, causing
+  "Cannot redefine property: request" errors. Use a real ephemeral
+  `http.createServer()` instead. This is the same pattern the sidecar
+  helper uses for handshake tests.
+- Avoid spying on `globalThis.setTimeout` to speed up tests; it's brittle
+  and conflicts with vitest's own scheduling. Instead, expose timeout
+  options on the production API (e.g., `cleanupTimeoutMs`) so tests can
+  pass small values directly.
+- Test-helpers package is ESM-only with NodeNext module resolution; all
+  internal imports must use `.js` extension (e.g., `./test-mode.js`).
+- The fake-launcher pattern (`makeFakeLauncher`) lets us unit-test the
+  full happy-path and error paths of `launchElectronApp` without ever
+  spawning Electron. Real Electron boot is deferred to T14 e2e.

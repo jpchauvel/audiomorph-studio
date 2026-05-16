@@ -387,4 +387,21 @@ export function registerIpcBridge(options: RegisterIpcBridgeOptions = {}): void 
     }
     return { path: app.getPath(payload.name) };
   });
+
+  // AUDIOMORPH_TEST_MODE hook: expose sidecar port + token to test driver.
+  // Gated by env so the channel does not exist in production builds.
+  // Used by @audiomorph/test-helpers/electron to introspect sidecar state.
+  if (process.env.AUDIOMORPH_TEST_MODE === "1") {
+    if (typeof ipcMain.removeHandler === "function") {
+      ipcMain.removeHandler("__audiomorph_test:get-sidecar-info");
+    }
+    ipcMain.handle("__audiomorph_test:get-sidecar-info", () => {
+      const baseUrl = sidecar.getApiBaseUrl();
+      const port = Number.parseInt(baseUrl.split(":").pop() ?? "0", 10);
+      return {
+        port,
+        token: sidecar.getApiToken(),
+      };
+    });
+  }
 }
