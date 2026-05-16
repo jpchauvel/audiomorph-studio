@@ -27,7 +27,8 @@
     "build:shell": "pnpm --filter @audiomorph/shell build:shell",
     "dist:mac": "pnpm --filter @audiomorph/shell dist:mac",
     "dist:win": "pnpm --filter @audiomorph/shell dist:win",
-    "dist:linux": "pnpm --filter @audiomorph/shell dist:linux"
+    "dist:linux": "pnpm --filter @audiomorph/shell dist:linux",
+    "scrub-secrets": "node scripts/scrub-test-output.mjs"
   },
   "version": "2.0.0"
 }

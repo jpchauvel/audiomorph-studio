@@ -337,3 +337,14 @@
 - **Test-mode hardware bypass**: `apps/shell/src/hardware/hardware-check.ts` now early-returns when `AUDIOMORPH_TEST_MODE=1` with marker `// AUDIOMORPH_TEST_MODE hook` (commit 960e241). Production builds must never set this env var.
 - **Sidecar bootstrap gap**: `apps/shell/src/main.ts` never calls `SidecarManager.getInstance({...}).start()` before `registerIpcBridge()`, so a real sidecar is never spawned. Inserting that call also requires a Python 3.12 venv with `audiomorph-sidecar` deps (`apps/sidecar/pyproject.toml`) — out of scope for the e2e scaffolding task.
 - **All 6 specs are `test.fixme()`** until the sidecar runtime prerequisite is met. JUnit emission, Playwright collection, and the `_setup.ts` helper are all exercised, so the suite is wired up and ready for un-fixme once the runtime lands.
+
+## T15: Scrubber CI integration script
+
+- `scripts/scrub-test-output.mjs` is standalone (no import from `packages/test-helpers/src/scrubber.ts`) per spec constraint "do NOT modify scrubber.ts". Patterns duplicated with tighter regex per T15 spec (e.g., `sk-or-v1-` prefix required, not just `sk-or-`).
+- Node 18+ `fs.promises.readdir({recursive:true, withFileTypes:true})` returns Dirent entries; use `entry.parentPath ?? entry.path` for compat across Node 18/20+.
+- ENOENT on missing scan dirs returns `[]` rather than failing — many repos lack `.test-results/`, `playwright-report/` etc.
+- Whitelist semantics: skip match if matched substring **contains** literal `PLANTED-FAKE-TEST-TOKEN` (substring check on the regex hit, not the line).
+- Binary file extensions (`.png .mp4 .wav .jpg .gif`) — filename-only check (do not read content).
+- Pre-existing local evidence (`.sisyphus/evidence/task-3-scrub-planted-secrets.txt`) contains a real-shaped fake JWT on line 11 that the script correctly detects. `.sisyphus/evidence/` is gitignored so this varies per machine. For QA scenario 2 (whitelist-ok), temporarily moved that file aside to validate isolated whitelist behavior — confirmed exit-code=0.
+- Positive-control test uses `execFileSync('node', [scriptPath])` and copies a planted token into `.test-results/_positive_control_qa/leak.txt` then cleans up. Asserts exit=1 + `OPENROUTER_KEY` in stdout.
+- 47/47 tests pass in `@audiomorph/test-helpers` (23 in scrubber.test.ts including new positive-control).

@@ -202,3 +202,49 @@ describe('scrubber', () => {
     });
   });
 });
+
+describe('scrub-test-output.mjs (CI integration — positive control)', () => {
+  let tempDir: string;
+
+  beforeEach(() => {
+    tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'scrub-cli-'));
+  });
+
+  afterEach(() => {
+    if (fs.existsSync(tempDir)) {
+      fs.rmSync(tempDir, { recursive: true, force: true });
+    }
+  });
+
+  it('detects a real-shaped OpenRouter token planted in a temp file', async () => {
+    const plantedToken = 'sk-or-v1-abc123def456ghi789jkl012mno';
+    const file = path.join(tempDir, 'leak.txt');
+    fs.writeFileSync(file, `header\nleaked: ${plantedToken}\nfooter`);
+
+    const { execFileSync } = await import('node:child_process');
+    const scriptPath = path.resolve(__dirname, '..', '..', '..', 'scripts', 'scrub-test-output.mjs');
+
+    // Symlink temp file into .test-results so the script's hardcoded scan dirs see it.
+    const repoRoot = path.resolve(__dirname, '..', '..', '..');
+    const qaDir = path.join(repoRoot, '.test-results', '_positive_control_qa');
+    fs.mkdirSync(qaDir, { recursive: true });
+    const planted = path.join(qaDir, 'leak.txt');
+    fs.copyFileSync(file, planted);
+
+    let exitCode = 0;
+    let stdout = '';
+    try {
+      stdout = execFileSync('node', [scriptPath], { encoding: 'utf8' });
+    } catch (err) {
+      const e = err as { status?: number; stdout?: string };
+      exitCode = e.status ?? -1;
+      stdout = e.stdout ?? '';
+    } finally {
+      fs.rmSync(qaDir, { recursive: true, force: true });
+    }
+
+    expect(exitCode).toBe(1);
+    expect(stdout).toContain('OPENROUTER_KEY');
+    expect(stdout).toContain('leak.txt');
+  });
+});
