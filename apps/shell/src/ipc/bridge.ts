@@ -143,7 +143,7 @@ async function forwardSse(
     const response = await fetchImpl(joinApiUrl(sidecar.getApiBaseUrl(), streamPath), {
       method: "POST",
       headers: {
-        Authorization: `Bearer ${sidecar.getApiToken()}`,
+        "X-Audiomorph-Token": sidecar.getApiToken(),
         Accept: "text/event-stream",
         "Content-Type": "application/json",
       },
@@ -257,7 +257,7 @@ export function registerIpcBridge(options: RegisterIpcBridgeOptions = {}): void 
       const response = await fetchImpl(joinApiUrl(sidecar.getApiBaseUrl(), requestPath), {
         method,
         headers: {
-          Authorization: `Bearer ${sidecar.getApiToken()}`,
+          "X-Audiomorph-Token": sidecar.getApiToken(),
           "Content-Type": "application/json",
         },
         body: body === undefined ? undefined : JSON.stringify(body),
