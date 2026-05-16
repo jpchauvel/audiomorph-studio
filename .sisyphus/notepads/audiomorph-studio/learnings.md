@@ -149,3 +149,116 @@
 - First-run state machine in `services/first_run.py`: ordered steps `pick_models_dir`, `download_models`, `first_run_completed`. `completed=True` iff `missing_steps==[]`.
 - Settings router uses NO prefix (`APIRouter(tags=["settings"])`) so it can host both `/settings*` and `/first-run/status` routes.
 - Test DB isolation pattern: `monkeypatch.setattr(settings_router, "session_scope", lambda: session_scope(str(db_path)))` — same pattern used by `test_export_service.py`.
+
+### W3.1 Next.js 15 app scaffold
+- Next.js 15 uses `next.config.ts` by default, configured `output: 'export'` for the Electron renderer
+- We replaced `toast` from shadcn with `sonner` as `toast` is deprecated in shadcn/ui.
+- Tailwind 4 natively integrates OKLCH values in `@theme inline` config without needing complex setups.
+- Use `--use-bun` when invoking `create-next-app` to respect the `bun` constraint, but `pnpm workspaces` might still require `pnpm install` at root to hoist workspace dependencies smoothly.
+- CSS `getComputedStyle` resolves `oklch()` CSS tokens into `lab()` values in Chromium. Tests using Playwright need to match against `lab()` if checking for token resolution programmatically.
+
+## W3.2 — First-run wizard
+- Used `'use client'` on page.tsx since it uses hooks + router
+- EventSource for SSE; mock via page.route() in Playwright
+- window.__AUDIOMORPH_IPC__ mocked in tests via page.addInitScript
+- freeDiskGb check: < 12 GB blocks step 2 → step 3 transition
+- sonner toast for errors (not shadcn toast which is deprecated)
+- For Playwright tests against an exported Next.js app, test against a local http server (`bunx serve out -p 8080`) rather than `file://` because `file://` fails to load JS bundles with absolute paths (`/_next/static/...`), preventing React hydration and breaking interactivity.
+- **Renderer Models Page**: Implemented the models library page with SSE downloads (`/models/jobs/{job_id}/events`), relying on `MessageEvent` for typing event stream data in TS.
+- **Toaster**: Added `Toaster` from `sonner` in the root `layout.tsx` for proper toast notifications rendering. Playwright text locators failed when toasts didn't render correctly.
+- **AlertDialogTrigger**: Shadcn Base UI requires manual styling and removal of `asChild` / embedded components due to missing `asChild` support in `@base-ui/react/alert-dialog` component.
+
+### W3.4 Generation Form
+- We successfully implemented a live generation form with Server-Sent Events (SSE).
+- We handled tracking generation phases (idle, loading, generating, encoding, finalizing, done) using a Zustand store.
+- Re-used `ShimmerButton` and `AnimatedBeam` for visual flair during generation and cancellation.
+- We handled an issue where base-ui's `<Slider>` `onValueChange` sends a single value if the array size is 1 or just changes types dynamically; we unified handling by checking `Array.isArray(vals) ? vals[0] : vals`.
+\n- Export dialog implemented using shadcn Dialog and Select, saving through POST /export and integrating with IPC file reveal.
+\n- W3.6: Successfully implemented wavesurfer.js v7 with Next.js static export using next/dynamic with {ssr: false}.\n- Extracted Web Audio API's media element via `ws.getMediaElement()` in wavesurfer.js to power a separate SpectrumCanvas component with AnalyserNode.
+- For Settings pages that manage API keys, never display the real key in the UI after saving. Always clear the input and show a placeholder instead, to maintain security.
+
+### W3.8: Lyrics Workspace
+- In Playwright tests, dynamically creating `<input type="file">` elements and triggering a click without appending them to the DOM doesn't always trigger `filechooser` events reliably or behaves poorly with visibility checks. It's safer and cleaner to render a visually hidden `<input type="file" className="hidden" />` component and call `.click()` on its ref.
+- EventSource handles reconnect attempts automatically, but in Playwright it will error immediately if the endpoint doesn't exist. Be sure to mock the SSE endpoint (`**/events`) using `page.route` with an empty handler to simulate an open hanging connection while simulating SSE events from the DOM side.
+\n- Implemented Prompt Assist Drawer with OpenRouter SSE streaming in Next.js/Zustand.
+
+### W4.1 — Electron shell scaffold
+- Created `apps/shell/` as the canonical Electron main-process workspace; `apps/desktop/` retained as legacy stub (untouched).
+- Security contract enforced via exported `SECURE_WEB_PREFERENCES` constant + Vitest assertions — makes regression impossible without test failure.
+- Used `AUDIOMORPH_SHELL_TEST` env guard around `app.whenReady()` so tests can import `main.ts` under Node without crashing on missing Electron runtime.
+- electron-builder.yml uses `extraResources` to ship `apps/renderer/out/` into `Resources/renderer/out/`; `resolveRendererEntry()` resolves relative to `__dirname` (compiled `dist/`) → `../../renderer/out/index.html` which maps correctly in both dev tree and packaged `Resources/`.
+- macOS uses `titleBarStyle: 'hiddenInset'`; win/linux use `frame: false` (custom titlebar in W4.x).
+- Hardening defaults: `setWindowOpenHandler` denies all `window.open`, routes http(s) to `shell.openExternal`; `will-navigate` blocks any non-localhost-dev / non-file:// navigation; `setPermissionRequestHandler` denies all by default (whitelist comes in W4.4).
+- pnpm-workspace.yaml: must list `apps/shell` AND root `package.json` workspaces array (bun reads npm-style, pnpm reads yaml — both updated).
+- Vitest config uses dual reporters (`default` for console + `junit` for CI artifact at `.test-results/shell.xml`).
+- Electron 33 + electron-builder 25 + tsx 4 + concurrently 9 — stable matrix as of 2025-Q4.
+
+## [2026-05-16] W4.2 — Sidecar manager lifecycle (Electron shell)
+- SidecarManager now owns full lifecycle: startup zombie reaping (`sidecar.pid`), spawn+JSON handshake port discovery, periodic `/healthz` probing, bounded restart policy (max 3 in 5m), and staged shutdown (`/internal/shutdown` -> SIGTERM -> SIGKILL).
+- Token hygiene pattern enforced in shell logs: always sanitize process output and structured startup logging with `maskToken()` (`first_char + ***`), never emit raw auth token.
+- Shell-side rotating logger pattern: daily file `logs/sidecar-YYYY-MM-DD.log`, rotate at 10MB, keep `.1`..`.5`; keeps sidecar stdout/stderr forensic history while bounding disk growth.
+- Vitest process-lifecycle tests are stable when child_process/fs/http are fully mocked and handshake-timeout assertions are attached before advancing fake timers to avoid unhandled rejections.
+
+## [2026-05-16] W4.3 — IPC bridge typed handlers + SSE forwarding
+- Use a typed `handleTyped(channel, handler)` wrapper around `ipcMain.handle` to keep channel payload/response contracts aligned with a shared `@audiomorph/ipc-contracts` map.
+- Cancellation pattern: maintain separate `Map<string, AbortController>` for request IDs and stream IDs; always delete controllers in `finally` blocks to avoid stale abort references.
+- SSE forwarding from main process is reliable when parsing `event:` and multi-line `data:` frames, flushing on blank line boundaries, and emitting terminal `api:stream:end` on normal close or cancel.
+- Security boundaries enforced in main process: inject bearer token only in `fetch` headers; never include token in return payloads/logs; restrict file paths to `userData` + sidecar tmp roots and restrict URL hosts via explicit allowlist.
+- Workspace package gotcha: `@audiomorph/ipc-contracts` must emit declarations (`dist`) before shell build so imports resolve under shell `rootDir` constraints.
+
+## [2026-05-16] W4.4 — Preload bridge typed `window.electronAPI`
+- Added `ElectronAPI` and window-facing alias types to `@audiomorph/ipc-contracts` so preload + renderer can share one typed contract (`ApiRequestArgs`, `ApiResponse`, `ApiStreamArgs`, `StreamEvent`, `StreamError`, dialog/fs aliases).
+- Preload bridge should expose only narrowly scoped wrapper methods over `ipcRenderer.invoke`/`ipcRenderer.on`; do not surface raw `ipcRenderer` or Node globals.
+- Stream bridge pattern: start via `api:stream` invoke, subscribe with `ipcRenderer.on` to `api:stream:event|end|error`, filter every callback by `streamId`, and return a cleanup function that removes all three listeners and invokes `api:stream:cancel`.
+- Renderer compatibility pattern: declare `window.electronAPI?: ElectronAPI` (optional) in `apps/renderer/types/electron.d.ts` so browser-only contexts remain valid.
+- Build ordering gotcha confirmed: after changing `packages/ipc-contracts/src/index.ts`, run `bun run build` in `packages/ipc-contracts` before `bun run build:shell` so shell sees updated exported declaration members.
+
+## [2026-05-16] W4.5 — Key vault via Electron safeStorage
+- Key vault file pattern: persist a JSON map of base64 ciphertext at `<userData>/vault.enc`, but always write atomically (`vault.enc.tmp` -> `rename`) to avoid corruption on crashes.
+- `safeStorage.isEncryptionAvailable()` can be false in CI/headless; fallback should still be base64-only (never plaintext), log warning, and keep API non-throwing for graceful operation.
+- Security boundary: renderer-facing IPC must never return decrypted secret values; `vault:get` should return `{present:boolean}` only. Decrypted value retrieval belongs to main-process-only function (`getSecretForSidecar`).
+- Audit pattern: append-only JSONL in `<userData>/logs/vault-audit.log` with `{action,key?,present?/found?,ts,pid}`; never include secret material in logs.
+- Contract sync rule: when adding IPC channels, update all three in lockstep — `packages/ipc-contracts` (`IpcInvokeMap` + `ElectronAPI`), shell preload bridge, and main-process handlers/tests.
+
+## [2026-05-16] W4.6 — Shell lifecycle + native menu wiring
+- Added `setupAppLifecycle(getMainWindow)` module to centralize single-instance lock, `second-instance` focus/restore behavior, `window-all-closed` macOS guard, `activate` handling, protocol registration, and deep-link stub forwarding via `ipcMain.emit("deep-link:received", maskedUrl)`.
+- Deep-link hardening rule implemented: URLs are masked before logging (`?query` stripped) and only logged/emitted; no navigation side effects.
+- Runtime icon strategy: `resolveAppIconPath()` uses `<resourcesPath>/icons/icon.png` in packaged builds and `<repo>/apps/shell/assets/icon.png` in dev. Applied for macOS dock (`app.dock.setIcon`) and Windows window icon (`setIcon`); Linux left to builder config.
+- Added `buildMenu(mainWindow)` with platform-specific templates: full macOS app/file/edit/view/window/help menu and minimal win/linux file/edit/view/help menu. DevTools/reload are dev-only (`NODE_ENV !== "production"`), and Help Learn More is allowlisted to the project GitHub URL.
+- Main-process wiring pattern updated: lifecycle setup now happens before `app.whenReady()`, while menu creation is bound after each window creation to ensure native menu exists and updates when a new main window is created.
+- Test mocking gotcha: if `createWindow()` now uses `win.on("closed")`, legacy BrowserWindow test doubles must include `on` to avoid regressions in unrelated `main.test.ts` assertions.
+
+## [2026-05-16] W4.7 — local crash reporter + no-updater hard guard
+- Crash reporter setup now sets crash dump path via `app.setPath("crashDumps", <userData>/logs/crashes)` and starts Electron crashReporter with `submitURL: ""`, `uploadToServer: false`, `compress: true` (local-only, no telemetry).
+- Main-process crash handlers (`uncaughtException`, `unhandledRejection`) persist sanitized JSON reports (`crash-<ISO>.json`) and terminate with `app.exit(1)` (never `process.exit`).
+- Crash report sanitization strips `Bearer <token>` and `X-Audiomorph-Token: <token>` patterns before writing to disk.
+- Auto-update hard guard centralizes updater disabling: forces `autoDownload=false`, `autoInstallOnAppQuit=false`, overrides `checkForUpdates`/`checkForUpdatesAndNotify` with warning no-ops, and logs on `update-available` without download side effects.
+- `main.ts` now invokes `disableAutoUpdater()` at module startup and `setupCrashReporter(app.getPath("userData"))` early in `app.whenReady()` lifecycle.
+
+
+## [2026-05-16] W5.4 — Hardware gating package + 3-tier enforcement
+- Added new workspace package `@audiomorph/hardware-gate` with `detect()` returning a typed `HardwareReport`/`HardwareFailure` contract, using `execFile` only (no shell) and OS-specific probes.
+- Threshold checks are done on raw numeric values (not rounded display values) so exact boundary behavior is correct: 16.0 GB passes, 15.9 GB fails; report details are rounded for UI readability.
+- Linux/Windows CUDA probe now uses `nvidia-smi` discovery fallback order (PATH first, then common install paths) and emits explicit `nvidia_gpu`/`cuda` failures.
+- Shell first-launch hard gate added in `enforceHardwareRequirements()` before window creation; on failure it shows `dialog.showErrorBox` and calls mandatory `app.exit(1)`.
+- Added dedicated IPC channel `hardware:check` and preload API `hardwareCheck()`; kept renderer safe for browser context by checking optional `window.electronAPI`.
+- Added renderer diagnostics page at `/diagnostics` with pass/fail banner + threshold table and settings link entry; styling uses Tailwind + project OKLCH token classes.
+- Build-order gotcha: shell now builds `@audiomorph/ipc-contracts` and `@audiomorph/hardware-gate` before compiling shell TS to avoid missing workspace type/module declarations.
+- Test coverage added for hardware-gate detection matrix and shell enforcement/IPC behavior; shell suite remains green with 69 passing tests.
+
+## [2026-05-16] W5.1 — macOS installer
+- `electron-builder.yml` mac targets should be explicit arm64-only objects for both dmg and zip; keep `hardenedRuntime: true` and `gatekeeperAssess: false`, then add `entitlements`, `entitlementsInherit`, `notarize: true`, and `afterPack` hook path.
+- `build/entitlements.mac.plist` should use Apple full entitlement keys under `<dict>` with `<true/>` values: unsigned executable memory, JIT, disable library validation, and dyld env vars.
+- AfterPack signing hook pattern: recurse `Contents/Resources/python`, detect signable files by Mach-O magic (including fat binaries), and invoke `codesign` via `execFile`/`promisify` only (no shell, no `--deep`).
+- Hook must no-op when the packaged `python/` directory is absent to avoid failing non-Python packaging paths.
+- Packaging tests can validate shell env guard logic by checking required var strings and a pure test helper for fail/pass scenarios; keep JUnit output at `.test-results/shell.xml`.
+
+## [2026-05-16] W5.2 — Windows installer
+- NSIS custom scripts hook via electron-builder `nsis.include: build/installer.nsh`
+- Use `!macro customInit` / `!macroend` — electron-builder injects this into `.onInit`
+- PowerShell exec from NSIS: `nsExec::ExecToStack 'powershell -NoProfile -ExecutionPolicy Bypass -Command "..."'`; pop $0=exit code, $1=stdout
+- Single-quote PowerShell string args by doubling: `''*NVIDIA*''`
+- For NVIDIA GPU detection: `Get-CimInstance Win32_VideoController | Where-Object {$_.Name -like '*NVIDIA*'}` — NEVER use deprecated wmic
+- electron-builder picks up `WIN_CSC_LINK` + `WIN_CSC_KEY_PASSWORD` env vars automatically — no script logic needed
+- Vitest yml assertions via regex `toMatch(/^\s{2}key:\s*value\s*$/m)` work when no yaml parser is installed
+- Tests negating a word (e.g. `not.toMatch(/\bwmic\b/i)`) must avoid mentioning that word even in comments of the file under test

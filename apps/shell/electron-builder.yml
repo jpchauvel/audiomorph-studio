@@ -30,6 +30,9 @@ mac:
       arch:
         - arm64
 win:
+  icon: build/icon.ico
+  publisherName: AudioMorph Studio
+  verifyUpdateCodeSignature: false
   target:
     - target: nsis
       arch:
@@ -47,3 +50,8 @@ nsis:
   oneClick: false
   allowToChangeInstallationDirectory: true
   perMachine: false
+  createDesktopShortcut: true
+  createStartMenuShortcut: true
+  installerIcon: build/installer.ico
+  uninstallerIcon: build/uninstaller.ico
+  include: build/installer.nsh
