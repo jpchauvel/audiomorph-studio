@@ -17,7 +17,7 @@ test.describe('Settings Page', () => {
       };
     });
 
-    await page.route('http://127.0.0.1:8000/settings', async route => {
+    await page.route('**/settings', async route => {
       await route.fulfill({
         status: 200,
         contentType: 'application/json',
@@ -30,7 +30,7 @@ test.describe('Settings Page', () => {
       });
     });
 
-    await page.route('http://127.0.0.1:8000/settings/*', async route => {
+    await page.route('**/settings/*', async route => {
       if (route.request().method() === 'PUT') {
         await route.fulfill({ status: 200 });
       } else {
@@ -38,15 +38,15 @@ test.describe('Settings Page', () => {
       }
     });
 
-    await page.goto('/settings');
+    await page.goto('/settings.html');
   });
 
   test('renders all sections', async ({ page }) => {
     await expect(page.locator('text=Appearance')).toBeVisible();
     await expect(page.locator('text=AI Keys')).toBeVisible();
-    await expect(page.locator('text=Models')).toBeVisible();
-    await expect(page.locator('text=Performance')).toBeVisible();
-    await expect(page.locator('text=About')).toBeVisible();
+    await expect(page.locator('text=Models').first()).toBeVisible();
+    await expect(page.locator('text=Performance').first()).toBeVisible();
+    await expect(page.locator('text=About').first()).toBeVisible();
     await expect(page.getByTestId('app-version')).toHaveText('1.0.0');
   });
 
@@ -73,7 +73,7 @@ test.describe('Settings Page', () => {
     await expect(toggle).not.toBeChecked();
 
     const requestPromise = page.waitForRequest(request => 
-      request.url() === 'http://127.0.0.1:8000/settings/cpu_fallback_enabled' && 
+      request.url().endsWith('/settings/cpu_fallback_enabled') && 
       request.method() === 'PUT'
     );
 

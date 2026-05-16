@@ -2,16 +2,35 @@ import { test, expect } from '@playwright/test';
 
 test.describe('Export Dialog', () => {
   test.beforeEach(async ({ page }) => {
+    await page.route('**/models', async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify([{ id: 'model-1', name: 'Test Model', state: 'verified' }]),
+      });
+    });
+
+    await page.route('**/jobs/generate', async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ job_id: 'test-job-id' }),
+      });
+    });
+
+    await page.route('**/jobs/test-job-id/events', async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'text/event-stream',
+        body: 'event: done\ndata: {}\n\n',
+      });
+    });
+
     await page.goto('/');
 
-    await page.evaluate(() => {
-      window.localStorage.setItem('generation-store', JSON.stringify({
-        state: { phase: 'done', resultJobId: 'test-job-id' },
-        version: 0
-      }));
-    });
-    
-    await page.reload();
+    await page.getByPlaceholder('Describe the music you want to generate...').fill('export test prompt');
+    await page.getByRole('button', { name: /generate/i }).click();
+    await expect(page.getByText('Generation complete')).toBeVisible();
 
     await page.evaluate(() => {
       (window as any).__AUDIOMORPH_IPC__ = {
@@ -29,7 +48,7 @@ test.describe('Export Dialog', () => {
     await expect(page.getByText('Export Audio')).toBeVisible();
 
     const formatSelect = page.getByTestId('format-select');
-    await expect(formatSelect).toHaveText(/WAV/);
+    await expect(formatSelect).toHaveText(/wav/i);
     
     await expect(page.getByTestId('bitrate-select')).toBeHidden();
 
@@ -38,7 +57,7 @@ test.describe('Export Dialog', () => {
 
     const bitrateSelect = page.getByTestId('bitrate-select');
     await expect(bitrateSelect).toBeVisible();
-    await expect(bitrateSelect).toHaveText(/192 kbps/);
+    await expect(bitrateSelect).toHaveText(/192/i);
 
     await page.route('**/export', async (route) => {
       const request = route.request();

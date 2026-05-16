@@ -3,10 +3,8 @@
   "private": true,
   "packageManager": "pnpm@9.15.0",
   "workspaces": [
-    "apps/desktop",
     "apps/shell",
     "apps/renderer",
-    "apps/web",
     "packages/*"
   ],
   "scripts": {

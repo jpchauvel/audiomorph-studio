@@ -2,10 +2,18 @@
   "active_plan": "/Users/hellhound/projects/mine/audiomorph-studio/.sisyphus/plans/audiomorph-studio.md",
   "started_at": "2026-05-16T13:49:34.875Z",
   "session_ids": [
-    "ses_1cef35312ffeupqA90Up40ilE2"
+    "ses_1cef35312ffeupqA90Up40ilE2",
+    "ses_1ce4ce81effeIlHG5KHk0m2nwu",
+    "ses_1ce4caff7ffeixBk4nlUHPkP6N",
+    "ses_1ce4c708affe7oqKEh2EfjhspH",
+    "ses_1ce4c125efferPL54947schq0q"
   ],
   "session_origins": {
-    "ses_1cef35312ffeupqA90Up40ilE2": "direct"
+    "ses_1cef35312ffeupqA90Up40ilE2": "direct",
+    "ses_1ce4ce81effeIlHG5KHk0m2nwu": "appended",
+    "ses_1ce4caff7ffeixBk4nlUHPkP6N": "appended",
+    "ses_1ce4c708affe7oqKEh2EfjhspH": "appended",
+    "ses_1ce4c125efferPL54947schq0q": "appended"
   },
   "plan_name": "audiomorph-studio",
   "agent": "atlas",
@@ -14,10 +22,10 @@
       "task_key": "final-wave:f1",
       "task_label": "F1",
       "task_title": "**Plan Compliance Audit** — `oracle`",
-      "session_id": "ses_1ce54d881ffeafSaa7LsVBEqvs",
+      "session_id": "ses_1ce3e4fa6ffe61bo7HhEAqKFJw",
       "agent": "Sisyphus-Junior",
-      "category": "unspecified-high",
-      "updated_at": "2026-05-16T16:44:11.705Z"
+      "category": "deep",
+      "updated_at": "2026-05-16T17:15:15.626Z"
     }
   }
 }

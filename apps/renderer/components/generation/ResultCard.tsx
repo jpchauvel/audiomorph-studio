@@ -5,6 +5,7 @@ import { useGenerationStore } from '@/lib/stores/generation'
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import dynamic from 'next/dynamic'
+import { ExportDialog } from '@/components/export/ExportDialog'
 
 const WaveformPlayer = dynamic(
   () => import('@/components/player/WaveformPlayer').then(m => m.WaveformPlayer),
@@ -13,6 +14,7 @@ const WaveformPlayer = dynamic(
 
 export function ResultCard() {
   const { phase, resultJobId } = useGenerationStore()
+  const [isExportOpen, setIsExportOpen] = useState(false)
 
   if (phase !== 'done' || !resultJobId) return null
 
@@ -34,7 +36,11 @@ export function ResultCard() {
         </div>
         
         <WaveformPlayer audioUrl={mockAudioUrl} />
+        <div className="flex justify-end">
+          <Button onClick={() => setIsExportOpen(true)}>Export</Button>
+        </div>
       </CardContent>
+      <ExportDialog open={isExportOpen} onClose={() => setIsExportOpen(false)} jobId={resultJobId} />
     </Card>
   )
 }

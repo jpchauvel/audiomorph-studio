@@ -1,7 +1,5 @@
 packages:
-  - 'apps/desktop'
   - 'apps/shell'
   - 'apps/renderer'
-  - 'apps/web'
   - 'packages/hardware-gate'
   - 'packages/*'

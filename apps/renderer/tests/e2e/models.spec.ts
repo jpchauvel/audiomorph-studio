@@ -1,22 +1,8 @@
 import { test, expect } from '@playwright/test'
-import path from 'path'
-import { spawn } from 'child_process'
-
-const outDir = path.resolve(__dirname, '../../out')
-let serverProcess: any;
-
-test.beforeAll(async () => {
-  serverProcess = spawn('bunx', ['serve', outDir, '-l', '8081']);
-  await new Promise(r => setTimeout(r, 3000));
-})
-
-test.afterAll(() => {
-  if (serverProcess) serverProcess.kill();
-})
 
 const mockModels = [
   { id: 'model-1', repo_id: 'org/model-1', name: 'Model 1', size_gb: 2.5, state: 'verified' },
-  { id: 'model-2', repo_id: 'org/model-2', name: 'Model 2', size_gb: 5.0, state: 'missing' }
+  { id: 'model-2', repo_id: 'org/model-2', name: 'Model 2', size_gb: 5.0, state: 'partial' }
 ]
 
 test.beforeEach(async ({ page }) => {
@@ -33,7 +19,7 @@ test('displays list of models', async ({ page }) => {
     }
   })
   
-  await page.goto('http://localhost:8081/models.html')
+  await page.goto('/models.html')
   
   await expect(page.locator('text=Model Library')).toBeVisible()
   await expect(page.locator('text=Model 1')).toBeVisible()
@@ -41,7 +27,7 @@ test('displays list of models', async ({ page }) => {
   await expect(page.locator('text=verified')).toBeVisible()
   
   await expect(page.locator('text=Model 2')).toBeVisible()
-  await expect(page.locator('text=missing')).toBeVisible()
+  await expect(page.locator('text=partial')).toBeVisible()
 })
 
 test('requires confirmation to delete a model', async ({ page }) => {
@@ -57,7 +43,7 @@ test('requires confirmation to delete a model', async ({ page }) => {
     }
   })
   
-  await page.goto('http://localhost:8081/models.html')
+  await page.goto('/models.html')
   
   const model1Card = page.locator('.flex-col').filter({ hasText: 'Model 1' })
   await model1Card.getByRole('button', { name: 'Delete' }).click()
@@ -76,18 +62,18 @@ test('handles verify action', async ({ page }) => {
     await route.fulfill({ json: mockModels })
   })
   
-  await page.route('**/models/model-1/verify', async (route) => {
+  await page.route('**/models/model-2/verify', async (route) => {
     if (route.request().method() === 'POST') {
       verifyCalled = true
       await route.fulfill({ json: { valid: true, mismatches: [] } })
     }
   })
   
-  await page.goto('http://localhost:8081/models.html')
+  await page.goto('/models.html')
   
-  const model1Card = page.locator('.flex-col').filter({ hasText: 'Model 1' })
-  await model1Card.getByRole('button', { name: 'Verify' }).click()
+  const model2Card = page.locator('.flex-col').filter({ hasText: 'Model 2' })
+  await model2Card.getByRole('button', { name: 'Verify' }).click()
   
   expect(verifyCalled).toBe(true)
-  await expect(page.locator('text=Model 1 is fully verified')).toBeVisible()
+  await expect(page.locator('text=Model 2 is fully verified')).toBeVisible()
 })

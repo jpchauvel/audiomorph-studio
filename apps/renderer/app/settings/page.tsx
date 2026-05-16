@@ -10,6 +10,12 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 
+const API_BASE = () =>
+  (typeof window !== 'undefined' && (window as any).__AUDIOMORPH_API_BASE__) || 'http://localhost:8000';
+const TOKEN = () =>
+  (typeof window !== 'undefined' && (window as any).__AUDIOMORPH_TOKEN__) || '';
+const headers = () => ({ 'X-Audiomorph-Token': TOKEN(), 'Content-Type': 'application/json' });
+
 export default function SettingsPage() {
   const { theme, setTheme } = useAppStore();
   const [modelsDir, setModelsDir] = useState<string>('');
@@ -23,7 +29,7 @@ export default function SettingsPage() {
   useEffect(() => {
     async function fetchSettings() {
       try {
-        const res = await fetch('http://127.0.0.1:8000/settings');
+        const res = await fetch(`${API_BASE()}/settings`, { headers: headers() });
         if (!res.ok) throw new Error('Failed to fetch settings');
         const data = await res.json();
         
@@ -46,9 +52,9 @@ export default function SettingsPage() {
   const handleCpuFallbackChange = async (checked: boolean) => {
     setCpuFallback(checked);
     try {
-      await fetch('http://127.0.0.1:8000/settings/cpu_fallback_enabled', {
+      await fetch(`${API_BASE()}/settings/cpu_fallback_enabled`, {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
+        headers: headers(),
         body: JSON.stringify({ value: checked ? 'true' : 'false' }),
       });
       toast.success('Performance setting updated');
@@ -62,9 +68,9 @@ export default function SettingsPage() {
     if (!orKeyInput.trim()) return;
     try {
       await (window as any).__AUDIOMORPH_IPC__?.setOpenRouterKey?.(orKeyInput);
-      await fetch('http://127.0.0.1:8000/settings/openrouter_key_present', {
+      await fetch(`${API_BASE()}/settings/openrouter_key_present`, {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
+        headers: headers(),
         body: JSON.stringify({ value: 'true' }),
       });
       setOpenrouterKeyPresent(true);
@@ -79,9 +85,9 @@ export default function SettingsPage() {
     if (!hfTokenInput.trim()) return;
     try {
       await (window as any).__AUDIOMORPH_IPC__?.setHfToken?.(hfTokenInput);
-      await fetch('http://127.0.0.1:8000/settings/hf_token_present', {
+      await fetch(`${API_BASE()}/settings/hf_token_present`, {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
+        headers: headers(),
         body: JSON.stringify({ value: 'true' }),
       });
       setHfTokenPresent(true);
@@ -97,9 +103,9 @@ export default function SettingsPage() {
       const dir = await (window as any).__AUDIOMORPH_IPC__?.openDirectory?.();
       if (dir) {
         setModelsDir(dir);
-        await fetch('http://127.0.0.1:8000/settings/models_dir', {
+        await fetch(`${API_BASE()}/settings/models_dir`, {
           method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
+          headers: headers(),
           body: JSON.stringify({ value: dir }),
         });
         toast.success('Models directory updated');

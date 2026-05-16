@@ -2095,7 +2095,7 @@ print('OK')
 
   **Commit**: YES. `feat(hardware-gate): platform detection + 3-tier enforcement (install/launch/runtime)`. Files: `packages/hardware-gate/src/**`, `packages/hardware-gate/tests/**`, integration in `apps/shell/src/main.ts` + `apps/sidecar/src/routes/generate.py`. Pre-commit: `cd packages/hardware-gate && bun test`.
 
-- [ ] W5.5. Release checklist + version stamping + SHA256 manifests + GitHub Actions matrix
+- [x] W5.5. Release checklist + version stamping + SHA256 manifests + GitHub Actions matrix
 
   **What to do**: Create `.github/workflows/release.yml` with matrix `[macos-14, windows-latest, ubuntu-24.04]` triggered on tag `v*`. Each job: checkout (submodules!), setup Bun + Python 3.14 + python-build-standalone, `bun install && bun run build`, platform-specific build script (W5.1/W5.2/W5.3), upload artifacts. Final job aggregates artifacts, generates `SHA256SUMS.txt` via `shasum -a 256`, creates GitHub Release with all installers + checksums attached. Version stamping: `scripts/stamp-version.ts` reads root `package.json` version + propagates to all workspace `package.json` + `apps/sidecar/pyproject.toml` + injects into `apps/renderer/src/version.ts` + `apps/shell/src/version.ts`. Create `RELEASE_CHECKLIST.md` documenting manual steps: bump version, regenerate icons if needed, smoke test on all 3 OS, push tag, monitor GHA, verify checksums match, publish release notes. RED tests: stamp-version writes all files correctly, GHA workflow lints clean via `actionlint`.
 
