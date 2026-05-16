@@ -145,3 +145,31 @@
   - ✓ No production logic changed outside test-mode guards
 - Evidence files: task-4-ci-refuse.txt, task-4-test-token-auth.txt, task-4-no-regression.txt
 - Commit: "test(test-mode): add AUDIOMORPH_TEST_MODE sentinel and product hooks"
+
+## T8 — Shared sidecar spawn helper (sidecar.ts)
+
+- Real sidecar spawn contract lives in `apps/shell/src/sidecar/manager.ts:171-191`:
+  command `python -m audiomorph.main --port 0 --token <token>`, cwd `apps/sidecar/`,
+  stdio `["ignore","pipe","pipe"]`, first stdout line is JSON
+  `{event:"listening", port:<int>, token:<str>}`. The plan-doc reference to
+  module name `audiomorph_sidecar` is stale — actual module path is `audiomorph.main`.
+- The Python module `audiomorph.main` does NOT exist on disk yet; `apps/sidecar/src/audiomorph/`
+  has `__main__.py` (different handshake protocol via `--handshake-fd`). The shell
+  manager and the new test-helper are coded against the future `main.py` entrypoint.
+  Tests therefore use a tiny inline Python mock script invoked via the helper's
+  `AUDIOMORPH_TEST_SPAWN_BIN` + `AUDIOMORPH_TEST_SPAWN_CMD` test hooks.
+- Test hooks added to the helper (env-var driven, no API surface change):
+  - `AUDIOMORPH_TEST_NO_HANDSHAKE=1` → helper skips reading stdout (forces timeout).
+  - `AUDIOMORPH_TEST_TOKEN_OVERRIDE=<str>` → helper asserts handshake token equals this.
+  - `AUDIOMORPH_TEST_SPAWN_BIN` + `AUDIOMORPH_TEST_SPAWN_CMD` (JSON array) → override
+    spawn binary + argv, lets tests inject mock sidecars without `.venv` or real Python module.
+- Cleanup pattern: `spawnSidecar()` wraps the entire handshake in try/catch; on any
+  failure (timeout, JSON parse, token mismatch) it calls `killChild()` (SIGTERM →
+  5s wait → SIGKILL) BEFORE re-throwing. Verified by mock that writes its own PID
+  to a temp file; post-rejection `process.kill(pid, 0)` confirms reaping.
+- Vitest module-property assignment (`(cp as any).spawn = wrap`) is NOT possible —
+  ESM modules are frozen. Use PID-file pattern instead of monkey-patching `spawn`.
+- ESM gotcha: helper imports `./test-mode.js` (with `.js` extension) — TypeScript
+  `NodeNext` resolution requires the runtime extension in source.
+- `waitForSidecarReady(baseUrl, token, timeoutMs=10000)` polls `GET /health` every
+  200ms with `X-Audiomorph-Token` header (NOT Bearer). Matches sidecar auth contract.
