@@ -508,7 +508,7 @@ Max Concurrent: 8 (Wave 3)
   - Files: `docs/heartlib-api-surface.md`
   - Pre-commit: `test -f docs/heartlib-api-surface.md`
 
-- [ ] W1.1. Initialize monorepo workspace structure with pnpm + Python uv
+- [x] W1.1. Initialize monorepo workspace structure with pnpm + Python uv
 
   **What to do**:
   - Create root `package.json` with `"private": true`, `"packageManager": "pnpm@9.x"`, and workspaces: `["apps/desktop", "apps/web", "packages/*"]`

@@ -1,1 +1,18 @@
-{"name": "@audiomorph/shared-types", "version": "0.1.0", "private": true}
+{
+  "name": "@audiomorph/shared-types",
+  "version": "0.1.0",
+  "private": true,
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "gen:python": "tsx src/python_gen.ts",
+    "test": "vitest run"
+  },
+  "devDependencies": {
+    "typescript": "^5.3.3",
+    "tsx": "^4.7.0",
+    "vitest": "^1.0.4",
+    "ts-morph": "^21.0.1"
+  }
+}

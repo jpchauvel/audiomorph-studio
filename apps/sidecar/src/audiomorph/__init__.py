@@ -1,0 +1,1 @@
+"""AudioMorph sidecar package"""
