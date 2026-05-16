@@ -148,7 +148,9 @@ export default function DiagnosticsPage() {
       </div>
 
       {loading ? (
-        <div className="rounded-xl border border-border bg-surface-2 p-6 text-text-muted">Running hardware checks…</div>
+        <div className="rounded-xl border border-border bg-surface-2 p-6 text-text-muted">
+          Running hardware checks…
+        </div>
       ) : error ? (
         <div className="rounded-xl border border-danger bg-danger/10 p-6 text-danger">{error}</div>
       ) : (
@@ -160,12 +162,15 @@ export default function DiagnosticsPage() {
                 : 'border-danger bg-danger/10 text-danger'
             }`}
           >
-            <p className="font-semibold">{report.ok ? 'All requirements met' : 'Requirements not met'}</p>
+            <p className="font-semibold">
+              {report.ok ? 'All requirements met' : 'Requirements not met'}
+            </p>
             {!report.ok && report.failures.length > 0 ? (
               <ul className="mt-2 list-disc space-y-1 pl-5 text-sm">
                 {report.failures.map((failure, index) => (
                   <li key={`${failure.requirement}-${index}`}>
-                    <span className="font-medium">{failure.requirement}:</span> {failure.message} ({failure.actual})
+                    <span className="font-medium">{failure.requirement}:</span> {failure.message} (
+                    {failure.actual})
                   </li>
                 ))}
               </ul>
@@ -187,7 +192,9 @@ export default function DiagnosticsPage() {
                   <tr key={row.key} className="border-b border-border/70 last:border-b-0">
                     <td className="px-4 py-3 text-text">{row.label}</td>
                     <td className="px-4 py-3 text-text-muted">{row.value}</td>
-                    <td className="px-4 py-3 text-text-muted">{row.threshold ?? 'Informational'}</td>
+                    <td className="px-4 py-3 text-text-muted">
+                      {row.threshold ?? 'Informational'}
+                    </td>
                     <td className="px-4 py-3">
                       <span className={row.ok ? 'text-success' : 'text-danger'}>
                         {row.ok ? '✓ Pass' : '✗ Fail'}

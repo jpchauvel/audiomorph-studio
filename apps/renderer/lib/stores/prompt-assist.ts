@@ -1,19 +1,19 @@
-'use client'
-import { create } from 'zustand'
+'use client';
+import { create } from 'zustand';
 
 type PromptAssistStore = {
-  open: boolean
-  messages: { role: 'user' | 'assistant'; content: string }[]
-  streaming: boolean
-  streamBuffer: string
-  model: string
-  setOpen: (v: boolean) => void
-  addMessage: (msg: { role: 'user' | 'assistant'; content: string }) => void
-  appendStream: (chunk: string) => void
-  finalizeStream: () => void
-  setModel: (m: string) => void
-  reset: () => void
-}
+  open: boolean;
+  messages: { role: 'user' | 'assistant'; content: string }[];
+  streaming: boolean;
+  streamBuffer: string;
+  model: string;
+  setOpen: (v: boolean) => void;
+  addMessage: (msg: { role: 'user' | 'assistant'; content: string }) => void;
+  appendStream: (chunk: string) => void;
+  finalizeStream: () => void;
+  setModel: (m: string) => void;
+  reset: () => void;
+};
 
 export const usePromptAssistStore = create<PromptAssistStore>((set) => ({
   open: false,
@@ -31,5 +31,12 @@ export const usePromptAssistStore = create<PromptAssistStore>((set) => ({
       streaming: false,
     })),
   setModel: (model) => set({ model }),
-  reset: () => set({ open: false, messages: [], streaming: false, streamBuffer: '', model: 'anthropic/claude-3.5-sonnet' }),
-}))
+  reset: () =>
+    set({
+      open: false,
+      messages: [],
+      streaming: false,
+      streamBuffer: '',
+      model: 'anthropic/claude-3.5-sonnet',
+    }),
+}));

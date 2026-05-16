@@ -1,21 +1,21 @@
-'use client'
-import { useEffect, useRef, useState } from 'react'
-import type WaveSurfer from 'wavesurfer.js'
-import { SpectrumCanvas } from './SpectrumCanvas'
+'use client';
+import { useEffect, useRef, useState } from 'react';
+import type WaveSurfer from 'wavesurfer.js';
+import { SpectrumCanvas } from './SpectrumCanvas';
 
-type Props = { audioUrl: string; onReady?: () => void }
+type Props = { audioUrl: string; onReady?: () => void };
 
 export function WaveformPlayer({ audioUrl, onReady }: Props) {
-  const containerRef = useRef<HTMLDivElement>(null)
-  const wsRef = useRef<WaveSurfer | null>(null)
-  const [playing, setPlaying] = useState(false)
-  const [currentTime, setCurrentTime] = useState(0)
-  const [duration, setDuration] = useState(0)
-  const [audioElement, setAudioElement] = useState<HTMLAudioElement | null>(null)
+  const containerRef = useRef<HTMLDivElement>(null);
+  const wsRef = useRef<WaveSurfer | null>(null);
+  const [playing, setPlaying] = useState(false);
+  const [currentTime, setCurrentTime] = useState(0);
+  const [duration, setDuration] = useState(0);
+  const [audioElement, setAudioElement] = useState<HTMLAudioElement | null>(null);
 
   useEffect(() => {
-    if (!containerRef.current) return
-    let ws: WaveSurfer
+    if (!containerRef.current) return;
+    let ws: WaveSurfer;
     import('wavesurfer.js').then(({ default: WaveSurfer }) => {
       ws = WaveSurfer.create({
         container: containerRef.current!,
@@ -27,38 +27,40 @@ export function WaveformPlayer({ audioUrl, onReady }: Props) {
         barGap: 1,
         barRadius: 2,
         normalize: true,
-      })
-      ws.load(audioUrl)
-      ws.on('ready', () => { 
-        setDuration(ws.getDuration())
-        onReady?.() 
-      })
-      ws.on('audioprocess', () => setCurrentTime(ws.getCurrentTime()))
-      ws.on('play', () => setPlaying(true))
-      ws.on('pause', () => setPlaying(false))
-      wsRef.current = ws
+      });
+      ws.load(audioUrl);
+      ws.on('ready', () => {
+        setDuration(ws.getDuration());
+        onReady?.();
+      });
+      ws.on('audioprocess', () => setCurrentTime(ws.getCurrentTime()));
+      ws.on('play', () => setPlaying(true));
+      ws.on('pause', () => setPlaying(false));
+      wsRef.current = ws;
 
-      const mediaElement = ws.getMediaElement()
+      const mediaElement = ws.getMediaElement();
       if (mediaElement) {
-        setAudioElement(mediaElement)
+        setAudioElement(mediaElement);
       }
-    })
-    return () => { ws?.destroy() }
-  }, [audioUrl, onReady])
+    });
+    return () => {
+      ws?.destroy();
+    };
+  }, [audioUrl, onReady]);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.code === 'Space') {
-        e.preventDefault()
-        wsRef.current?.playPause()
+        e.preventDefault();
+        wsRef.current?.playPause();
       }
-    }
-    window.addEventListener('keydown', handleKeyDown)
-    return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [])
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
 
-  const toggle = () => wsRef.current?.playPause()
-  const fmt = (s: number) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`
+  const toggle = () => wsRef.current?.playPause();
+  const fmt = (s: number) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`;
 
   return (
     <div className="flex flex-col gap-4 w-full" data-testid="waveform-player" tabIndex={0}>
@@ -81,5 +83,5 @@ export function WaveformPlayer({ audioUrl, onReady }: Props) {
         </span>
       </div>
     </div>
-  )
+  );
 }

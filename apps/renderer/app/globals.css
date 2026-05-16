@@ -1,4 +1,4 @@
-@import "tailwindcss";
+@import 'tailwindcss';
 
 @plugin "tailwindcss-animate";
 
@@ -34,7 +34,7 @@
   --color-destructive-foreground: var(--color-text);
   --color-ring: var(--color-accent);
   --color-input: var(--color-border);
-  
+
   --radius-sm: calc(var(--radius) * 0.6);
   --radius-md: calc(var(--radius) * 0.8);
   --radius-lg: var(--radius);

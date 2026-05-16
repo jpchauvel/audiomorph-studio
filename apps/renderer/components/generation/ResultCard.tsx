@@ -1,24 +1,24 @@
-'use client'
+'use client';
 
-import { useState } from 'react'
-import { useGenerationStore } from '@/lib/stores/generation'
-import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
-import dynamic from 'next/dynamic'
-import { ExportDialog } from '@/components/export/ExportDialog'
+import { useState } from 'react';
+import { useGenerationStore } from '@/lib/stores/generation';
+import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import dynamic from 'next/dynamic';
+import { ExportDialog } from '@/components/export/ExportDialog';
 
 const WaveformPlayer = dynamic(
-  () => import('@/components/player/WaveformPlayer').then(m => m.WaveformPlayer),
-  { ssr: false }
-)
+  () => import('@/components/player/WaveformPlayer').then((m) => m.WaveformPlayer),
+  { ssr: false },
+);
 
 export function ResultCard() {
-  const { phase, resultJobId } = useGenerationStore()
-  const [isExportOpen, setIsExportOpen] = useState(false)
+  const { phase, resultJobId } = useGenerationStore();
+  const [isExportOpen, setIsExportOpen] = useState(false);
 
-  if (phase !== 'done' || !resultJobId) return null
+  if (phase !== 'done' || !resultJobId) return null;
 
-  const mockAudioUrl = 'https://www.w3schools.com/html/horse.ogg'
+  const mockAudioUrl = 'https://www.w3schools.com/html/horse.ogg';
 
   return (
     <Card className="mt-6 border border-[var(--color-success)] bg-[var(--color-success)]/5">
@@ -34,13 +34,17 @@ export function ResultCard() {
             {resultJobId}
           </code>
         </div>
-        
+
         <WaveformPlayer audioUrl={mockAudioUrl} />
         <div className="flex justify-end">
           <Button onClick={() => setIsExportOpen(true)}>Export</Button>
         </div>
       </CardContent>
-      <ExportDialog open={isExportOpen} onClose={() => setIsExportOpen(false)} jobId={resultJobId} />
+      <ExportDialog
+        open={isExportOpen}
+        onClose={() => setIsExportOpen(false)}
+        jobId={resultJobId}
+      />
     </Card>
-  )
+  );
 }

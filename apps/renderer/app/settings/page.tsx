@@ -11,9 +11,9 @@ import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 
 const API_BASE = () =>
-  (typeof window !== 'undefined' && (window as any).__AUDIOMORPH_API_BASE__) || 'http://localhost:8000';
-const TOKEN = () =>
-  (typeof window !== 'undefined' && (window as any).__AUDIOMORPH_TOKEN__) || '';
+  (typeof window !== 'undefined' && (window as any).__AUDIOMORPH_API_BASE__) ||
+  'http://localhost:8000';
+const TOKEN = () => (typeof window !== 'undefined' && (window as any).__AUDIOMORPH_TOKEN__) || '';
 const headers = () => ({ 'X-Audiomorph-Token': TOKEN(), 'Content-Type': 'application/json' });
 
 export default function SettingsPage() {
@@ -32,10 +32,11 @@ export default function SettingsPage() {
         const res = await fetch(`${API_BASE()}/settings`, { headers: headers() });
         if (!res.ok) throw new Error('Failed to fetch settings');
         const data = await res.json();
-        
+
         if (data.models_dir) setModelsDir(data.models_dir);
         if (data.cpu_fallback_enabled) setCpuFallback(data.cpu_fallback_enabled === 'true');
-        if (data.openrouter_key_present) setOpenrouterKeyPresent(data.openrouter_key_present === 'true');
+        if (data.openrouter_key_present)
+          setOpenrouterKeyPresent(data.openrouter_key_present === 'true');
         if (data.hf_token_present) setHfTokenPresent(data.hf_token_present === 'true');
       } catch (err) {
         console.error(err);
@@ -58,7 +59,7 @@ export default function SettingsPage() {
         body: JSON.stringify({ value: checked ? 'true' : 'false' }),
       });
       toast.success('Performance setting updated');
-    } catch (err) {
+    } catch (_err) {
       toast.error('Failed to update performance setting');
       setCpuFallback(!checked);
     }
@@ -76,7 +77,7 @@ export default function SettingsPage() {
       setOpenrouterKeyPresent(true);
       setOrKeyInput('');
       toast.success('OpenRouter key saved');
-    } catch (err) {
+    } catch (_err) {
       toast.error('Failed to save OpenRouter key');
     }
   };
@@ -93,7 +94,7 @@ export default function SettingsPage() {
       setHfTokenPresent(true);
       setHfTokenInput('');
       toast.success('HuggingFace token saved');
-    } catch (err) {
+    } catch (_err) {
       toast.error('Failed to save HuggingFace token');
     }
   };
@@ -110,12 +111,13 @@ export default function SettingsPage() {
         });
         toast.success('Models directory updated');
       }
-    } catch (err) {
+    } catch (_err) {
       toast.error('Failed to update models directory');
     }
   };
 
-  const version = (typeof window !== 'undefined' ? (window as any).__AUDIOMORPH_VERSION__ : null) ?? '0.1.0';
+  const version =
+    (typeof window !== 'undefined' ? (window as any).__AUDIOMORPH_VERSION__ : null) ?? '0.1.0';
 
   return (
     <div className="container mx-auto p-8 space-y-8 max-w-3xl">
@@ -130,7 +132,9 @@ export default function SettingsPage() {
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="flex items-center justify-between">
-            <Label htmlFor="theme-toggle" className="text-base font-medium">Dark Mode</Label>
+            <Label htmlFor="theme-toggle" className="text-base font-medium">
+              Dark Mode
+            </Label>
             <Switch
               id="theme-toggle"
               checked={theme === 'dark'}
@@ -159,12 +163,16 @@ export default function SettingsPage() {
                 data-testid="openrouter-key-input"
                 className="flex-1"
               />
-              <Button onClick={saveOpenRouterKey} disabled={!orKeyInput.trim()} data-testid="save-openrouter-key">
+              <Button
+                onClick={saveOpenRouterKey}
+                disabled={!orKeyInput.trim()}
+                data-testid="save-openrouter-key"
+              >
                 Save
               </Button>
             </div>
           </div>
-          
+
           <div className="space-y-2">
             <Label htmlFor="hf-token">HuggingFace Token</Label>
             <div className="flex space-x-2">
@@ -177,7 +185,11 @@ export default function SettingsPage() {
                 data-testid="hf-token-input"
                 className="flex-1"
               />
-              <Button onClick={saveHfToken} disabled={!hfTokenInput.trim()} data-testid="save-hf-token">
+              <Button
+                onClick={saveHfToken}
+                disabled={!hfTokenInput.trim()}
+                data-testid="save-hf-token"
+              >
                 Save
               </Button>
             </div>
@@ -194,7 +206,10 @@ export default function SettingsPage() {
           <div className="space-y-2">
             <Label>Models Directory</Label>
             <div className="flex items-center space-x-4">
-              <p className="flex-1 bg-muted p-2 rounded-md text-sm font-mono truncate" data-testid="models-dir-display">
+              <p
+                className="flex-1 bg-muted p-2 rounded-md text-sm font-mono truncate"
+                data-testid="models-dir-display"
+              >
                 {modelsDir || 'Not set'}
               </p>
               <Button variant="outline" onClick={changeModelsDir} data-testid="change-models-dir">
@@ -213,8 +228,12 @@ export default function SettingsPage() {
         <CardContent className="space-y-4">
           <div className="flex items-center justify-between">
             <div className="space-y-0.5">
-              <Label htmlFor="cpu-fallback" className="text-base font-medium">CPU Fallback</Label>
-              <p className="text-sm text-muted-foreground">Force using CPU when GPU fails or is unsupported.</p>
+              <Label htmlFor="cpu-fallback" className="text-base font-medium">
+                CPU Fallback
+              </Label>
+              <p className="text-sm text-muted-foreground">
+                Force using CPU when GPU fails or is unsupported.
+              </p>
             </div>
             <Switch
               id="cpu-fallback"
@@ -233,11 +252,10 @@ export default function SettingsPage() {
         </CardHeader>
         <CardContent className="space-y-2 text-sm">
           <p>
-            <span className="font-semibold">Version:</span> <span data-testid="app-version">{version}</span>
+            <span className="font-semibold">Version:</span>{' '}
+            <span data-testid="app-version">{version}</span>
           </p>
-          <p className="text-muted-foreground">
-            Created with ♥ by heartlib.
-          </p>
+          <p className="text-muted-foreground">Created with ♥ by heartlib.</p>
         </CardContent>
       </Card>
 

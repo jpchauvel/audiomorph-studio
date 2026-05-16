@@ -1,55 +1,73 @@
-'use client'
+'use client';
 
-import { useState, useEffect, useRef } from 'react'
-import { usePromptAssistStore } from '@/lib/stores/prompt-assist'
-import { useGenerationStore } from '@/lib/stores/generation'
-import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet'
-import { Button } from '@/components/ui/button'
-import { Textarea } from '@/components/ui/textarea'
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
-import { toast } from 'sonner'
-import Link from 'next/link'
+import { useState, useEffect, useRef } from 'react';
+import { usePromptAssistStore } from '@/lib/stores/prompt-assist';
+import { useGenerationStore } from '@/lib/stores/generation';
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetDescription,
+} from '@/components/ui/sheet';
+import { Button } from '@/components/ui/button';
+import { Textarea } from '@/components/ui/textarea';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { toast } from 'sonner';
+import Link from 'next/link';
 
 const API_BASE = () =>
-  (typeof window !== 'undefined' && (window as any).__AUDIOMORPH_API_BASE__) || 'http://localhost:8000'
-const TOKEN = () =>
-  (typeof window !== 'undefined' && (window as any).__AUDIOMORPH_TOKEN__) || ''
+  (typeof window !== 'undefined' && (window as any).__AUDIOMORPH_API_BASE__) ||
+  'http://localhost:8000';
+const TOKEN = () => (typeof window !== 'undefined' && (window as any).__AUDIOMORPH_TOKEN__) || '';
 const OPENROUTER_KEY = () =>
-  (typeof window !== 'undefined' && (window as any).__AUDIOMORPH_OPENROUTER_KEY__) || ''
+  (typeof window !== 'undefined' && (window as any).__AUDIOMORPH_OPENROUTER_KEY__) || '';
 
-const SYSTEM_PROMPT = "You are a music prompt assistant. Given the user's intent, return: 1) An enhanced generation prompt (max 200 chars) 2) Suggested lyrics (max 500 chars). Format your response as JSON: {\"prompt\": \"...\", \"lyrics\": \"...\"}"
+const SYSTEM_PROMPT =
+  'You are a music prompt assistant. Given the user\'s intent, return: 1) An enhanced generation prompt (max 200 chars) 2) Suggested lyrics (max 500 chars). Format your response as JSON: {"prompt": "...", "lyrics": "..."}';
 
 export function PromptAssistDrawer() {
-  const { open, setOpen, messages, streaming, streamBuffer, model, addMessage, appendStream, finalizeStream, reset } = usePromptAssistStore()
-  const { setPromptDraft, setLyricsDraft } = useGenerationStore()
-  
-  const [intent, setIntent] = useState('')
-  const [keyPresent, setKeyPresent] = useState<boolean | null>(null)
-  
-  const scrollRef = useRef<HTMLDivElement>(null)
+  const {
+    open,
+    setOpen,
+    messages,
+    streaming,
+    streamBuffer,
+    model,
+    addMessage,
+    appendStream,
+    finalizeStream,
+    reset: _reset,
+  } = usePromptAssistStore();
+  const { setPromptDraft, setLyricsDraft } = useGenerationStore();
+
+  const [intent, setIntent] = useState('');
+  const [keyPresent, setKeyPresent] = useState<boolean | null>(null);
+
+  const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (open) {
       fetch(`${API_BASE()}/settings`, { headers: { 'X-Audiomorph-Token': TOKEN() } })
-        .then(r => r.json())
-        .then(d => setKeyPresent(d.openrouter_key_present === 'true'))
-        .catch(() => setKeyPresent(false))
+        .then((r) => r.json())
+        .then((d) => setKeyPresent(d.openrouter_key_present === 'true'))
+        .catch(() => setKeyPresent(false));
     }
-  }, [open])
+  }, [open]);
 
   useEffect(() => {
     if (scrollRef.current) {
-      scrollRef.current.scrollTop = scrollRef.current.scrollHeight
+      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
-  }, [messages, streamBuffer])
+  }, [messages, streamBuffer]);
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!intent.trim() || streaming) return
+    e.preventDefault();
+    if (!intent.trim() || streaming) return;
 
-    const userMsg = intent.trim()
-    setIntent('')
-    addMessage({ role: 'user', content: userMsg })
+    const userMsg = intent.trim();
+    setIntent('');
+    addMessage({ role: 'user', content: userMsg });
 
     try {
       const response = await fetch(`${API_BASE()}/openrouter/chat`, {
@@ -57,7 +75,7 @@ export function PromptAssistDrawer() {
         headers: {
           'Content-Type': 'application/json',
           'X-Audiomorph-Token': TOKEN(),
-          'X-OpenRouter-Key': OPENROUTER_KEY()
+          'X-OpenRouter-Key': OPENROUTER_KEY(),
         },
         body: JSON.stringify({
           model,
@@ -65,81 +83,86 @@ export function PromptAssistDrawer() {
           messages: [
             { role: 'system', content: SYSTEM_PROMPT },
             ...messages,
-            { role: 'user', content: userMsg }
-          ]
-        })
-      })
+            { role: 'user', content: userMsg },
+          ],
+        }),
+      });
 
       if (!response.ok) {
-        throw new Error('Failed to fetch from chat API')
+        throw new Error('Failed to fetch from chat API');
       }
 
-      const reader = response.body?.getReader()
-      const decoder = new TextDecoder()
+      const reader = response.body?.getReader();
+      const decoder = new TextDecoder();
 
-      if (!reader) throw new Error('No reader')
+      if (!reader) throw new Error('No reader');
 
       while (true) {
-        const { done, value } = await reader.read()
-        if (done) break
-        
-        const chunk = decoder.decode(value, { stream: true })
-        const lines = chunk.split('\n')
-        
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        const chunk = decoder.decode(value, { stream: true });
+        const lines = chunk.split('\n');
+
         for (const line of lines) {
           if (line.startsWith('data: ')) {
-            const dataStr = line.slice(6)
+            const dataStr = line.slice(6);
             if (dataStr.trim() === '[DONE]') {
-              break
+              break;
             }
             try {
-              const data = JSON.parse(dataStr)
-              const content = data.choices?.[0]?.delta?.content || ''
+              const data = JSON.parse(dataStr);
+              const content = data.choices?.[0]?.delta?.content || '';
               if (content) {
-                appendStream(content)
+                appendStream(content);
               }
-            } catch (e) {
+            } catch (_e) {
               // ignore parse errors for partial chunks
             }
           }
         }
       }
-      finalizeStream()
-    } catch (e) {
-      toast.error('Failed to generate response')
-      finalizeStream()
+      finalizeStream();
+    } catch (_e) {
+      toast.error('Failed to generate response');
+      finalizeStream();
     }
-  }
+  };
 
   const handleUsePrompt = (content: string) => {
     try {
-      const jsonMatch = content.match(/```json\n([\s\S]*?)\n```/) || content.match(/```\n([\s\S]*?)\n```/)
-      const rawJson = jsonMatch ? jsonMatch[1] : content
-      const parsed = JSON.parse(rawJson)
-      if (parsed.prompt) setPromptDraft(parsed.prompt)
-      toast.success('Prompt applied!')
-      setOpen(false)
+      const jsonMatch =
+        content.match(/```json\n([\s\S]*?)\n```/) || content.match(/```\n([\s\S]*?)\n```/);
+      const rawJson = jsonMatch ? jsonMatch[1] : content;
+      const parsed = JSON.parse(rawJson);
+      if (parsed.prompt) setPromptDraft(parsed.prompt);
+      toast.success('Prompt applied!');
+      setOpen(false);
     } catch {
-      toast.error('Could not parse JSON from response')
+      toast.error('Could not parse JSON from response');
     }
-  }
+  };
 
   const handleUseLyrics = (content: string) => {
     try {
-      const jsonMatch = content.match(/```json\n([\s\S]*?)\n```/) || content.match(/```\n([\s\S]*?)\n```/)
-      const rawJson = jsonMatch ? jsonMatch[1] : content
-      const parsed = JSON.parse(rawJson)
-      if (parsed.lyrics) setLyricsDraft(parsed.lyrics)
-      toast.success('Lyrics applied!')
-      setOpen(false)
+      const jsonMatch =
+        content.match(/```json\n([\s\S]*?)\n```/) || content.match(/```\n([\s\S]*?)\n```/);
+      const rawJson = jsonMatch ? jsonMatch[1] : content;
+      const parsed = JSON.parse(rawJson);
+      if (parsed.lyrics) setLyricsDraft(parsed.lyrics);
+      toast.success('Lyrics applied!');
+      setOpen(false);
     } catch {
-      toast.error('Could not parse JSON from response')
+      toast.error('Could not parse JSON from response');
     }
-  }
+  };
 
   return (
     <Sheet open={open} onOpenChange={setOpen}>
-      <SheetContent side="right" className="w-full sm:w-[480px] sm:max-w-md flex flex-col h-full bg-[var(--color-surface)] border-l-[var(--color-border)] p-0">
+      <SheetContent
+        side="right"
+        className="w-full sm:w-[480px] sm:max-w-md flex flex-col h-full bg-[var(--color-surface)] border-l-[var(--color-border)] p-0"
+      >
         <div className="p-6 pb-4 border-b border-[var(--color-border)]">
           <SheetHeader>
             <SheetTitle className="text-[var(--color-text)]">Prompt Assist ✨</SheetTitle>
@@ -154,23 +177,42 @@ export function PromptAssistDrawer() {
             <Alert variant="destructive" className="mb-4">
               <AlertTitle>Missing OpenRouter Key</AlertTitle>
               <AlertDescription>
-                You need to set your OpenRouter API key in <Link href="/settings" className="underline">Settings</Link> to use this feature.
+                You need to set your OpenRouter API key in{' '}
+                <Link href="/settings" className="underline">
+                  Settings
+                </Link>{' '}
+                to use this feature.
               </AlertDescription>
             </Alert>
           )}
 
           <div className="flex flex-col gap-4">
             {messages.map((msg, i) => (
-              <div key={i} className={`flex flex-col gap-1 ${msg.role === 'user' ? 'items-end' : 'items-start'}`}>
-                <div className={`px-4 py-2 rounded-lg max-w-[85%] text-sm ${msg.role === 'user' ? 'bg-[var(--color-primary)] text-[var(--color-surface)]' : 'bg-[var(--color-surface-2)] text-[var(--color-text)] border border-[var(--color-border)]'}`}>
+              <div
+                key={i}
+                className={`flex flex-col gap-1 ${msg.role === 'user' ? 'items-end' : 'items-start'}`}
+              >
+                <div
+                  className={`px-4 py-2 rounded-lg max-w-[85%] text-sm ${msg.role === 'user' ? 'bg-[var(--color-primary)] text-[var(--color-surface)]' : 'bg-[var(--color-surface-2)] text-[var(--color-text)] border border-[var(--color-border)]'}`}
+                >
                   {msg.role === 'assistant' ? (
                     <div className="flex flex-col gap-3">
                       <pre className="whitespace-pre-wrap font-sans">{msg.content}</pre>
                       <div className="flex gap-2 w-full">
-                        <Button variant="outline" size="sm" onClick={() => handleUsePrompt(msg.content)} className="flex-1 text-xs">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleUsePrompt(msg.content)}
+                          className="flex-1 text-xs"
+                        >
                           Use this prompt
                         </Button>
-                        <Button variant="outline" size="sm" onClick={() => handleUseLyrics(msg.content)} className="flex-1 text-xs">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleUseLyrics(msg.content)}
+                          className="flex-1 text-xs"
+                        >
                           Use these lyrics
                         </Button>
                       </div>
@@ -181,11 +223,14 @@ export function PromptAssistDrawer() {
                 </div>
               </div>
             ))}
-            
+
             {streaming && (
               <div className="flex flex-col gap-1 items-start">
                 <div className="px-4 py-2 rounded-lg max-w-[85%] text-sm bg-[var(--color-surface-2)] text-[var(--color-text)] border border-[var(--color-border)]">
-                  <pre className="whitespace-pre-wrap font-sans">{streamBuffer}<span className="animate-pulse">_</span></pre>
+                  <pre className="whitespace-pre-wrap font-sans">
+                    {streamBuffer}
+                    <span className="animate-pulse">_</span>
+                  </pre>
                 </div>
               </div>
             )}
@@ -202,14 +247,19 @@ export function PromptAssistDrawer() {
               disabled={streaming || keyPresent === false}
               onKeyDown={(e) => {
                 if (e.key === 'Enter' && !e.shiftKey) {
-                  e.preventDefault()
-                  handleSubmit(e)
+                  e.preventDefault();
+                  handleSubmit(e);
                 }
               }}
             />
             <div className="flex justify-between items-center">
               <span className="text-xs text-[var(--color-text-muted)]">Press Enter to send</span>
-              <Button type="submit" disabled={!intent.trim() || streaming || keyPresent === false} size="sm" className="bg-[var(--color-primary)] text-[var(--color-surface)]">
+              <Button
+                type="submit"
+                disabled={!intent.trim() || streaming || keyPresent === false}
+                size="sm"
+                className="bg-[var(--color-primary)] text-[var(--color-surface)]"
+              >
                 Generate
               </Button>
             </div>
@@ -217,5 +267,5 @@ export function PromptAssistDrawer() {
         </div>
       </SheetContent>
     </Sheet>
-  )
+  );
 }

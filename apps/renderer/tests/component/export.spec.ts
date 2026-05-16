@@ -28,18 +28,22 @@ test.describe('Export Dialog', () => {
 
     await page.goto('/');
 
-    await page.getByPlaceholder('Describe the music you want to generate...').fill('export test prompt');
+    await page
+      .getByPlaceholder('Describe the music you want to generate...')
+      .fill('export test prompt');
     await page.getByRole('button', { name: /generate/i }).click();
     await expect(page.getByText('Generation complete')).toBeVisible();
 
     await page.evaluate(() => {
       (window as any).__AUDIOMORPH_IPC__ = {
-        showItemInFolder: () => {}
+        showItemInFolder: () => {},
       };
     });
   });
 
-  test('opens export dialog, shows bitrate only for mp3, exports successfully', async ({ page }) => {
+  test('opens export dialog, shows bitrate only for mp3, exports successfully', async ({
+    page,
+  }) => {
     const exportBtn = page.getByRole('button', { name: 'Export' });
     await expect(exportBtn).toBeVisible();
     await exportBtn.click();
@@ -49,7 +53,7 @@ test.describe('Export Dialog', () => {
 
     const formatSelect = page.getByTestId('format-select');
     await expect(formatSelect).toHaveText(/wav/i);
-    
+
     await expect(page.getByTestId('bitrate-select')).toBeHidden();
 
     await formatSelect.click();
@@ -66,19 +70,21 @@ test.describe('Export Dialog', () => {
       expect(body).toEqual({
         job_id: 'test-job-id',
         format: 'mp3',
-        bitrate_kbps: 192
+        bitrate_kbps: 192,
       });
       await route.fulfill({
         status: 200,
         contentType: 'application/json',
-        body: JSON.stringify({ file_path: '/mock/path/audio.mp3', size_bytes: 1024 })
+        body: JSON.stringify({ file_path: '/mock/path/audio.mp3', size_bytes: 1024 }),
       });
     });
 
     await page.evaluate(() => {
       (window as any).folderOpenedPath = null;
       (window as any).__AUDIOMORPH_IPC__ = {
-        showItemInFolder: (path: string) => { (window as any).folderOpenedPath = path; }
+        showItemInFolder: (path: string) => {
+          (window as any).folderOpenedPath = path;
+        },
       };
     });
 

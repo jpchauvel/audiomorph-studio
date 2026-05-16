@@ -1,4 +1,4 @@
-import type { ElectronAPI } from "@audiomorph/ipc-contracts";
+import type { ElectronAPI } from '@audiomorph/ipc-contracts';
 
 declare global {
   interface Window {

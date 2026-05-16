@@ -31,7 +31,11 @@ const test = createSidecarFixture();
 test.skip(!RENDERER_BUILD_PRESENT, 'renderer not built (apps/renderer/out missing)');
 test.skip(!SIDECAR_RUNTIME_PRESENT, 'sidecar runtime missing (.venv/bin/python not found)');
 
-test('lyrics page loads with stubbed OpenRouter backend', async ({ page, sidecar, staticServer }) => {
+test('lyrics page loads with stubbed OpenRouter backend', async ({
+  page,
+  sidecar,
+  staticServer,
+}) => {
   await stubReady;
   const errors: string[] = [];
   page.on('pageerror', (e) => errors.push(e.message));

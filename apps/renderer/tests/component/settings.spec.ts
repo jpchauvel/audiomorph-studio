@@ -13,11 +13,11 @@ test.describe('Settings Page', () => {
         },
         openDirectory: async () => {
           return '/mock/models/dir';
-        }
+        },
       };
     });
 
-    await page.route('**/settings', async route => {
+    await page.route('**/settings', async (route) => {
       await route.fulfill({
         status: 200,
         contentType: 'application/json',
@@ -26,11 +26,11 @@ test.describe('Settings Page', () => {
           cpu_fallback_enabled: 'false',
           openrouter_key_present: 'false',
           hf_token_present: 'false',
-        })
+        }),
       });
     });
 
-    await page.route('**/settings/*', async route => {
+    await page.route('**/settings/*', async (route) => {
       if (route.request().method() === 'PUT') {
         await route.fulfill({ status: 200 });
       } else {
@@ -55,10 +55,10 @@ test.describe('Settings Page', () => {
     const saveBtn = page.getByTestId('save-openrouter-key');
 
     await expect(input).toHaveAttribute('placeholder', 'sk-or-...');
-    
+
     await input.fill('sk-or-secret-key-123');
     await expect(input).toHaveValue('sk-or-secret-key-123');
-    
+
     await saveBtn.click();
 
     await expect(input).toHaveValue('');
@@ -69,12 +69,12 @@ test.describe('Settings Page', () => {
 
   test('CPU fallback toggle updates settings', async ({ page }) => {
     const toggle = page.getByTestId('cpu-fallback-toggle');
-    
+
     await expect(toggle).not.toBeChecked();
 
-    const requestPromise = page.waitForRequest(request => 
-      request.url().endsWith('/settings/cpu_fallback_enabled') && 
-      request.method() === 'PUT'
+    const requestPromise = page.waitForRequest(
+      (request) =>
+        request.url().endsWith('/settings/cpu_fallback_enabled') && request.method() === 'PUT',
     );
 
     await toggle.click();

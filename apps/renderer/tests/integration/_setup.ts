@@ -14,9 +14,7 @@ const REPO_ROOT = path.resolve(__dirname, '../../../..');
 const RENDERER_OUT = path.resolve(__dirname, '../../out');
 const VENV_PYTHON = path.join(REPO_ROOT, '.venv', 'bin', 'python');
 
-export const RENDERER_BUILD_PRESENT = fs.existsSync(
-  path.join(RENDERER_OUT, 'index.html'),
-);
+export const RENDERER_BUILD_PRESENT = fs.existsSync(path.join(RENDERER_OUT, 'index.html'));
 export const SIDECAR_RUNTIME_PRESENT = fs.existsSync(VENV_PYTHON);
 export const RENDERER_OUT_DIR = RENDERER_OUT;
 export const REPOSITORY_ROOT = REPO_ROOT;
@@ -104,7 +102,9 @@ function launchServer(cmd: string, args: string[]): Promise<StaticServerHandle> 
       if (!resolved) {
         resolved = true;
         clearTimeout(timeout);
-        reject(new Error(`Static server exited with code ${code} before listening. stderr=${stderrBuf}`));
+        reject(
+          new Error(`Static server exited with code ${code} before listening. stderr=${stderrBuf}`),
+        );
       }
     });
   });
@@ -159,17 +159,18 @@ export type IntegrationFixtures = {
   apiBase: string;
 };
 
-export function createSidecarFixture(opts: {
-  extraEnv?: Record<string, string>;
-} = {}) {
+export function createSidecarFixture(
+  opts: {
+    extraEnv?: Record<string, string>;
+  } = {},
+) {
   return base.extend<IntegrationFixtures>({
-    // eslint-disable-next-line no-empty-pattern
     sidecar: async ({}, use) => {
       const handle = await spawnSidecar({ extraEnv: opts.extraEnv });
       await use(handle);
       await handle.kill();
     },
-    // eslint-disable-next-line no-empty-pattern
+
     staticServer: async ({}, use) => {
       const handle = await startStaticServer(RENDERER_OUT_DIR);
       await use(handle);
