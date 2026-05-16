@@ -30,6 +30,7 @@ export class KeyVault {
     decryptString: (value: Buffer) => string;
   };
   private readonly logger: Pick<Console, "warn">;
+  private readonly inMemoryVault: VaultMap = {};
 
   public constructor(options: KeyVaultOptions = {}) {
     const userDataPath = options.userDataPath ?? app.getPath("userData");
@@ -38,6 +39,11 @@ export class KeyVault {
     this.fsImpl = options.fsImpl ?? fs;
     this.encryption = options.encryption ?? safeStorage;
     this.logger = options.logger ?? console;
+    
+    // AUDIOMORPH_TEST_MODE hook
+    if (process.env.AUDIOMORPH_TEST_MODE === "1") {
+      this.logger.warn("[vault] test mode enabled - using in-memory storage");
+    }
   }
 
   public async set(key: VaultKey, value: string): Promise<void> {
@@ -77,6 +83,9 @@ export class KeyVault {
   }
 
   private async readVault(): Promise<VaultMap> {
+    if (process.env.AUDIOMORPH_TEST_MODE === "1") {
+      return { ...this.inMemoryVault };
+    }
     try {
       const data = await this.fsImpl.readFile(this.vaultPath, "utf8");
       const parsed = JSON.parse(data) as unknown;
@@ -99,6 +108,10 @@ export class KeyVault {
   }
 
   private async writeVault(vault: VaultMap): Promise<void> {
+    if (process.env.AUDIOMORPH_TEST_MODE === "1") {
+      Object.assign(this.inMemoryVault, vault);
+      return;
+    }
     await this.fsImpl.mkdir(path.dirname(this.vaultPath), { recursive: true });
     const tmpPath = `${this.vaultPath}.tmp`;
     await this.fsImpl.writeFile(tmpPath, JSON.stringify(vault), "utf8");

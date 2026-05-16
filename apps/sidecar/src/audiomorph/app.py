@@ -26,6 +26,9 @@ from .routers.models import router as models_router
 from .routers.openrouter import router as openrouter_router
 from .routers.settings import router as settings_router
 
+# AUDIOMORPH_TEST_MODE hook
+_test_mode_id_counter = 0
+
 def _gpu_info() -> dict[str, Any]:
     try:
         import torch  # pyright: ignore[reportMissingImports]
@@ -50,6 +53,13 @@ def _gpu_info() -> dict[str, Any]:
         }
 
     return {"available": False}
+
+def _generate_id() -> str:
+    global _test_mode_id_counter
+    if os.environ.get("AUDIOMORPH_TEST_MODE") == "1":
+        _test_mode_id_counter += 1
+        return f"test-id-{_test_mode_id_counter}"
+    return str(uuid4())
 
 
 def create_app(auth_token: str = "") -> FastAPI:
@@ -77,7 +87,7 @@ def create_app(auth_token: str = "") -> FastAPI:
 
     @app.middleware("http")
     async def request_logging_middleware(request: Request, call_next: Any) -> JSONResponse:  # pyright: ignore[reportUnusedFunction]
-        request_id = str(uuid4())
+        request_id = _generate_id()
         started = perf_counter()
 
         try:
