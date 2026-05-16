@@ -3,11 +3,23 @@ name = "audiomorph-sidecar"
 version = "0.1.0"
 description = "AudioMorph Studio FastAPI sidecar"
 requires-python = ">=3.12,<3.13"
-dependencies = []
+dependencies = [
+  "platformdirs",
+  "fastapi>=0.115.0",
+  "uvicorn[standard]>=0.30.0",
+  "psutil>=6.0.0",
+]
+
+[project.optional-dependencies]
+dev = [
+  "pytest>=8.0.0",
+]
 
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [tool.uv]
-dev-dependencies = []
+dev-dependencies = [
+  "pytest>=8.0.0",
+]

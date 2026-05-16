@@ -9,7 +9,7 @@ import * as path from "path";
 
 const PYTHON_OUTPUT = path.join(
   __dirname,
-  "../../apps/sidecar/src/audiomorph/schemas.py"
+  "../../../apps/sidecar/src/audiomorph/schemas.py"
 );
 
 const pythonCode = `"""
