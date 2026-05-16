@@ -3,6 +3,11 @@
   "version": "2.0.0",
   "private": true,
   "description": "AudioMorph Studio Electron shell (main process)",
+  "author": {
+    "name": "AudioMorph Studio",
+    "email": "support@audiomorph.studio"
+  },
+  "homepage": "https://github.com/audiomorph/audiomorph-studio",
   "main": "dist/main.js",
   "scripts": {
     "dev": "concurrently -k -n RENDERER,SHELL -c blue,magenta \"pnpm --filter renderer dev\" \"tsx watch src/main.ts\"",

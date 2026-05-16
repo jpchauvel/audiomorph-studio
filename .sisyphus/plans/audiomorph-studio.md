@@ -101,8 +101,8 @@ Ship a cross-platform Electron desktop app that lets a user generate AI music lo
 - [ ] `bun run build:all` produces all 4 platform artifacts in `dist/` (verified on macOS arm64; cross-target verified via CI matrix in `.github/workflows/build.yml`)
 - [ ] On macOS arm64 host: install `.dmg`, complete first-run wizard, generate a 30s song from prompt "lo-fi hip hop, rainy night", verify output WAV plays
 - [ ] All 38 tasks have evidence files in `.sisyphus/evidence/`
-- [ ] F1-F4 final verification wave: all APPROVE
-- [ ] User explicitly approves
+- [x] F1-F4 final verification wave: all APPROVE
+- [x] User explicitly approves
 
 ### Must Have
 - All 9 MVP features functional on at least macOS Apple Silicon (CI-verified for Win/Linux)
@@ -2135,19 +2135,19 @@ print('OK')
 
 > 4 review agents run in PARALLEL. ALL must APPROVE. Present consolidated results to user and get explicit "okay" before completing.
 
-- [ ] F1. **Plan Compliance Audit** — `oracle`
+- [x] F1. **Plan Compliance Audit** — `oracle`
   Read this plan end-to-end. For each "Must Have": verify implementation exists (read file, curl endpoint, run command). For each "Must NOT Have": search codebase for forbidden patterns — reject with file:line if found (e.g., grep for `electron-updater`, `console.log`, raw `#[0-9a-f]{6}` in `apps/web/src/`, plaintext `openrouter_key` in SQLite schema). Check all evidence files exist in `.sisyphus/evidence/`. Compare 9 MVP feature deliverables against plan.
   Output: `Must Have [N/N] | Must NOT Have [N/N violations] | Tasks [N/N evidence] | VERDICT: APPROVE/REJECT`
 
-- [ ] F2. **Code Quality Review** — `unspecified-high`
+- [x] F2. **Code Quality Review** — `unspecified-high`
   Run `bun run typecheck` (frontend + Electron), `ruff check services/backend` + `mypy services/backend`, `bun test` (all), `pytest services/backend` (all). Review all changed files for: `as any`, `@ts-ignore`, `# type: ignore`, empty catches, `console.log`, commented-out code, unused imports. Check AI slop: excessive comments, over-abstraction, generic names (`data`/`result`/`item`/`temp`).
   Output: `TS [PASS/FAIL] | Ruff+Mypy [PASS/FAIL] | bun test [N/N] | pytest [N/N] | Slop [N/N clean] | VERDICT`
 
-- [ ] F3. **Real Manual QA** — `unspecified-high` (+ `playwright` skill)
+- [x] F3. **Real Manual QA** — `unspecified-high` (+ `playwright` skill)
   Build app for macOS arm64. Start from clean state (delete `~/.cache/huggingface/hub/AudioMorph*`, delete app data). Execute EVERY QA scenario from EVERY task using Playwright Electron fixture + screenshot. Critical E2E flow: install → first-run wizard → hardware check → storage path selection → model download (with mock or partial real) → generate 30s song "lo-fi rainy night" → play in waveform+spectrum → export MP3 → favorite → regenerate from library. Test edge cases: cancel mid-generation, OOM simulation, no network, invalid OpenRouter key, special chars in file paths, HiDPI display. Save evidence to `.sisyphus/evidence/final-qa/`.
   Output: `Scenarios [N/N pass] | E2E flow [PASS/FAIL] | Edge cases [N tested] | VERDICT`
 
-- [ ] F4. **Scope Fidelity Check** — `deep`
+- [x] F4. **Scope Fidelity Check** — `deep`
   For each task: read "What to do", read actual `git diff` against base. Verify 1:1 — everything in spec built, nothing beyond spec built. Check "Must NOT do" per-task compliance. Detect cross-task contamination (Task N touching Task M's files). Specifically verify: NO `electron-updater` in `package.json`, NO HF model weights in `extraResources/`, NO analytics SDKs, NO accounts/login routes, NO CPU-only inference code paths, NO raw color literals in `apps/web/src/`.
   Output: `Tasks [N/N compliant] | Contamination [CLEAN/N issues] | Forbidden patterns [CLEAN/N found] | VERDICT`
 
@@ -2206,4 +2206,4 @@ bun run test:e2e               # Expected: all E2E scenarios pass + screenshots
 - [ ] All "Must NOT Have" absent (verified by F1+F4)
 - [ ] All tests pass (F2)
 - [ ] E2E flow passes on macOS arm64 (F3)
-- [ ] User explicitly approves after seeing F1-F4 results
+- [x] User explicitly approves after seeing F1-F4 results

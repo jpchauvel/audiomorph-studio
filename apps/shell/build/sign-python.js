@@ -79,7 +79,8 @@ async function signFile(filePath, entitlementsPath, identity) {
 module.exports = async function signPythonAfterPack(context) {
   const identity = process.env.CSC_NAME;
   if (!identity) {
-    throw new Error("CSC_NAME is required for signing python resources");
+    console.log("CSC_NAME not set, skipping Python resource signing");
+    return;
   }
 
   const pythonDir = path.join(context.appOutDir, "Contents", "Resources", "python");

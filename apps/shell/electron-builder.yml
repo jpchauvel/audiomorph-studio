@@ -14,14 +14,16 @@ extraResources:
     filter:
       - "**/*"
 asar: true
+nodeGypRebuild: false
+npmRebuild: false
+afterPack: build/sign-python.js
 mac:
   category: public.app-category.music
   hardenedRuntime: true
   gatekeeperAssess: false
   entitlements: build/entitlements.mac.plist
   entitlementsInherit: build/entitlements.mac.plist
-  notarize: true
-  afterPack: build/sign-python.js
+  notarize: false
   target:
     - target: dmg
       arch:
@@ -63,6 +65,7 @@ deb:
     - libatk-bridge2.0-0
     - libgbm1
   afterInstall: build/postinst.sh
+  artifactName: audiomorph-studio_${version}_${arch}.deb
 nsis:
   oneClick: false
   allowToChangeInstallationDirectory: true

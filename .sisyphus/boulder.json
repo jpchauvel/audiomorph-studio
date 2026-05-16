@@ -6,14 +6,26 @@
     "ses_1ce4ce81effeIlHG5KHk0m2nwu",
     "ses_1ce4caff7ffeixBk4nlUHPkP6N",
     "ses_1ce4c708affe7oqKEh2EfjhspH",
-    "ses_1ce4c125efferPL54947schq0q"
+    "ses_1ce4c125efferPL54947schq0q",
+    "ses_1ce354270ffeTbuayUutTXGD3J",
+    "ses_1ce35046affeMZW3t6F50IkTCV",
+    "ses_1ce33f53affeZd2gpI6CsfFMS2",
+    "ses_1ce2f5345ffe7Gd54sn09x9z5O",
+    "ses_1ce2f1ef2ffe65y76RoEFSFFn0",
+    "ses_1ce2ed7aaffeqbJGn9v2v4pB4u"
   ],
   "session_origins": {
     "ses_1cef35312ffeupqA90Up40ilE2": "direct",
     "ses_1ce4ce81effeIlHG5KHk0m2nwu": "appended",
     "ses_1ce4caff7ffeixBk4nlUHPkP6N": "appended",
     "ses_1ce4c708affe7oqKEh2EfjhspH": "appended",
-    "ses_1ce4c125efferPL54947schq0q": "appended"
+    "ses_1ce4c125efferPL54947schq0q": "appended",
+    "ses_1ce354270ffeTbuayUutTXGD3J": "appended",
+    "ses_1ce35046affeMZW3t6F50IkTCV": "appended",
+    "ses_1ce33f53affeZd2gpI6CsfFMS2": "appended",
+    "ses_1ce2f5345ffe7Gd54sn09x9z5O": "appended",
+    "ses_1ce2f1ef2ffe65y76RoEFSFFn0": "appended",
+    "ses_1ce2ed7aaffeqbJGn9v2v4pB4u": "appended"
   },
   "plan_name": "audiomorph-studio",
   "agent": "atlas",
@@ -22,10 +34,9 @@
       "task_key": "final-wave:f1",
       "task_label": "F1",
       "task_title": "**Plan Compliance Audit** — `oracle`",
-      "session_id": "ses_1ce3e4fa6ffe61bo7HhEAqKFJw",
-      "agent": "Sisyphus-Junior",
-      "category": "deep",
-      "updated_at": "2026-05-16T17:15:15.626Z"
+      "session_id": "ses_1ce2cecceffe0GU3bom9jndH0c",
+      "agent": "oracle",
+      "updated_at": "2026-05-16T17:27:33.946Z"
     }
   }
 }

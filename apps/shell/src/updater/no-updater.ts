@@ -20,6 +20,8 @@ function makeNoop(): Promise<AutoUpdaterNoopResult> {
 }
 
 export function disableAutoUpdater(): void {
+  if (!autoUpdater) return;
+
   const guardedUpdater = autoUpdater as typeof autoUpdater & {
     autoDownload: boolean;
     autoInstallOnAppQuit: boolean;

@@ -11,7 +11,7 @@
     "lint": "eslint . --ext .ts,.tsx",
     "format": "prettier --write .",
     "typecheck": "tsc --noEmit -p tsconfig.base.json",
-    "test:ts": "vitest run --reporter=junit --outputFile=.test-results/vitest.xml",
+    "test:ts": "pnpm -r --filter './apps/*' --filter './packages/*' run test",
     "test:py": "cd apps/sidecar && python3 -m pytest",
     "test": "pnpm test:ts && pnpm test:py",
     "dev": "pnpm --filter @audiomorph/shell dev",

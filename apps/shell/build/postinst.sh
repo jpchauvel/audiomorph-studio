@@ -6,9 +6,6 @@ set -euo pipefail
 # Verifies that an NVIDIA GPU driver is present via nvidia-smi.
 # Aborts installation if missing.
 
-RED='\033[0;31m'
-NC='\033[0m'
-
 find_nvidia_smi() {
   if command -v nvidia-smi >/dev/null 2>&1; then
     echo "nvidia-smi"
@@ -26,12 +23,12 @@ find_nvidia_smi() {
 }
 
 if ! NVIDIA_SMI=$(find_nvidia_smi); then
-  printf "${RED}NVIDIA GPU required for AudioMorph Studio${NC}\n" >&2
+  printf '\033[0;31mNVIDIA GPU required for AudioMorph Studio\033[0m\n' >&2
   exit 1
 fi
 
-if ! "${NVIDIA_SMI}" >/dev/null 2>&1; then
-  printf "${RED}NVIDIA GPU required for AudioMorph Studio${NC}\n" >&2
+if ! "$NVIDIA_SMI" >/dev/null 2>&1; then
+  printf '\033[0;31mNVIDIA GPU required for AudioMorph Studio\033[0m\n' >&2
   exit 1
 fi
 

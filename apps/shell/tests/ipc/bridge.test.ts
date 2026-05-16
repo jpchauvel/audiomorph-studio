@@ -94,7 +94,7 @@ describe("IPC bridge", () => {
     });
   });
 
-  it("api:request proxies with Authorization token and returns status/body", async () => {
+  it("api:request proxies with X-Audiomorph-Token header and returns status/body", async () => {
     mocks.fetch.mockResolvedValueOnce(createJsonResponse({ ok: true }, { status: 201 }));
     const handler = mocks.handlers.get("api:request");
     expect(handler).toBeDefined();
@@ -108,7 +108,7 @@ describe("IPC bridge", () => {
     const [url, init] = mocks.fetch.mock.calls[0] as [string, RequestInit];
     expect(url).toBe("http://127.0.0.1:40123/jobs");
     expect(init.headers).toMatchObject({
-      Authorization: "Bearer super-secret-token",
+      "X-Audiomorph-Token": "super-secret-token",
       "Content-Type": "application/json",
     });
     expect(out).toEqual({ status: 201, body: { ok: true } });
