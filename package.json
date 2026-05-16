@@ -7,7 +7,7 @@
     "lint": "eslint . --ext .ts,.tsx",
     "format": "prettier --write .",
     "typecheck": "tsc --noEmit -p tsconfig.base.json",
-    "test:ts": "vitest run",
+    "test:ts": "vitest run --reporter=junit --outputFile=.test-results/vitest.xml",
     "test:py": "cd apps/sidecar && python3 -m pytest",
     "test": "pnpm test:ts && pnpm test:py"
   }

@@ -12,7 +12,11 @@ describe('Platform paths', () => {
   const originalEnv = process.env.AUDIOMORPH_DATA_DIR;
 
   afterEach(() => {
-    process.env.AUDIOMORPH_DATA_DIR = originalEnv;
+    if (originalEnv === undefined) {
+      delete process.env.AUDIOMORPH_DATA_DIR;
+    } else {
+      process.env.AUDIOMORPH_DATA_DIR = originalEnv;
+    }
   });
 
   it('getPlatform returns valid platform string', () => {
@@ -29,7 +33,8 @@ describe('Platform paths', () => {
   it('getUserDataDir on darwin contains Application Support', () => {
     if (process.platform === 'darwin') {
       const dir = getUserDataDir();
-      expect(dir).toContain('Application Support');
+      expect(dir.length).toBeGreaterThan(0);
+      expect(dir.includes('Application Support')).toBe(true);
     }
   });
 
