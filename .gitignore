@@ -1,7 +1,6 @@
 # Dependencies
 node_modules/
 .pnpm-store/
-pnpm-lock.yaml
 
 # Build outputs
 dist/
@@ -21,9 +20,16 @@ yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
 
-# Test results
+# Test results & reports
 .test-results/
-
+**/test-results/
+**/playwright-report/
+**/blob-report/
+coverage/
+.nyc_output/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
 
 # Python
 __pycache__/
@@ -42,9 +48,15 @@ env/
 *.swo
 *~
 .DS_Store
+Thumbs.db
 
-# Sisyphus
-.sisyphus/evidence/
+# Sisyphus (root only; nested project notes under apps/ may be tracked)
+/.sisyphus/evidence/
+**/.sisyphus/evidence/
 
-# Release
+# Release artifacts
 release/
+
+# Local security scan reports
+*.gitleaks.json
+bandit-report.*
