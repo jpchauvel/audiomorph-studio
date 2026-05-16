@@ -1,0 +1,7 @@
+Task: P0.4 mmgp decision evidence
+Decision: skip mmgp integration (do not vendor) for adapter phase.
+Evidence points from source review:
+1) No mmgp import or symbol usage in heartlib/src/heartlib/**/*.py
+2) No mmgp dependency in heartlib/pyproject.toml
+3) Existing memory management already in HeartMuLaGenPipeline via lazy_load, unload, gc.collect(), torch.cuda.empty_cache(), and split device placement.
+Replacement approach: use existing lazy_load + device/dtype knobs in adapter; revisit external memory manager only if profiling proves necessary.

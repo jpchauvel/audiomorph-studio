@@ -1,0 +1,7 @@
+Task: P0.4 doc coverage verification
+Doc file: /Users/hellhound/projects/mine/audiomorph-studio/docs/heartlib-api-surface.md
+Pattern count [generate_music|MusicGen|music_generation]: 4
+Pattern count [HeartMuLa/]: 9
+Required thresholds: >=3 for both
+PASS_music_pattern: True
+PASS_hf_pattern: True
