@@ -1,0 +1,86 @@
+default_install_hook_types: [pre-commit, pre-push]
+default_stages: [pre-commit]
+
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v5.0.0
+    hooks:
+      - id: trailing-whitespace
+        exclude: \.snap$|\.svg$|\.lock$|^heartlib/
+      - id: end-of-file-fixer
+        exclude: \.snap$|\.svg$|\.lock$|^heartlib/
+      - id: check-yaml
+        exclude: ^heartlib/
+      - id: check-toml
+        exclude: ^heartlib/
+      - id: check-json
+        exclude: tsconfig.*\.json$|\.vscode/|^heartlib/
+      - id: check-added-large-files
+        args: [--maxkb=1024]
+        exclude: ^heartlib/|^apps/(shell|renderer)/\.sisyphus/evidence/
+      - id: check-merge-conflict
+      - id: mixed-line-ending
+        args: [--fix=lf]
+
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.14.0
+    hooks:
+      - id: ruff
+        args: [--config=apps/sidecar/ruff.toml, --fix]
+        files: ^apps/sidecar/.*\.py$
+      - id: ruff-format
+        args: [--config=apps/sidecar/ruff.toml]
+        files: ^apps/sidecar/.*\.py$
+
+  - repo: https://github.com/gitleaks/gitleaks
+    rev: v8.21.2
+    hooks:
+      - id: gitleaks
+        args: [--config=.gitleaks.toml]
+
+  - repo: local
+    hooks:
+      - id: prettier
+        name: prettier
+        entry: pnpm exec prettier --write
+        language: system
+        files: \.(ts|tsx|js|jsx|json|md|yml|yaml|css)$
+        exclude: ^heartlib/|/dist/|/\.next/|/node_modules/|pnpm-lock\.yaml$
+
+      - id: eslint
+        name: eslint
+        entry: pnpm exec eslint --fix
+        language: system
+        files: \.(ts|tsx)$
+        exclude: ^heartlib/|/dist/|/\.next/|/node_modules/
+
+      - id: typecheck-ts
+        name: typecheck (tsc)
+        entry: pnpm typecheck
+        language: system
+        pass_filenames: false
+        stages: [pre-push]
+        files: \.(ts|tsx)$
+
+      - id: mypy
+        name: mypy (sidecar strict)
+        entry: bash -c 'cd apps/sidecar && python3 -m mypy src'
+        language: system
+        pass_filenames: false
+        stages: [pre-push]
+        files: ^apps/sidecar/.*\.py$
+
+      - id: bandit
+        name: bandit (sidecar security)
+        entry: bash -c 'cd apps/sidecar && python3 -m bandit -c pyproject.toml -r src'
+        language: system
+        pass_filenames: false
+        stages: [pre-push]
+        files: ^apps/sidecar/.*\.py$
+
+      - id: test-fast
+        name: test:fast (component + sidecar unit)
+        entry: pnpm test:fast
+        language: system
+        pass_filenames: false
+        stages: [pre-push]
