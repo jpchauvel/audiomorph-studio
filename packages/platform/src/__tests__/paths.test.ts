@@ -20,33 +20,38 @@ describe('Platform paths', () => {
     expect(['darwin-arm64', 'darwin-x64', 'win32-x64', 'linux-x64']).toContain(platform);
   });
 
+  it('getUserDataDir returns a string', () => {
+    const dir = getUserDataDir();
+    expect(typeof dir).toBe('string');
+    expect(dir.length).toBeGreaterThan(0);
+  });
+
   it('getUserDataDir on darwin contains Application Support', () => {
     if (process.platform === 'darwin') {
       const dir = getUserDataDir();
-      expect(dir).toBeTruthy();
-      expect(dir).toMatch(/Application Support/);
+      expect(dir).toContain('Application Support');
     }
   });
 
   it('getModelsDir is subdirectory of getUserDataDir', () => {
     const userDir = getUserDataDir();
     const modelsDir = getModelsDir();
-    expect(modelsDir).toMatch(new RegExp(userDir.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));
-    expect(modelsDir).toMatch(/models/);
+    expect(modelsDir.startsWith(userDir)).toBe(true);
+    expect(modelsDir).toContain('models');
   });
 
   it('getLogsDir is subdirectory of getUserDataDir', () => {
     const userDir = getUserDataDir();
     const logsDir = getLogsDir();
-    expect(logsDir).toMatch(new RegExp(userDir.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));
-    expect(logsDir).toMatch(/logs/);
+    expect(logsDir.startsWith(userDir)).toBe(true);
+    expect(logsDir).toContain('logs');
   });
 
   it('getCacheDir is subdirectory of getUserDataDir', () => {
     const userDir = getUserDataDir();
     const cacheDir = getCacheDir();
-    expect(cacheDir).toMatch(new RegExp(userDir.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));
-    expect(cacheDir).toMatch(/cache/);
+    expect(cacheDir.startsWith(userDir)).toBe(true);
+    expect(cacheDir).toContain('cache');
   });
 
   it('getDefaultModelsDir equals getModelsDir', () => {

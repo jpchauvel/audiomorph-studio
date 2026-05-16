@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import os
 import secrets
+import select
 import subprocess
 import sys
 import time
@@ -48,7 +49,11 @@ def test_sidecar_lifecycle() -> None:
     os.close(write_fd)
 
     try:
+        ready, _, _ = select.select([read_fd], [], [], 5)
+        assert ready, "Timed out waiting for handshake"
+
         handshake_raw = os.read(read_fd, 4096).decode("utf-8").strip()
+        assert handshake_raw, "Missing handshake payload"
         handshake = json.loads(handshake_raw)
 
         port = int(handshake["port"])
@@ -71,9 +76,13 @@ def test_sidecar_lifecycle() -> None:
         else:
             raise AssertionError("Sidecar failed to serve /healthz")
 
-        status, body = _get_json(url)
-        assert status == 200
-        assert body["ok"] is True
+        status, body = _get_json(f"http://127.0.0.1:{port}/missing")
+        assert status == 401
+        assert body == {
+            "code": "KEY_VAULT_ERROR",
+            "message": "Unauthorized",
+            "retriable": False,
+        }
     finally:
         os.close(read_fd)
         proc.terminate()
