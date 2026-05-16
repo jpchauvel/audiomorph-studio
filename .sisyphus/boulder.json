@@ -1,42 +1,23 @@
 {
-  "active_plan": "/Users/hellhound/projects/mine/audiomorph-studio/.sisyphus/plans/audiomorph-studio.md",
-  "started_at": "2026-05-16T13:49:34.875Z",
+  "active_plan": "/Users/hellhound/projects/mine/audiomorph-studio/.sisyphus/plans/testing-integration-e2e.md",
+  "started_at": "2026-05-16T19:08:23.349Z",
   "session_ids": [
-    "ses_1cef35312ffeupqA90Up40ilE2",
-    "ses_1ce4ce81effeIlHG5KHk0m2nwu",
-    "ses_1ce4caff7ffeixBk4nlUHPkP6N",
-    "ses_1ce4c708affe7oqKEh2EfjhspH",
-    "ses_1ce4c125efferPL54947schq0q",
-    "ses_1ce354270ffeTbuayUutTXGD3J",
-    "ses_1ce35046affeMZW3t6F50IkTCV",
-    "ses_1ce33f53affeZd2gpI6CsfFMS2",
-    "ses_1ce2f5345ffe7Gd54sn09x9z5O",
-    "ses_1ce2f1ef2ffe65y76RoEFSFFn0",
-    "ses_1ce2ed7aaffeqbJGn9v2v4pB4u"
+    "ses_1cef35312ffeupqA90Up40ilE2"
   ],
   "session_origins": {
-    "ses_1cef35312ffeupqA90Up40ilE2": "direct",
-    "ses_1ce4ce81effeIlHG5KHk0m2nwu": "appended",
-    "ses_1ce4caff7ffeixBk4nlUHPkP6N": "appended",
-    "ses_1ce4c708affe7oqKEh2EfjhspH": "appended",
-    "ses_1ce4c125efferPL54947schq0q": "appended",
-    "ses_1ce354270ffeTbuayUutTXGD3J": "appended",
-    "ses_1ce35046affeMZW3t6F50IkTCV": "appended",
-    "ses_1ce33f53affeZd2gpI6CsfFMS2": "appended",
-    "ses_1ce2f5345ffe7Gd54sn09x9z5O": "appended",
-    "ses_1ce2f1ef2ffe65y76RoEFSFFn0": "appended",
-    "ses_1ce2ed7aaffeqbJGn9v2v4pB4u": "appended"
+    "ses_1cef35312ffeupqA90Up40ilE2": "direct"
   },
-  "plan_name": "audiomorph-studio",
+  "plan_name": "testing-integration-e2e",
   "agent": "atlas",
   "task_sessions": {
-    "final-wave:f1": {
-      "task_key": "final-wave:f1",
-      "task_label": "F1",
-      "task_title": "**Plan Compliance Audit** — `oracle`",
-      "session_id": "ses_1ce2cecceffe0GU3bom9jndH0c",
-      "agent": "oracle",
-      "updated_at": "2026-05-16T17:27:33.946Z"
+    "todo:1": {
+      "task_key": "todo:1",
+      "task_label": "1",
+      "task_title": "**Scaffold `packages/test-helpers/` workspace package**",
+      "session_id": "ses_1cdce08a1ffekY9fLz7BmjnIdX",
+      "agent": "Sisyphus-Junior",
+      "category": "quick",
+      "updated_at": "2026-05-16T19:11:26.615Z"
     }
   }
 }
