@@ -1,14 +1,13 @@
 from __future__ import annotations
 
 # pyright: reportMissingImports=false, reportUnknownVariableType=false, reportUnknownMemberType=false, reportUnknownArgumentType=false, reportUnknownParameterType=false
-
 import asyncio
 from collections.abc import AsyncIterator
 from typing import Any
 
-import httpx
 from fastapi import APIRouter, Request
 from fastapi.responses import JSONResponse, StreamingResponse
+import httpx
 
 from audiomorph._errors import ApiError
 from audiomorph._logging import get_logger
@@ -60,11 +59,9 @@ async def _post_with_retry(
                     )
             except httpx.TimeoutException as exc:
                 last_exc = exc
-                _logger.warning(
-                    "openrouter_timeout", attempt=attempt + 1
-                )
+                _logger.warning("openrouter_timeout", attempt=attempt + 1)
                 if attempt < _MAX_RETRIES:
-                    await asyncio.sleep(_RETRY_BACKOFF_BASE * (2 ** attempt))
+                    await asyncio.sleep(_RETRY_BACKOFF_BASE * (2**attempt))
                     continue
                 await client.aclose()
                 raise ApiError(
@@ -81,10 +78,10 @@ async def _post_with_retry(
                 )
                 if stream:
                     await response.aclose()
-                await asyncio.sleep(_RETRY_BACKOFF_BASE * (2 ** attempt))
+                await asyncio.sleep(_RETRY_BACKOFF_BASE * (2**attempt))
                 continue
 
-            response.extensions["_openrouter_client"] = client  # type: ignore[index]
+            response.extensions["_openrouter_client"] = client
             return response
 
         await client.aclose()
@@ -171,6 +168,7 @@ async def openrouter_chat(request: Request) -> Any:
         )
 
     if stream:
+
         async def _iter() -> AsyncIterator[bytes]:
             try:
                 async for chunk in response.aiter_bytes():

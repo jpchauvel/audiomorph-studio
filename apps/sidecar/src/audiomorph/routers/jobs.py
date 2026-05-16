@@ -1,10 +1,9 @@
 from __future__ import annotations
 
 # pyright: reportMissingImports=false, reportUnknownVariableType=false
-
 import asyncio
-import json
 from collections.abc import AsyncGenerator
+import json
 from typing import Any
 from uuid import uuid4
 
@@ -12,17 +11,22 @@ from fastapi import APIRouter, Response
 
 try:
     from sse_starlette.sse import EventSourceResponse
-except Exception:  # pragma: no cover - fallback when dependency not installed yet
+except (
+    Exception
+):  # pragma: no cover - fallback when dependency not installed yet
     from starlette.responses import StreamingResponse
 
     class EventSourceResponse(StreamingResponse):  # type: ignore[no-redef]
-        def __init__(self, generator: AsyncGenerator[dict[str, object], None]):
+        def __init__(
+            self, generator: AsyncGenerator[dict[str, object], None]
+        ):
             async def _encode() -> AsyncGenerator[str, None]:
                 async for item in generator:
                     payload = json.dumps(item.get("data", {}))
                     yield f"event: {item.get('event', 'message')}\ndata: {payload}\n\n"
 
             super().__init__(_encode(), media_type="text/event-stream")
+
 
 from audiomorph._errors import ApiError
 from audiomorph.generation import get_engine
@@ -37,7 +41,11 @@ _JOB_TASKS: dict[str, asyncio.Task[None]] = {}
 
 
 def _not_found(job_id: str) -> ApiError:
-    return ApiError(code="JOB_NOT_FOUND", message=f"Unknown job: {job_id}", retriable=False)
+    return ApiError(
+        code="JOB_NOT_FOUND",
+        message=f"Unknown job: {job_id}",
+        retriable=False,
+    )
 
 
 def _job_state(job_id: str) -> dict[str, Any]:
@@ -118,7 +126,11 @@ async def stream_job_events(job_id: str) -> EventSourceResponse:
 
     async def _events() -> AsyncGenerator[dict[str, Any], None]:
         queue = _JOB_EVENTS[job_id]
-        terminal = {JobStatus.completed.value, JobStatus.failed.value, JobStatus.cancelled.value}
+        terminal = {
+            JobStatus.completed.value,
+            JobStatus.failed.value,
+            JobStatus.cancelled.value,
+        }
         while True:
             item = await queue.get()
             if item["event"] != "terminal":

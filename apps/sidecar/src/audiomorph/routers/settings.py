@@ -52,7 +52,10 @@ def _coerce_read(key: str, raw: str | None) -> Any:
 def _is_absolute_path(value: str) -> bool:
     if not value:
         return False
-    return PurePosixPath(value).is_absolute() or PureWindowsPath(value).is_absolute()
+    return (
+        PurePosixPath(value).is_absolute()
+        or PureWindowsPath(value).is_absolute()
+    )
 
 
 def _validate_value(key: str, value: Any) -> str:
@@ -100,7 +103,10 @@ def _validate_value(key: str, value: Any) -> str:
 @router.get("/settings")
 async def read_settings() -> dict[str, Any]:
     with session_scope() as session:
-        return {key: _coerce_read(key, repo.get_setting(session, key)) for key in ALL_KEYS}
+        return {
+            key: _coerce_read(key, repo.get_setting(session, key))
+            for key in ALL_KEYS
+        }
 
 
 @router.put("/settings/{key}")

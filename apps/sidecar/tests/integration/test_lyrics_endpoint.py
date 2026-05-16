@@ -12,9 +12,7 @@ def test_openrouter_chat_routed_through_stub(
 ) -> None:
     from audiomorph.routers import openrouter as or_router
 
-    monkeypatch.setattr(
-        or_router, "OPENROUTER_URL", openrouter_stub["url"]
-    )
+    monkeypatch.setattr(or_router, "OPENROUTER_URL", openrouter_stub["url"])
 
     payload = {
         "model": "openai/gpt-4o-mini",
@@ -39,12 +37,16 @@ def test_openrouter_chat_routed_through_stub(
     assert auth_hdr == f"Bearer {PLANTED_KEY}"
 
 
-def test_openrouter_chat_requires_key_header(app_client, auth_headers) -> None:
+def test_openrouter_chat_requires_key_header(
+    app_client, auth_headers
+) -> None:
     payload = {
         "model": "openai/gpt-4o-mini",
         "messages": [{"role": "user", "content": "hi"}],
     }
-    resp = app_client.post("/openrouter/chat", json=payload, headers=auth_headers)
+    resp = app_client.post(
+        "/openrouter/chat", json=payload, headers=auth_headers
+    )
     assert resp.status_code == 422
 
 

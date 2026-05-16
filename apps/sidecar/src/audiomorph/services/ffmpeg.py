@@ -67,8 +67,10 @@ async def convert(
         ) from exc
 
     try:
-        _, stderr = await asyncio.wait_for(proc.communicate(), timeout=_TIMEOUT_SECONDS)
-    except asyncio.TimeoutError as exc:
+        _, stderr = await asyncio.wait_for(
+            proc.communicate(), timeout=_TIMEOUT_SECONDS
+        )
+    except TimeoutError as exc:
         try:
             proc.kill()
         except ProcessLookupError:

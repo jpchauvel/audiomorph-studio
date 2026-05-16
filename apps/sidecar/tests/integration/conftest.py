@@ -1,16 +1,15 @@
 from __future__ import annotations
 
-# pyright: reportMissingImports=false, reportUnknownVariableType=false, reportUnknownMemberType=false, reportUnknownArgumentType=false, reportUnknownParameterType=false
-
-import json
-import os
-import socket
-import sys
-import threading
+from collections.abc import Callable, Iterator
 from datetime import UTC, datetime
 from http.server import BaseHTTPRequestHandler, HTTPServer
+
+# pyright: reportMissingImports=false, reportUnknownVariableType=false, reportUnknownMemberType=false, reportUnknownArgumentType=false, reportUnknownParameterType=false
+import json
 from pathlib import Path
-from typing import Any, Callable, Iterator
+import sys
+import threading
+from typing import Any
 
 import pytest
 
@@ -35,7 +34,9 @@ def auth_headers() -> dict[str, str]:
 
 
 @pytest.fixture
-def sqlite_db(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Iterator[str]:
+def sqlite_db(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> Iterator[str]:
     data_dir = tmp_path / "data"
     data_dir.mkdir(parents=True, exist_ok=True)
     monkeypatch.setenv("AUDIOMORPH_DATA_DIR", str(data_dir))
@@ -89,7 +90,9 @@ class _StubHandler(BaseHTTPRequestHandler):
 
 
 @pytest.fixture
-def openrouter_stub(monkeypatch: pytest.MonkeyPatch) -> Iterator[dict[str, Any]]:
+def openrouter_stub(
+    monkeypatch: pytest.MonkeyPatch,
+) -> Iterator[dict[str, Any]]:
     fixture = FIXTURES / "openrouter" / "chat-response.json"
     body = fixture.read_bytes()
     recorded: list[dict[str, Any]] = []
@@ -120,7 +123,9 @@ def openrouter_stub(monkeypatch: pytest.MonkeyPatch) -> Iterator[dict[str, Any]]
 
 
 @pytest.fixture
-def stub_musicgen(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> Callable[[], list[dict[str, Any]]]:
+def stub_musicgen(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> Callable[[], list[dict[str, Any]]]:
     """Monkeypatch GenerationEngine.generate to write a stub WAV and record calls."""
     from audiomorph.generation import engine as gen_engine
     from audiomorph.schemas import GenerationRequest, GenerationResult
@@ -139,9 +144,15 @@ def stub_musicgen(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> Callable[[
     ) -> GenerationResult:
         out_path = output_dir / f"{job_id}.wav"
         out_path.write_bytes(audio_bytes)
-        progress_cb({"step": 1, "total_steps": 2, "eta_s": 0.1, "phase": "encoding"})
-        progress_cb({"step": 2, "total_steps": 2, "eta_s": 0.0, "phase": "finalizing"})
-        calls.append({"job_id": job_id, "prompt": req.prompt, "model_id": req.model_id})
+        progress_cb(
+            {"step": 1, "total_steps": 2, "eta_s": 0.1, "phase": "encoding"}
+        )
+        progress_cb(
+            {"step": 2, "total_steps": 2, "eta_s": 0.0, "phase": "finalizing"}
+        )
+        calls.append(
+            {"job_id": job_id, "prompt": req.prompt, "model_id": req.model_id}
+        )
         return GenerationResult(
             job_id=job_id,
             file_path=str(out_path),
@@ -153,12 +164,16 @@ def stub_musicgen(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> Callable[[
             created_at=datetime.now(UTC).isoformat(),
         )
 
-    monkeypatch.setattr(gen_engine.GenerationEngine, "generate", fake_generate)
+    monkeypatch.setattr(
+        gen_engine.GenerationEngine, "generate", fake_generate
+    )
     return lambda: calls
 
 
 @pytest.fixture
-def stub_whisper(monkeypatch: pytest.MonkeyPatch) -> Callable[[], list[dict[str, Any]]]:
+def stub_whisper(
+    monkeypatch: pytest.MonkeyPatch,
+) -> Callable[[], list[dict[str, Any]]]:
     """Monkeypatch TranscriptionEngine.transcribe."""
     from audiomorph.lyrics import engine as lyr_engine
     from audiomorph.schemas import LyricsResult, LyricsSegment
@@ -171,8 +186,17 @@ def stub_whisper(monkeypatch: pytest.MonkeyPatch) -> Callable[[], list[dict[str,
         job_id: str,
         progress_cb: Callable[[dict[str, Any]], None],
     ) -> LyricsResult:
-        progress_cb({"step": 1, "total_steps": 2, "eta_s": 0.1, "phase": "transcribing"})
-        progress_cb({"step": 2, "total_steps": 2, "eta_s": 0.0, "phase": "finalizing"})
+        progress_cb(
+            {
+                "step": 1,
+                "total_steps": 2,
+                "eta_s": 0.1,
+                "phase": "transcribing",
+            }
+        )
+        progress_cb(
+            {"step": 2, "total_steps": 2, "eta_s": 0.0, "phase": "finalizing"}
+        )
         calls.append({"job_id": job_id, "audio_path": audio_path})
         return LyricsResult(
             text="hello this is a test recording",
@@ -182,7 +206,9 @@ def stub_whisper(monkeypatch: pytest.MonkeyPatch) -> Callable[[], list[dict[str,
             ],
         )
 
-    monkeypatch.setattr(lyr_engine.TranscriptionEngine, "transcribe", fake_transcribe)
+    monkeypatch.setattr(
+        lyr_engine.TranscriptionEngine, "transcribe", fake_transcribe
+    )
     return lambda: calls
 
 

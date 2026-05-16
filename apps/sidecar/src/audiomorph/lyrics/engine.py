@@ -1,10 +1,9 @@
 from __future__ import annotations
 
 # pyright: reportMissingImports=false, reportUnknownVariableType=false, reportUnknownMemberType=false, reportUnknownArgumentType=false, reportUnknownParameterType=false
-
 import asyncio
-import os
 from collections.abc import Callable
+import os
 from pathlib import Path
 from typing import Any
 
@@ -17,8 +16,12 @@ SUPPORTED_EXTS = {".wav", ".mp3", ".flac", ".ogg", ".m4a"}
 MAX_DURATION_SECONDS = 600
 
 
-def _api_error(*, code: str, message: str, retriable: bool, hint: str | None = None) -> ApiError:
-    return ApiError(code=code, message=message, retriable=retriable, hint=hint)
+def _api_error(
+    *, code: str, message: str, retriable: bool, hint: str | None = None
+) -> ApiError:
+    return ApiError(
+        code=code, message=message, retriable=retriable, hint=hint
+    )
 
 
 class TranscriptionEngine:
@@ -86,7 +89,10 @@ class TranscriptionEngine:
     def _pick_device(self) -> tuple[Any, Any, Any]:
         import torch
 
-        if getattr(torch.backends, "mps", None) and torch.backends.mps.is_available():
+        if (
+            getattr(torch.backends, "mps", None)
+            and torch.backends.mps.is_available()
+        ):
             return torch.device("mps"), torch.float16, torch
         if torch.cuda.is_available():
             return torch.device("cuda"), torch.float16, torch
@@ -99,7 +105,9 @@ class TranscriptionEngine:
             )
         return torch.device("cpu"), torch.float32, torch
 
-    def _ensure_pipeline(self, model_root: Path, device: Any, dtype: Any) -> Any:
+    def _ensure_pipeline(
+        self, model_root: Path, device: Any, dtype: Any
+    ) -> Any:
         if self._pipe is not None:
             return self._pipe
         from heartlib import HeartTranscriptorPipeline
@@ -151,14 +159,27 @@ class TranscriptionEngine:
 
         def progress(step: int, total: int, eta_s: float, phase: str) -> None:
             if cancel_event.is_set():
-                raise _api_error(code="CANCELLED", message="Transcription cancelled", retriable=False)
-            progress_cb({"step": step, "total_steps": total, "eta_s": eta_s, "phase": phase})
+                raise _api_error(
+                    code="CANCELLED",
+                    message="Transcription cancelled",
+                    retriable=False,
+                )
+            progress_cb(
+                {
+                    "step": step,
+                    "total_steps": total,
+                    "eta_s": eta_s,
+                    "phase": phase,
+                }
+            )
 
         async with self._transcription_lock:
             from audiomorph.paths import get_models_dir
 
             device, dtype, _torch = self._pick_device()
-            model_root = get_models_dir() / "HeartMuLa" / "HeartTranscriptor-oss"
+            model_root = (
+                get_models_dir() / "HeartMuLa" / "HeartTranscriptor-oss"
+            )
 
             progress(1, 3, 2.0, "loading")
             pipe = self._ensure_pipeline(model_root, device, dtype)
@@ -183,7 +204,11 @@ class TranscriptionEngine:
                 raise
 
             if cancel_event.is_set():
-                raise _api_error(code="CANCELLED", message="Transcription cancelled", retriable=False)
+                raise _api_error(
+                    code="CANCELLED",
+                    message="Transcription cancelled",
+                    retriable=False,
+                )
 
             progress(3, 3, 0.0, "finalizing")
             return self._normalize_result(raw)

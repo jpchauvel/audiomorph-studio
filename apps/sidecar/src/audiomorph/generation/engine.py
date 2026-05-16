@@ -1,12 +1,11 @@
 from __future__ import annotations
 
 # pyright: reportMissingImports=false, reportUnknownVariableType=false, reportUnknownMemberType=false, reportUnknownArgumentType=false, reportUnknownParameterType=false
-
 import asyncio
 import contextlib
+from datetime import UTC, datetime
 import gc
 import os
-from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -16,8 +15,12 @@ from audiomorph.paths import get_jobs_dir, get_models_dir
 from audiomorph.schemas import GenerationRequest, GenerationResult
 
 
-def _api_error(*, code: str, message: str, retriable: bool, hint: str | None = None) -> ApiError:
-    return ApiError(code=code, message=message, retriable=retriable, hint=hint)
+def _api_error(
+    *, code: str, message: str, retriable: bool, hint: str | None = None
+) -> ApiError:
+    return ApiError(
+        code=code, message=message, retriable=retriable, hint=hint
+    )
 
 
 class GenerationEngine:
@@ -41,13 +44,29 @@ class GenerationEngine:
 
     def _validate(self, req: GenerationRequest) -> None:
         if len(req.prompt) > 2000:
-            raise _api_error(code="VALIDATION_ERROR", message="prompt exceeds 2000 chars", retriable=False)
+            raise _api_error(
+                code="VALIDATION_ERROR",
+                message="prompt exceeds 2000 chars",
+                retriable=False,
+            )
         if len(req.lyrics) > 4000:
-            raise _api_error(code="VALIDATION_ERROR", message="lyrics exceeds 4000 chars", retriable=False)
+            raise _api_error(
+                code="VALIDATION_ERROR",
+                message="lyrics exceeds 4000 chars",
+                retriable=False,
+            )
         if req.duration_seconds > 240:
-            raise _api_error(code="VALIDATION_ERROR", message="duration_seconds exceeds 240", retriable=False)
+            raise _api_error(
+                code="VALIDATION_ERROR",
+                message="duration_seconds exceeds 240",
+                retriable=False,
+            )
         if req.seed < -2147483648 or req.seed > 2147483647:
-            raise _api_error(code="VALIDATION_ERROR", message="seed out of int32 range", retriable=False)
+            raise _api_error(
+                code="VALIDATION_ERROR",
+                message="seed out of int32 range",
+                retriable=False,
+            )
 
     def _resolve_model_root(self, model_id: str) -> Path:
         model_root = (get_models_dir() / model_id).resolve()
@@ -71,12 +90,21 @@ class GenerationEngine:
     def _pick_device(self) -> tuple[dict[str, Any], dict[str, Any], Any]:
         import torch
 
-        if getattr(torch.backends, "mps", None) and torch.backends.mps.is_available():
-            device = {"mula": torch.device("mps"), "codec": torch.device("mps")}
+        if (
+            getattr(torch.backends, "mps", None)
+            and torch.backends.mps.is_available()
+        ):
+            device = {
+                "mula": torch.device("mps"),
+                "codec": torch.device("mps"),
+            }
             dtype = {"mula": torch.bfloat16, "codec": torch.float32}
             return device, dtype, torch
         if torch.cuda.is_available():
-            device = {"mula": torch.device("cuda"), "codec": torch.device("cuda")}
+            device = {
+                "mula": torch.device("cuda"),
+                "codec": torch.device("cuda"),
+            }
             dtype = {"mula": torch.bfloat16, "codec": torch.float32}
             return device, dtype, torch
 
@@ -92,7 +120,9 @@ class GenerationEngine:
         dtype = {"mula": torch.float32, "codec": torch.float32}
         return device, dtype, torch
 
-    def _ensure_pipeline(self, model_root: Path, device: dict[str, Any], dtype: dict[str, Any]) -> Any:
+    def _ensure_pipeline(
+        self, model_root: Path, device: dict[str, Any], dtype: dict[str, Any]
+    ) -> Any:
         if self._pipe is not None:
             return self._pipe
 
@@ -117,7 +147,9 @@ class GenerationEngine:
                 torch_mod.cuda.empty_cache()
         gc.collect()
 
-    async def generate(self, req: GenerationRequest, job_id: str, progress_cb: Any) -> GenerationResult:
+    async def generate(
+        self, req: GenerationRequest, job_id: str, progress_cb: Any
+    ) -> GenerationResult:
         if self._generation_lock.locked():
             raise GenerationBusyError(
                 code="VALIDATION_ERROR",
@@ -133,10 +165,23 @@ class GenerationEngine:
         output_path = job_dir / "audio.wav"
         cancel_event = self.get_cancel_event(job_id)
 
-        def progress(step: int, total_steps: int, eta_s: float, phase: str) -> None:
+        def progress(
+            step: int, total_steps: int, eta_s: float, phase: str
+        ) -> None:
             if cancel_event.is_set():
-                raise _api_error(code="CANCELLED", message="Generation cancelled", retriable=False)
-            progress_cb({"step": step, "total_steps": total_steps, "eta_s": eta_s, "phase": phase})
+                raise _api_error(
+                    code="CANCELLED",
+                    message="Generation cancelled",
+                    retriable=False,
+                )
+            progress_cb(
+                {
+                    "step": step,
+                    "total_steps": total_steps,
+                    "eta_s": eta_s,
+                    "phase": phase,
+                }
+            )
 
         async with self._generation_lock:
             device, dtype, torch = self._pick_device()
@@ -164,14 +209,17 @@ class GenerationEngine:
                     )
 
             try:
-                progress(2, 4, max(0.1, float(req.duration_seconds)), "generating")
+                progress(
+                    2, 4, max(0.1, float(req.duration_seconds)), "generating"
+                )
                 await asyncio.to_thread(_invoke, req.duration_seconds)
             except asyncio.CancelledError:
                 self._cleanup_after_cancel(output_path)
                 raise
             except Exception as exc:
                 is_oom = isinstance(exc, torch.cuda.OutOfMemoryError) or (
-                    isinstance(exc, RuntimeError) and "out of memory" in str(exc).lower()
+                    isinstance(exc, RuntimeError)
+                    and "out of memory" in str(exc).lower()
                 )
                 if not is_oom:
                     self._cleanup_after_cancel(output_path)
@@ -179,10 +227,15 @@ class GenerationEngine:
 
                 self._recover_oom(torch)
                 try:
-                    await asyncio.to_thread(_invoke, max(1.0, req.duration_seconds / 2))
+                    await asyncio.to_thread(
+                        _invoke, max(1.0, req.duration_seconds / 2)
+                    )
                 except Exception as exc2:
-                    is_oom_2 = isinstance(exc2, torch.cuda.OutOfMemoryError) or (
-                        isinstance(exc2, RuntimeError) and "out of memory" in str(exc2).lower()
+                    is_oom_2 = isinstance(
+                        exc2, torch.cuda.OutOfMemoryError
+                    ) or (
+                        isinstance(exc2, RuntimeError)
+                        and "out of memory" in str(exc2).lower()
                     )
                     if is_oom_2:
                         self._recover_oom(torch)
@@ -198,10 +251,18 @@ class GenerationEngine:
 
             if cancel_event.is_set():
                 self._cleanup_after_cancel(output_path)
-                raise _api_error(code="CANCELLED", message="Generation cancelled", retriable=False)
+                raise _api_error(
+                    code="CANCELLED",
+                    message="Generation cancelled",
+                    retriable=False,
+                )
 
             if not output_path.exists():
-                raise _api_error(code="INTERNAL_ERROR", message="Generation did not produce output", retriable=False)
+                raise _api_error(
+                    code="INTERNAL_ERROR",
+                    message="Generation did not produce output",
+                    retriable=False,
+                )
 
             progress(3, 4, 0.2, "encoding")
             progress(4, 4, 0.0, "finalizing")

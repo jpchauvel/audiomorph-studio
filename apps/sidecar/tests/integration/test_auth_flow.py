@@ -19,11 +19,15 @@ def test_protected_route_rejects_missing_token(app_client) -> None:
 
 
 def test_protected_route_rejects_wrong_token(app_client) -> None:
-    resp = app_client.get("/settings", headers={"X-Audiomorph-Token": "wrong"})
+    resp = app_client.get(
+        "/settings", headers={"X-Audiomorph-Token": "wrong"}
+    )
     assert resp.status_code == 401
 
 
-def test_protected_route_accepts_correct_token(app_client, auth_headers) -> None:
+def test_protected_route_accepts_correct_token(
+    app_client, auth_headers
+) -> None:
     resp = app_client.get("/settings", headers=auth_headers)
     assert resp.status_code == 200
 

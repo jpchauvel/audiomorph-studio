@@ -1,18 +1,16 @@
 from __future__ import annotations
 
 # pyright: reportMissingImports=false, reportUnknownMemberType=false, reportUnknownArgumentType=false, reportUnknownVariableType=false, reportUnknownParameterType=false
-
 import asyncio
 import hashlib
+from pathlib import Path
 import sys
 import threading
 import time
-from typing import NamedTuple
-from pathlib import Path
-from typing import Any
+from typing import Any, NamedTuple
 
-import pytest
 from fastapi.testclient import TestClient
+import pytest
 
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
@@ -31,7 +29,9 @@ def _disk_usage(free: int) -> Any:
     return _DiskUsage(total=10_000_000_000, used=1_000_000_000, free=free)
 
 
-async def _wait_for_terminal(manager: ModelDownloadManager, job_id: str, timeout_s: float = 3.0) -> dict[str, Any]:
+async def _wait_for_terminal(
+    manager: ModelDownloadManager, job_id: str, timeout_s: float = 3.0
+) -> dict[str, Any]:
     assert isinstance(manager, ModelDownloadManager)
     started = time.monotonic()
     while True:
@@ -59,6 +59,7 @@ async def test_start_download_uses_resume_and_byok_token_with_global_single_flig
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     manager = ModelDownloadManager(models_dir=tmp_path)
+
     def _du_9g(_p: object) -> Any:
         return _disk_usage(9_000_000_000)
 
@@ -86,7 +87,9 @@ async def test_start_download_uses_resume_and_byok_token_with_global_single_flig
             active -= 1
         return str(local_dir)
 
-    monkeypatch.setattr("audiomorph.models.manager.snapshot_download", fake_snapshot_download)
+    monkeypatch.setattr(
+        "audiomorph.models.manager.snapshot_download", fake_snapshot_download
+    )
 
     job_a = await manager.start_download("HeartMuLa/HeartMuLaGen")
     job_b = await manager.start_download("HeartMuLa/HeartCodec-oss-20260123")
@@ -102,8 +105,11 @@ async def test_start_download_uses_resume_and_byok_token_with_global_single_flig
 
 
 @pytest.mark.anyio
-async def test_start_download_refuses_when_disk_is_too_full(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+async def test_start_download_refuses_when_disk_is_too_full(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     manager = ModelDownloadManager(models_dir=tmp_path)
+
     def _du_1(_p: object) -> Any:
         return _disk_usage(1)
 
@@ -117,7 +123,9 @@ async def test_start_download_refuses_when_disk_is_too_full(tmp_path: Path, monk
 
 
 @pytest.mark.anyio
-async def test_verify_reports_sha_mismatch(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+async def test_verify_reports_sha_mismatch(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     manager = ModelDownloadManager(models_dir=tmp_path)
     model_id = "HeartMuLa/HeartMuLaGen"
     model_dir = manager.model_path(model_id)
@@ -136,7 +144,9 @@ async def test_verify_reports_sha_mismatch(tmp_path: Path, monkeypatch: pytest.M
     assert status["state"] == "corrupted"
 
 
-def test_models_router_endpoints_and_sse_stream(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+def test_models_router_endpoints_and_sse_stream(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     from audiomorph.routers import models as models_router
 
     manager = ModelDownloadManager(models_dir=tmp_path)
@@ -153,11 +163,15 @@ def test_models_router_endpoints_and_sse_stream(tmp_path: Path, monkeypatch: pyt
         (local_dir / "weights.bin").write_bytes(b"abc")
         return str(local_dir)
 
-    monkeypatch.setattr("audiomorph.models.manager.snapshot_download", fake_snapshot_download)
+    monkeypatch.setattr(
+        "audiomorph.models.manager.snapshot_download", fake_snapshot_download
+    )
 
     app = create_app(auth_token="test-token")
     with TestClient(app) as client:
-        listed = client.get("/models", headers={"X-Audiomorph-Token": "test-token"})
+        listed = client.get(
+            "/models", headers={"X-Audiomorph-Token": "test-token"}
+        )
         assert listed.status_code == 200
         assert len(listed.json()["items"]) == 3
 

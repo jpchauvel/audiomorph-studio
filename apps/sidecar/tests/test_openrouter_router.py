@@ -1,14 +1,14 @@
 from __future__ import annotations
 
-# pyright: reportMissingImports=false, reportUnknownVariableType=false, reportUnknownMemberType=false, reportUnknownArgumentType=false, reportUnknownParameterType=false, reportUnusedFunction=false, reportUntypedFunctionDecorator=false
-
-import sys
 from pathlib import Path
 
+# pyright: reportMissingImports=false, reportUnknownVariableType=false, reportUnknownMemberType=false, reportUnknownArgumentType=false, reportUnknownParameterType=false, reportUnusedFunction=false, reportUntypedFunctionDecorator=false
+import sys
+
+from fastapi.testclient import TestClient
 import httpx
 import pytest
 import respx
-from fastapi.testclient import TestClient
 
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
@@ -27,7 +27,9 @@ def _client() -> TestClient:
 def test_openrouter_chat_happy_path_forwards_response() -> None:
     upstream_payload = {
         "id": "chatcmpl-abc",
-        "choices": [{"message": {"role": "assistant", "content": "hello back"}}],
+        "choices": [
+            {"message": {"role": "assistant", "content": "hello back"}}
+        ],
     }
     route = respx.post(OPENROUTER_URL).mock(
         return_value=httpx.Response(200, json=upstream_payload)
@@ -47,13 +49,21 @@ def test_openrouter_chat_happy_path_forwards_response() -> None:
     assert resp.json() == upstream_payload
     assert route.called
     sent_request = route.calls.last.request
-    assert sent_request.headers.get("Authorization") == "Bearer sk-or-test-abc"
-    assert sent_request.headers.get("HTTP-Referer") == "https://audiomorph.local"
+    assert (
+        sent_request.headers.get("Authorization") == "Bearer sk-or-test-abc"
+    )
+    assert (
+        sent_request.headers.get("HTTP-Referer") == "https://audiomorph.local"
+    )
 
 
 @respx.mock
-def test_openrouter_chat_missing_key_header_returns_validation_error() -> None:
-    route = respx.post(OPENROUTER_URL).mock(return_value=httpx.Response(200, json={}))
+def test_openrouter_chat_missing_key_header_returns_validation_error() -> (
+    None
+):
+    route = respx.post(OPENROUTER_URL).mock(
+        return_value=httpx.Response(200, json={})
+    )
 
     with _client() as client:
         resp = client.post(
@@ -92,9 +102,13 @@ def test_openrouter_chat_retries_on_5xx_then_succeeds() -> None:
 
 
 @respx.mock
-def test_openrouter_chat_never_logs_api_key(capsys: pytest.CaptureFixture[str]) -> None:
+def test_openrouter_chat_never_logs_api_key(
+    capsys: pytest.CaptureFixture[str],
+) -> None:
     secret = "sk-or-test-secret-marker"
-    respx.post(OPENROUTER_URL).mock(return_value=httpx.Response(200, json={"ok": True}))
+    respx.post(OPENROUTER_URL).mock(
+        return_value=httpx.Response(200, json={"ok": True})
+    )
 
     with _client() as client:
         resp = client.post(

@@ -17,7 +17,9 @@ def _post_generation(app_client, auth_headers) -> str:
         "seed": 42,
         "model_id": "facebook/musicgen-small",
     }
-    resp = app_client.post("/jobs/generate", json=payload, headers=auth_headers)
+    resp = app_client.post(
+        "/jobs/generate", json=payload, headers=auth_headers
+    )
     assert resp.status_code == 202, resp.text
     body = resp.json()
     assert "job_id" in body
@@ -52,7 +54,9 @@ def test_generation_persists_to_sqlite(
 
     conn = sqlite3.connect(sqlite_db)
     try:
-        cur = conn.execute("SELECT name FROM sqlite_master WHERE type='table'")
+        cur = conn.execute(
+            "SELECT name FROM sqlite_master WHERE type='table'"
+        )
         tables = {row[0] for row in cur.fetchall()}
     finally:
         conn.close()
@@ -63,5 +67,7 @@ def test_generation_persists_to_sqlite(
 
 
 def test_generation_rejects_invalid_payload(app_client, auth_headers) -> None:
-    resp = app_client.post("/jobs/generate", json={"prompt": "x"}, headers=auth_headers)
+    resp = app_client.post(
+        "/jobs/generate", json={"prompt": "x"}, headers=auth_headers
+    )
     assert resp.status_code == 422

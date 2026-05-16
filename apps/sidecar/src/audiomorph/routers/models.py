@@ -1,25 +1,30 @@
 from __future__ import annotations
 
-# pyright: reportMissingImports=false, reportUnknownVariableType=false, reportUnknownParameterType=false, reportArgumentType=false
-
-import json
 from collections.abc import AsyncGenerator
+
+# pyright: reportMissingImports=false, reportUnknownVariableType=false, reportUnknownParameterType=false, reportArgumentType=false
+import json
 
 from fastapi import APIRouter, Response
 
 try:
     from sse_starlette.sse import EventSourceResponse
-except Exception:  # pragma: no cover - fallback when dependency not installed yet
+except (
+    Exception
+):  # pragma: no cover - fallback when dependency not installed yet
     from starlette.responses import StreamingResponse
 
     class EventSourceResponse(StreamingResponse):  # type: ignore[no-redef]
-        def __init__(self, generator: AsyncGenerator[dict[str, object], None]):
+        def __init__(
+            self, generator: AsyncGenerator[dict[str, object], None]
+        ):
             async def _encode() -> AsyncGenerator[str, None]:
                 async for item in generator:
                     payload = json.dumps(item.get("data", {}))
                     yield f"event: {item.get('event', 'message')}\ndata: {payload}\n\n"
 
             super().__init__(_encode(), media_type="text/event-stream")
+
 
 from audiomorph.models.manager import ModelDownloadManager
 

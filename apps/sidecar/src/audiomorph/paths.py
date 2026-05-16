@@ -1,5 +1,5 @@
-from pathlib import Path
 import os
+from pathlib import Path
 import sys
 
 APP_NAME = "AudioMorph Studio"
@@ -13,12 +13,13 @@ def get_user_data_dir() -> Path:
 
     if sys.platform == "darwin":
         return Path.home() / "Library" / "Application Support" / APP_NAME
-    elif sys.platform == "win32":
-        appdata = os.environ.get("APPDATA", str(Path.home() / "AppData" / "Roaming"))
+    if sys.platform == "win32":
+        appdata = os.environ.get(
+            "APPDATA", str(Path.home() / "AppData" / "Roaming")
+        )
         return Path(appdata) / APP_NAME
-    else:
-        xdg = os.environ.get("XDG_CONFIG_HOME", str(Path.home() / ".config"))
-        return Path(xdg) / APP_NAME_SLUG
+    xdg = os.environ.get("XDG_CONFIG_HOME", str(Path.home() / ".config"))
+    return Path(xdg) / APP_NAME_SLUG
 
 
 def get_models_dir() -> Path:

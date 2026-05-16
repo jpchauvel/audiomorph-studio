@@ -32,14 +32,27 @@ def test_no_keyring_import_during_request(app_client, auth_headers) -> None:
 def test_no_telemetry_module_imported(app_client) -> None:
     import sys
 
-    banned_prefixes = ("sentry_sdk", "posthog", "analytics", "segment_analytics", "mixpanel")
+    banned_prefixes = (
+        "sentry_sdk",
+        "posthog",
+        "analytics",
+        "segment_analytics",
+        "mixpanel",
+    )
     for mod in list(sys.modules):
         for prefix in banned_prefixes:
-            assert not mod.startswith(prefix), f"telemetry module imported: {mod}"
+            assert not mod.startswith(prefix), (
+                f"telemetry module imported: {mod}"
+            )
 
 
-def test_openrouter_url_default_is_not_overridden_in_test_mode(monkeypatch) -> None:
+def test_openrouter_url_default_is_not_overridden_in_test_mode(
+    monkeypatch,
+) -> None:
     monkeypatch.delenv("AUDIOMORPH_OPENROUTER_BASE_URL", raising=False)
     from audiomorph.routers import openrouter as or_router
 
-    assert or_router.OPENROUTER_URL == "https://openrouter.ai/api/v1/chat/completions"
+    assert (
+        or_router.OPENROUTER_URL
+        == "https://openrouter.ai/api/v1/chat/completions"
+    )

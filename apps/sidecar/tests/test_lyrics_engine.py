@@ -1,9 +1,9 @@
 from __future__ import annotations
 
-# pyright: reportMissingImports=false, reportUnknownVariableType=false, reportUnknownMemberType=false, reportUnknownArgumentType=false, reportUnknownParameterType=false
-
-import sys
 from pathlib import Path
+
+# pyright: reportMissingImports=false, reportUnknownVariableType=false, reportUnknownMemberType=false, reportUnknownArgumentType=false, reportUnknownParameterType=false
+import sys
 from types import ModuleType, SimpleNamespace
 from typing import Any
 
@@ -19,9 +19,15 @@ def _install_fake_torch(monkeypatch: pytest.MonkeyPatch) -> None:
     fake_torch.float16 = object()
     fake_torch.float32 = object()
     fake_torch.bfloat16 = object()
-    fake_torch.device = lambda value: SimpleNamespace(type=str(value).split(":")[0])
-    fake_torch.backends = SimpleNamespace(mps=SimpleNamespace(is_available=lambda: False))
-    fake_torch.cuda = SimpleNamespace(is_available=lambda: False, empty_cache=lambda: None)
+    fake_torch.device = lambda value: SimpleNamespace(
+        type=str(value).split(":")[0]
+    )
+    fake_torch.backends = SimpleNamespace(
+        mps=SimpleNamespace(is_available=lambda: False)
+    )
+    fake_torch.cuda = SimpleNamespace(
+        is_available=lambda: False, empty_cache=lambda: None
+    )
 
     class _NoGrad:
         def __enter__(self) -> None:
@@ -34,7 +40,9 @@ def _install_fake_torch(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setitem(sys.modules, "torch", fake_torch)
 
 
-def _install_fake_heartlib(monkeypatch: pytest.MonkeyPatch, pipe_factory: Any) -> None:
+def _install_fake_heartlib(
+    monkeypatch: pytest.MonkeyPatch, pipe_factory: Any
+) -> None:
     fake_heartlib = ModuleType("heartlib")
 
     class _Pipeline:
@@ -63,10 +71,14 @@ async def test_transcription_engine_happy_path_returns_text_and_segments(
 
     def pipe_factory(*_args: object, **_kwargs: object) -> Any:
         class Pipe:
-            def __call__(self, _audio_path: str, **_kw: object) -> dict[str, Any]:
+            def __call__(
+                self, _audio_path: str, **_kw: object
+            ) -> dict[str, Any]:
                 return {
                     "text": "hello world",
-                    "chunks": [{"timestamp": [0.0, 2.5], "text": "hello world"}],
+                    "chunks": [
+                        {"timestamp": [0.0, 2.5], "text": "hello world"}
+                    ],
                 }
 
         return Pipe()

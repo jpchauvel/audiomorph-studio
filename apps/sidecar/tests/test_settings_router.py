@@ -1,12 +1,12 @@
 from __future__ import annotations
 
-# pyright: reportMissingImports=false, reportUnknownVariableType=false, reportUnknownMemberType=false, reportUnknownArgumentType=false, reportUnknownParameterType=false, reportUnusedFunction=false, reportUntypedFunctionDecorator=false
-
-import sys
 from pathlib import Path
 
-import pytest
+# pyright: reportMissingImports=false, reportUnknownVariableType=false, reportUnknownMemberType=false, reportUnknownArgumentType=false, reportUnknownParameterType=false, reportUnusedFunction=false, reportUntypedFunctionDecorator=false
+import sys
+
 from fastapi.testclient import TestClient
+import pytest
 
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
@@ -18,14 +18,14 @@ AUTH_TOKEN = "test-token"
 AUTH_HEADERS = {"X-Audiomorph-Token": AUTH_TOKEN}
 
 
-@pytest.fixture()
+@pytest.fixture
 def db_path(tmp_path: Path) -> Path:
     p = tmp_path / "settings.db"
     init_db(str(p))
     return p
 
 
-@pytest.fixture()
+@pytest.fixture
 def client(monkeypatch: pytest.MonkeyPatch, db_path: Path) -> TestClient:
     monkeypatch.setattr(
         settings_router, "session_scope", lambda: session_scope(str(db_path))
@@ -33,7 +33,9 @@ def client(monkeypatch: pytest.MonkeyPatch, db_path: Path) -> TestClient:
     return TestClient(create_app(auth_token=AUTH_TOKEN))
 
 
-def test_get_settings_returns_defaults_on_fresh_db(client: TestClient) -> None:
+def test_get_settings_returns_defaults_on_fresh_db(
+    client: TestClient,
+) -> None:
     resp = client.get("/settings", headers=AUTH_HEADERS)
     assert resp.status_code == 200
     body = resp.json()
@@ -85,7 +87,9 @@ def test_put_unknown_key_returns_validation_error(client: TestClient) -> None:
     assert "Unknown setting key" in body["message"]
 
 
-def test_put_theme_invalid_value_returns_validation_error(client: TestClient) -> None:
+def test_put_theme_invalid_value_returns_validation_error(
+    client: TestClient,
+) -> None:
     resp = client.put(
         "/settings/theme",
         headers=AUTH_HEADERS,

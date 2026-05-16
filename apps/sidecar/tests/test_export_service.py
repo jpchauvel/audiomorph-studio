@@ -1,10 +1,9 @@
 from __future__ import annotations
 
 # pyright: reportMissingImports=false, reportUnknownVariableType=false, reportUnknownMemberType=false, reportUnknownArgumentType=false, reportUnknownParameterType=false, reportMissingParameterType=false, reportUnknownLambdaType=false
-
 import asyncio
-import sys
 from pathlib import Path
+import sys
 from typing import Any
 
 import pytest
@@ -60,18 +59,24 @@ def _patch_subprocess(monkeypatch: pytest.MonkeyPatch, proc_factory):
     return captured
 
 
-def test_convert_wav_to_mp3_success(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+def test_convert_wav_to_mp3_success(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
     src = tmp_path / "input.wav"
     src.write_bytes(b"RIFFFAKE")
     dst = tmp_path / "output.mp3"
 
     captured = _patch_subprocess(
         monkeypatch,
-        lambda _c: _FakeProc(returncode=0, write_output=dst, output_bytes=b"ID3FAKE"),
+        lambda _c: _FakeProc(
+            returncode=0, write_output=dst, output_bytes=b"ID3FAKE"
+        ),
     )
 
     asyncio.run(
-        ffmpeg_service.convert(str(src), str(dst), format="mp3", bitrate_kbps=192)
+        ffmpeg_service.convert(
+            str(src), str(dst), format="mp3", bitrate_kbps=192
+        )
     )
 
     cmd = captured["cmd"]
@@ -86,7 +91,9 @@ def test_convert_wav_to_mp3_success(monkeypatch: pytest.MonkeyPatch, tmp_path: P
     assert dst.read_bytes() == b"ID3FAKE"
 
 
-def test_convert_unknown_format_raises(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+def test_convert_unknown_format_raises(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
     src = tmp_path / "input.wav"
     src.write_bytes(b"RIFFFAKE")
     dst = tmp_path / "output.ogg"
@@ -97,7 +104,9 @@ def test_convert_unknown_format_raises(monkeypatch: pytest.MonkeyPatch, tmp_path
     assert ei.value.code == "EXPORT_FAILED"
 
 
-def test_convert_ffmpeg_missing_raises(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+def test_convert_ffmpeg_missing_raises(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
     src = tmp_path / "input.wav"
     src.write_bytes(b"RIFFFAKE")
     dst = tmp_path / "output.mp3"
@@ -148,7 +157,9 @@ def test_convert_flac_uses_flac_codec(
 
     captured = _patch_subprocess(
         monkeypatch,
-        lambda _c: _FakeProc(returncode=0, write_output=dst, output_bytes=b"fLaC"),
+        lambda _c: _FakeProc(
+            returncode=0, write_output=dst, output_bytes=b"fLaC"
+        ),
     )
 
     asyncio.run(ffmpeg_service.convert(str(src), str(dst), format="flac"))
@@ -157,7 +168,7 @@ def test_convert_flac_uses_flac_codec(
     assert "libmp3lame" not in captured["cmd"]
 
 
-@pytest.fixture()
+@pytest.fixture
 def db_path(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     from audiomorph.db.session import init_db
 
@@ -168,8 +179,8 @@ def db_path(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
 
 
 def _seed_generation(db_path: Path, job_id: str, source_path: Path) -> None:
-    from audiomorph.db.session import session_scope
     from audiomorph.db import repo
+    from audiomorph.db.session import session_scope
     from audiomorph.schemas import GenerationResult
 
     with session_scope(str(db_path)) as session:
@@ -227,10 +238,11 @@ def test_export_router_unknown_job_returns_404(
 
     from audiomorph.app import create_app
     from audiomorph.db.session import session_scope
-
     import audiomorph.routers.export as export_router
 
-    monkeypatch.setattr(export_router, "session_scope", lambda: session_scope(str(db_path)))
+    monkeypatch.setattr(
+        export_router, "session_scope", lambda: session_scope(str(db_path))
+    )
     monkeypatch.setattr(export_router, "get_jobs_dir", lambda: tmp_path)
 
     app = create_app(auth_token="t")
@@ -259,14 +271,20 @@ def test_export_router_happy_path(
 
     import audiomorph.routers.export as export_router
 
-    monkeypatch.setattr(export_router, "session_scope", lambda: session_scope(str(db_path)))
+    monkeypatch.setattr(
+        export_router, "session_scope", lambda: session_scope(str(db_path))
+    )
     monkeypatch.setattr(export_router, "get_jobs_dir", lambda: tmp_path)
 
-    async def _fake_convert(input_path: str, output_path: str, format: str, bitrate_kbps=None):
+    async def _fake_convert(
+        input_path: str, output_path: str, format: str, bitrate_kbps=None
+    ):
         Path(output_path).parent.mkdir(parents=True, exist_ok=True)
         Path(output_path).write_bytes(b"ID3DATA" * 10)
 
-    monkeypatch.setattr(export_router.ffmpeg_service, "convert", _fake_convert)
+    monkeypatch.setattr(
+        export_router.ffmpeg_service, "convert", _fake_convert
+    )
 
     app = create_app(auth_token="t")
     with TestClient(app) as client:
@@ -297,7 +315,9 @@ def test_export_router_bitrate_invalid_for_wav(
 
     import audiomorph.routers.export as export_router
 
-    monkeypatch.setattr(export_router, "session_scope", lambda: session_scope(str(db_path)))
+    monkeypatch.setattr(
+        export_router, "session_scope", lambda: session_scope(str(db_path))
+    )
     monkeypatch.setattr(export_router, "get_jobs_dir", lambda: tmp_path)
 
     app = create_app(auth_token="t")

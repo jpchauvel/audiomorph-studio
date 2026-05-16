@@ -12,7 +12,9 @@ from urllib.error import HTTPError
 from urllib.request import Request, urlopen
 
 
-def _get_json(url: str, *, token: str | None = None) -> tuple[int, dict[str, Any]]:
+def _get_json(
+    url: str, *, token: str | None = None
+) -> tuple[int, dict[str, Any]]:
     headers: dict[str, str] = {}
     if token:
         headers["X-Audiomorph-Token"] = token
@@ -20,7 +22,9 @@ def _get_json(url: str, *, token: str | None = None) -> tuple[int, dict[str, Any
     req = Request(url, headers=headers, method="GET")
     try:
         with urlopen(req, timeout=3) as response:
-            return response.getcode(), json.loads(response.read().decode("utf-8"))
+            return response.getcode(), json.loads(
+                response.read().decode("utf-8")
+            )
     except HTTPError as exc:
         return exc.code, json.loads(exc.read().decode("utf-8"))
 
@@ -41,7 +45,11 @@ def test_sidecar_lifecycle() -> None:
             f"--auth-token={token}",
         ],
         cwd=os.path.dirname(os.path.dirname(__file__)),
-        env={**os.environ, "PYTHONPATH": "src"},
+        env={
+            **os.environ,
+            "PYTHONPATH": "src",
+            "AUDIOMORPH_TEST_MODE": "1",
+        },
         pass_fds=(write_fd,),
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,

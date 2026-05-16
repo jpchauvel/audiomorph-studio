@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Optional
 
 from fastapi import APIRouter
 from pydantic import BaseModel
@@ -22,7 +21,7 @@ _MP3_MAX_KBPS = 320
 class _ExportBody(BaseModel):
     job_id: str
     format: str
-    bitrate_kbps: Optional[int] = None
+    bitrate_kbps: int | None = None
 
 
 class _ExportResponse(BaseModel):
@@ -76,7 +75,9 @@ async def export_audio(body: _ExportBody) -> _ExportResponse:
     out_dir.mkdir(parents=True, exist_ok=True)
     output = out_dir / f"export.{body.format}"
 
-    await ffmpeg_service.convert(str(source), str(output), body.format, body.bitrate_kbps)
+    await ffmpeg_service.convert(
+        str(source), str(output), body.format, body.bitrate_kbps
+    )
 
     return _ExportResponse(
         file_path=str(output),

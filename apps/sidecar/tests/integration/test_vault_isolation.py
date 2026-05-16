@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-import sqlite3
 from pathlib import Path
+import sqlite3
 
 import pytest
 
@@ -18,7 +18,9 @@ def _run_one_generation(app_client, auth_headers) -> str:
         "seed": 7,
         "model_id": "facebook/musicgen-small",
     }
-    resp = app_client.post("/jobs/generate", json=payload, headers=auth_headers)
+    resp = app_client.post(
+        "/jobs/generate", json=payload, headers=auth_headers
+    )
     assert resp.status_code == 202
     job_id = resp.json()["job_id"]
     final = wait_for_job(app_client, f"/jobs/{job_id}", auth_headers)
@@ -29,7 +31,9 @@ def _run_one_generation(app_client, auth_headers) -> str:
 def _count_generations(db_path: str) -> int:
     conn = sqlite3.connect(db_path)
     try:
-        cur = conn.execute("SELECT name FROM sqlite_master WHERE type='table'")
+        cur = conn.execute(
+            "SELECT name FROM sqlite_master WHERE type='table'"
+        )
         tables = {row[0].lower() for row in cur.fetchall()}
         table = None
         for candidate in ("generation", "generations"):

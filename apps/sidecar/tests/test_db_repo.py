@@ -1,21 +1,20 @@
 from __future__ import annotations
 
+from pathlib import Path
 import sys
 import threading
-from pathlib import Path
 
 import pytest
 
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
-from sqlmodel import text
 
-from audiomorph.db.session import get_engine, init_db, session_scope
 from audiomorph.db import repo
+from audiomorph.db.session import get_engine, init_db, session_scope
 from audiomorph.schemas import GenerationResult
 
 
-@pytest.fixture()
+@pytest.fixture
 def db_path(tmp_path: Path) -> Path:
     p = tmp_path / "test.db"
     init_db(str(p))

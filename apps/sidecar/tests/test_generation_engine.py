@@ -1,12 +1,11 @@
 from __future__ import annotations
 
 # pyright: reportMissingImports=false, reportUnknownVariableType=false, reportUnknownMemberType=false, reportUnknownArgumentType=false, reportUnknownParameterType=false
-
 import asyncio
 import contextlib
+from pathlib import Path
 import sys
 import time
-from pathlib import Path
 from types import ModuleType, SimpleNamespace
 from typing import Any
 
@@ -34,10 +33,14 @@ def _install_fake_torch(
     fake_torch = ModuleType("torch")
     fake_torch.bfloat16 = object()
     fake_torch.float32 = object()
-    fake_torch.device = lambda value: SimpleNamespace(type=str(value).split(":")[0])
+    fake_torch.device = lambda value: SimpleNamespace(
+        type=str(value).split(":")[0]
+    )
     fake_torch.manual_seed = lambda _seed: None
     fake_torch.inference_mode = inference_mode
-    fake_torch.backends = SimpleNamespace(mps=SimpleNamespace(is_available=lambda: mps_available))
+    fake_torch.backends = SimpleNamespace(
+        mps=SimpleNamespace(is_available=lambda: mps_available)
+    )
     fake_torch.cuda = SimpleNamespace(
         is_available=lambda: cuda_available,
         manual_seed_all=lambda _seed: None,
@@ -48,7 +51,9 @@ def _install_fake_torch(
     return FakeOOMError
 
 
-def _install_fake_heartlib(monkeypatch: pytest.MonkeyPatch, pipe_factory: Any) -> None:
+def _install_fake_heartlib(
+    monkeypatch: pytest.MonkeyPatch, pipe_factory: Any
+) -> None:
     fake_heartlib = ModuleType("heartlib")
 
     class _Pipeline:
@@ -86,7 +91,13 @@ async def test_generation_engine_happy_path_writes_wav_and_returns_result(
 
     def pipe_factory(*_args: object, **_kwargs: object):
         class Pipe:
-            def __call__(self, _inputs: dict[str, str], *, save_path: str, **_kw: object) -> None:
+            def __call__(
+                self,
+                _inputs: dict[str, str],
+                *,
+                save_path: str,
+                **_kw: object,
+            ) -> None:
                 Path(save_path).write_bytes(b"RIFF....WAVE")
 
         return Pipe()
@@ -121,7 +132,9 @@ async def test_generation_engine_validation_rejects_duration_too_long(
 
     engine = GenerationEngine()
     with pytest.raises(ApiError) as exc:
-        await engine.generate(_req(duration_seconds=999.0), "job-too-long", lambda _u: None)
+        await engine.generate(
+            _req(duration_seconds=999.0), "job-too-long", lambda _u: None
+        )
     assert exc.value.code == "VALIDATION_ERROR"
 
 
@@ -138,7 +151,13 @@ async def test_generation_engine_cancelled_removes_partial_files(
 
     def pipe_factory(*_args: object, **_kwargs: object):
         class Pipe:
-            def __call__(self, _inputs: dict[str, str], *, save_path: str, **_kw: object) -> None:
+            def __call__(
+                self,
+                _inputs: dict[str, str],
+                *,
+                save_path: str,
+                **_kw: object,
+            ) -> None:
                 Path(save_path).write_bytes(b"partial")
                 time.sleep(2)
 
@@ -223,6 +242,8 @@ async def test_generation_engine_model_not_found(
 
     engine = GenerationEngine()
     with pytest.raises(ApiError) as exc:
-        await engine.generate(_req(model_id="does-not-exist"), "job-missing", lambda _u: None)
+        await engine.generate(
+            _req(model_id="does-not-exist"), "job-missing", lambda _u: None
+        )
 
     assert exc.value.code == "MODEL_NOT_FOUND"

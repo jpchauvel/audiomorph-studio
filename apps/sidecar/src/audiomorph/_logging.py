@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import sys
+from typing import cast
 
 import structlog
 
@@ -20,4 +21,4 @@ def setup_logging() -> None:
 
 
 def get_logger(name: str = "audiomorph") -> structlog.stdlib.BoundLogger:
-    return structlog.get_logger(name)
+    return cast("structlog.stdlib.BoundLogger", structlog.get_logger(name))

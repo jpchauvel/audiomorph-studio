@@ -1,16 +1,17 @@
 from __future__ import annotations
 
-# pyright: reportMissingImports=false, reportUnknownVariableType=false, reportUnknownParameterType=false, reportUnknownMemberType=false, reportUnknownArgumentType=false
-
-import platform
-import traceback
-import os
+from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
+import os
+
+# pyright: reportMissingImports=false, reportUnknownVariableType=false, reportUnknownParameterType=false, reportUnknownMemberType=false, reportUnknownArgumentType=false
+import platform
 from time import perf_counter
-from typing import Any, AsyncIterator, cast
+import traceback
+from typing import Any, cast
 from uuid import uuid4
 
-from fastapi import APIRouter, FastAPI, Request
+from fastapi import APIRouter, FastAPI, Request, Response
 from fastapi.responses import JSONResponse
 from starlette.middleware.cors import CORSMiddleware
 
@@ -28,6 +29,7 @@ from .routers.settings import router as settings_router
 
 # AUDIOMORPH_TEST_MODE hook
 _test_mode_id_counter = 0
+
 
 def _gpu_info() -> dict[str, Any]:
     try:
@@ -53,6 +55,7 @@ def _gpu_info() -> dict[str, Any]:
         }
 
     return {"available": False}
+
 
 def _generate_id() -> str:
     global _test_mode_id_counter
@@ -86,12 +89,14 @@ def create_app(auth_token: str = "") -> FastAPI:
     app.add_middleware(AuthMiddleware, token=auth_token)
 
     @app.middleware("http")
-    async def request_logging_middleware(request: Request, call_next: Any) -> JSONResponse:  # pyright: ignore[reportUnusedFunction]
+    async def request_logging_middleware(
+        request: Request, call_next: Any
+    ) -> Response:  # pyright: ignore[reportUnusedFunction]
         request_id = _generate_id()
         started = perf_counter()
 
         try:
-            response = await call_next(request)
+            response = cast("Response", await call_next(request))
         except Exception:
             duration_ms = round((perf_counter() - started) * 1000, 2)
             logger.info(
@@ -118,11 +123,19 @@ def create_app(auth_token: str = "") -> FastAPI:
 
     @app.exception_handler(ApiError)
     async def api_error_handler(_: Request, exc: ApiError) -> JSONResponse:  # pyright: ignore[reportUnusedFunction]
-        return JSONResponse(status_code=exc.status_code, content=exc.envelope())
+        return JSONResponse(
+            status_code=exc.status_code, content=exc.envelope()
+        )
 
     @app.exception_handler(Exception)
-    async def unhandled_error_handler(_: Request, exc: Exception) -> JSONResponse:  # pyright: ignore[reportUnusedFunction]
-        logger.error("unhandled_exception", traceback=traceback.format_exc(), error=str(exc))
+    async def unhandled_error_handler(
+        _: Request, exc: Exception
+    ) -> JSONResponse:  # pyright: ignore[reportUnusedFunction]
+        logger.error(
+            "unhandled_exception",
+            traceback=traceback.format_exc(),
+            error=str(exc),
+        )
         return JSONResponse(
             status_code=500,
             content={
@@ -145,11 +158,11 @@ def create_app(auth_token: str = "") -> FastAPI:
             "models_dir": str(get_models_dir()),
             "python_version": platform.python_version(),
         }
-        
+
         # AUDIOMORPH_TEST_MODE hook
         if os.environ.get("AUDIOMORPH_TEST_MODE") == "1":
             health_data["test_mode"] = True
-        
+
         return health_data
 
     app.include_router(root_router)

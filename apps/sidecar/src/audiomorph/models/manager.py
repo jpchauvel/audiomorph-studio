@@ -1,38 +1,46 @@
 from __future__ import annotations
 
 # pyright: reportMissingImports=false, reportUnknownVariableType=false, reportUnknownMemberType=false, reportUnknownArgumentType=false, reportUnknownParameterType=false, reportCallIssue=false
-
 import asyncio
+from collections.abc import AsyncIterator
+from concurrent.futures import ThreadPoolExecutor
 import hashlib
 import os
+from pathlib import Path
 import re
 import shutil
 import time
-from concurrent.futures import ThreadPoolExecutor
-from pathlib import Path
 from typing import Any
 from uuid import uuid4
 
 try:
     from huggingface_hub import HfApi, snapshot_download
 except Exception:  # pragma: no cover - optional at test-runtime
+
     class HfApi:  # type: ignore[no-redef]
         def model_info(self, *args: Any, **kwargs: Any) -> Any:
             _ = (args, kwargs)
-            raise RuntimeError("huggingface_hub is required for model metadata")
+            raise RuntimeError(
+                "huggingface_hub is required for model metadata"
+            )
 
-    def snapshot_download(**_: Any) -> str:  # type: ignore[no-redef]
+    def snapshot_download(**_: Any) -> str:
         raise RuntimeError("huggingface_hub is required for downloads")
 
-from audiomorph._logging import get_logger
+
 from audiomorph._errors import ApiError
+from audiomorph._logging import get_logger
 from audiomorph.paths import get_models_dir
 
 _MODEL_ID_RE = re.compile(r"^[A-Za-z0-9_/-]+$")
 
 
-def _api_error(*, code: str, message: str, retriable: bool, hint: str | None = None) -> Exception:
-    return ApiError(code=code, message=message, retriable=retriable, hint=hint)
+def _api_error(
+    *, code: str, message: str, retriable: bool, hint: str | None = None
+) -> Exception:
+    return ApiError(
+        code=code, message=message, retriable=retriable, hint=hint
+    )
 
 
 def _sha256_file(path: Path) -> str:
@@ -191,7 +199,10 @@ class ModelDownloadManager:
         self._assert_disk_space(safe)
 
         for job in self._jobs.values():
-            if job["model_id"] == safe and job["state"] in {"queued", "running"}:
+            if job["model_id"] == safe and job["state"] in {
+                "queued",
+                "running",
+            }:
                 raise _api_error(
                     code="DOWNLOAD_FAILED",
                     message="Download already in progress for model",
@@ -212,12 +223,18 @@ class ModelDownloadManager:
         self._jobs[job_id] = job
         self._job_events[job_id] = asyncio.Queue()
         self._emit_progress(job_id, current_file=None, speed_mbps=0.0)
-        self._job_tasks[job_id] = asyncio.create_task(self._run_download(job_id))
+        self._job_tasks[job_id] = asyncio.create_task(
+            self._run_download(job_id)
+        )
         return job_id
 
     async def cancel_download(self, job_id: str) -> dict[str, Any]:
         if job_id not in self._jobs:
-            raise _api_error(code="JOB_NOT_FOUND", message=f"Unknown job: {job_id}", retriable=False)
+            raise _api_error(
+                code="JOB_NOT_FOUND",
+                message=f"Unknown job: {job_id}",
+                retriable=False,
+            )
 
         job = self._jobs[job_id]
         job["cancel_requested"] = True
@@ -250,7 +267,9 @@ class ModelDownloadManager:
             if not local_file.exists() or not local_file.is_file():
                 mismatches.append(rel_path)
                 continue
-            actual_sha = await loop.run_in_executor(self._hash_pool, _sha256_file, local_file)
+            actual_sha = await loop.run_in_executor(
+                self._hash_pool, _sha256_file, local_file
+            )
             if actual_sha.lower() != expected_sha.lower():
                 mismatches.append(rel_path)
 
@@ -259,7 +278,9 @@ class ModelDownloadManager:
         return {"valid": valid, "mismatches": sorted(mismatches)}
 
     async def _remote_sha256_map(self, model_id: str) -> dict[str, str]:
-        info = await asyncio.to_thread(self._api.model_info, model_id, files_metadata=True)
+        info = await asyncio.to_thread(
+            self._api.model_info, model_id, files_metadata=True
+        )
         hashes: dict[str, str] = {}
         for sibling in getattr(info, "siblings", []) or []:
             rel = getattr(sibling, "rfilename", None)
@@ -271,7 +292,9 @@ class ModelDownloadManager:
                 hashes[str(rel)] = sha
         return hashes
 
-    def _emit_progress(self, job_id: str, current_file: str | None, speed_mbps: float) -> None:
+    def _emit_progress(
+        self, job_id: str, current_file: str | None, speed_mbps: float
+    ) -> None:
         job = self._jobs[job_id]
         status = self.get_status(job["model_id"])
         payload = {
@@ -309,7 +332,9 @@ class ModelDownloadManager:
                 "token": token,
             }
 
-            task = asyncio.create_task(asyncio.to_thread(snapshot_download, **kwargs))
+            task = asyncio.create_task(
+                asyncio.to_thread(snapshot_download, **kwargs)
+            )
             last_bytes = self._bytes_done(model_dir)
             last_ts = time.monotonic()
 
@@ -321,7 +346,9 @@ class ModelDownloadManager:
                     delta_bytes = max(0, done - last_bytes)
                     delta_t = max(1e-6, now - last_ts)
                     speed_mbps = (delta_bytes / (1024 * 1024)) / delta_t
-                    self._emit_progress(job_id, current_file=None, speed_mbps=speed_mbps)
+                    self._emit_progress(
+                        job_id, current_file=None, speed_mbps=speed_mbps
+                    )
                     last_bytes = done
                     last_ts = now
 
@@ -336,16 +363,27 @@ class ModelDownloadManager:
                 job["updated_at"] = time.time()
                 self._emit_progress(job_id, current_file=None, speed_mbps=0.0)
             except Exception as exc:
-                self._logger.error("model_download_failed", model_id=model_id, job_id=job_id, error=str(exc))
+                self._logger.error(
+                    "model_download_failed",
+                    model_id=model_id,
+                    job_id=job_id,
+                    error=str(exc),
+                )
                 job["state"] = "failed"
                 job["error"] = str(exc)
                 job["updated_at"] = time.time()
                 self._model_states[model_id] = "partial"
                 self._emit_progress(job_id, current_file=None, speed_mbps=0.0)
 
-    async def stream_job_events(self, job_id: str):
+    async def stream_job_events(
+        self, job_id: str
+    ) -> AsyncIterator[dict[str, Any]]:
         if job_id not in self._jobs:
-            raise _api_error(code="JOB_NOT_FOUND", message=f"Unknown job: {job_id}", retriable=False)
+            raise _api_error(
+                code="JOB_NOT_FOUND",
+                message=f"Unknown job: {job_id}",
+                retriable=False,
+            )
 
         queue = self._job_events[job_id]
         terminal = {"completed", "failed", "cancelled"}

@@ -1,12 +1,11 @@
 from __future__ import annotations
 
 # pyright: reportMissingImports=false, reportUnknownVariableType=false, reportUnknownMemberType=false, reportUnknownArgumentType=false, reportUnusedFunction=false
-
 import importlib
 import json
+from pathlib import Path
 import re
 import sys
-from pathlib import Path
 from types import SimpleNamespace
 from typing import Any
 
@@ -41,7 +40,9 @@ def test_api_error_returns_contract_envelope() -> None:
     app.include_router(router)
 
     with TestClient(app) as client:
-        response = client.get("/boom-api", headers={"X-Audiomorph-Token": "test-token"})
+        response = client.get(
+            "/boom-api", headers={"X-Audiomorph-Token": "test-token"}
+        )
 
     assert response.status_code == 404
     assert response.json() == {
@@ -52,7 +53,9 @@ def test_api_error_returns_contract_envelope() -> None:
     }
 
 
-def test_unhandled_exception_returns_internal_error_without_traceback() -> None:
+def test_unhandled_exception_returns_internal_error_without_traceback() -> (
+    None
+):
     app = create_app(auth_token="test-token")
     router = APIRouter()
 
@@ -63,7 +66,9 @@ def test_unhandled_exception_returns_internal_error_without_traceback() -> None:
     app.include_router(router)
 
     with TestClient(app, raise_server_exceptions=False) as client:
-        response = client.get("/boom", headers={"X-Audiomorph-Token": "test-token"})
+        response = client.get(
+            "/boom", headers={"X-Audiomorph-Token": "test-token"}
+        )
 
     assert response.status_code == 500
     assert response.json() == {
@@ -76,10 +81,14 @@ def test_unhandled_exception_returns_internal_error_without_traceback() -> None:
     assert "RuntimeError" not in response.text
 
 
-def test_healthz_returns_gpu_info_without_auth(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_healthz_returns_gpu_info_without_auth(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     fake_torch = SimpleNamespace(
         cuda=SimpleNamespace(is_available=lambda: False),
-        backends=SimpleNamespace(mps=SimpleNamespace(is_available=lambda: False)),
+        backends=SimpleNamespace(
+            mps=SimpleNamespace(is_available=lambda: False)
+        ),
     )
     monkeypatch.setitem(sys.modules, "torch", fake_torch)
     import audiomorph.app as app_module
@@ -107,7 +116,9 @@ def test_auth_required_on_non_healthz_routes() -> None:
     assert response.json()["message"] == "Unauthorized"
 
 
-def test_request_logging_has_required_fields(capsys: pytest.CaptureFixture[str]) -> None:
+def test_request_logging_has_required_fields(
+    capsys: pytest.CaptureFixture[str],
+) -> None:
     with _client() as client:
         response = client.get("/healthz")
         assert response.status_code == 200

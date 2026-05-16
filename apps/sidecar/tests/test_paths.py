@@ -1,15 +1,15 @@
 import os
-import sys
 from pathlib import Path
+import sys
 
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
 from audiomorph.paths import (
-    get_user_data_dir,
-    get_models_dir,
-    get_logs_dir,
     get_cache_dir,
     get_default_models_dir,
+    get_logs_dir,
+    get_models_dir,
+    get_user_data_dir,
 )
 
 

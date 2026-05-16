@@ -1,8 +1,9 @@
 from __future__ import annotations
 
+from collections.abc import Iterator
 from contextlib import contextmanager
 from pathlib import Path
-from typing import Iterator, Optional
+from typing import Any
 
 from sqlalchemy import event
 from sqlalchemy.engine import Engine
@@ -10,7 +11,6 @@ from sqlmodel import Session, SQLModel, create_engine
 
 from ..paths import ensure_dir, get_user_data_dir
 from . import models as _models  # noqa: F401  (register tables)
-
 
 _engine_cache: dict[str, Engine] = {}
 
@@ -20,7 +20,7 @@ def _default_db_path() -> str:
     return str(base / "audiomorph.db")
 
 
-def get_engine(db_path: Optional[str] = None) -> Engine:
+def get_engine(db_path: str | None = None) -> Engine:
     path = db_path or _default_db_path()
     if path in _engine_cache:
         return _engine_cache[path]
@@ -33,7 +33,7 @@ def get_engine(db_path: Optional[str] = None) -> Engine:
     )
 
     @event.listens_for(engine, "connect")
-    def _set_sqlite_pragmas(dbapi_conn, _conn_record):  # pyright: ignore[reportUnusedFunction]
+    def _set_sqlite_pragmas(dbapi_conn: Any, _conn_record: Any) -> None:  # pyright: ignore[reportUnusedFunction]
         cursor = dbapi_conn.cursor()
         cursor.execute("PRAGMA journal_mode=WAL;")
         cursor.execute("PRAGMA busy_timeout=5000;")
@@ -45,7 +45,7 @@ def get_engine(db_path: Optional[str] = None) -> Engine:
     return engine
 
 
-def init_db(db_path: Optional[str] = None) -> Engine:
+def init_db(db_path: str | None = None) -> Engine:
     engine = get_engine(db_path)
     SQLModel.metadata.create_all(engine)
     with engine.connect() as conn:
@@ -54,7 +54,7 @@ def init_db(db_path: Optional[str] = None) -> Engine:
 
 
 @contextmanager
-def session_scope(db_path: Optional[str] = None) -> Iterator[Session]:
+def session_scope(db_path: str | None = None) -> Iterator[Session]:
     engine = get_engine(db_path)
     session = Session(engine, expire_on_commit=False)
     try:

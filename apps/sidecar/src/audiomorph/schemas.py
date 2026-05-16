@@ -4,12 +4,13 @@ DO NOT EDIT MANUALLY - regenerate with: pnpm --filter @audiomorph/shared-types g
 """
 
 from enum import Enum
-from typing import Optional, List
+
 from pydantic import BaseModel
 
 
 class JobStatus(str, Enum):
     """Job status enumeration"""
+
     pending = "pending"
     running = "running"
     completed = "completed"
@@ -19,6 +20,7 @@ class JobStatus(str, Enum):
 
 class ExportFormat(str):
     """Supported audio export formats"""
+
     wav = "wav"
     mp3 = "mp3"
     flac = "flac"
@@ -26,15 +28,17 @@ class ExportFormat(str):
 
 class ApiError(BaseModel):
     """API error response structure"""
+
     code: str
     message: str
-    details: Optional[dict[str, object]] = None
+    details: dict[str, object] | None = None
     retriable: bool
-    hint: Optional[str] = None
+    hint: str | None = None
 
 
 class GenerationRequest(BaseModel):
     """Request to generate music using heartlib"""
+
     prompt: str
     lyrics: str = ""
     duration_seconds: float
@@ -44,16 +48,18 @@ class GenerationRequest(BaseModel):
 
 class GenerationStatus(BaseModel):
     """Current status of a generation job"""
+
     job_id: str
     status: str  # JobStatus enum value
-    progress: Optional[int] = None
-    eta_seconds: Optional[int] = None
-    phase: Optional[str] = None
-    error: Optional[ApiError] = None
+    progress: int | None = None
+    eta_seconds: int | None = None
+    phase: str | None = None
+    error: ApiError | None = None
 
 
 class GenerationResult(BaseModel):
     """Result of a completed generation job"""
+
     job_id: str
     file_path: str
     duration_seconds: float
@@ -66,11 +72,13 @@ class GenerationResult(BaseModel):
 
 class LyricsRequest(BaseModel):
     """Request to transcribe lyrics from audio"""
+
     audio_path: str
 
 
 class LyricsSegment(BaseModel):
     """Segment of transcribed lyrics"""
+
     start: int
     end: int
     text: str
@@ -78,30 +86,34 @@ class LyricsSegment(BaseModel):
 
 class LyricsResult(BaseModel):
     """Result of lyrics transcription"""
+
     text: str
-    segments: Optional[List[LyricsSegment]] = None
+    segments: list[LyricsSegment] | None = None
 
 
 class ModelInfo(BaseModel):
     """Information about an available model"""
+
     id: str
     name: str
     size_gb: int
     state: str  # "missing" | "partial" | "verified" | "corrupted"
-    bytes_done: Optional[int] = None
-    bytes_total: Optional[int] = None
+    bytes_done: int | None = None
+    bytes_total: int | None = None
 
 
 class ExportRequest(BaseModel):
     """Request to export a generated audio file"""
+
     job_id: str
     format: str  # ExportFormat enum value
-    bitrate_kbps: Optional[int] = None
+    bitrate_kbps: int | None = None
     output_path: str
 
 
 class AppSettings(BaseModel):
     """Application settings"""
+
     models_dir: str
     hf_token_set: bool
     openrouter_key_set: bool

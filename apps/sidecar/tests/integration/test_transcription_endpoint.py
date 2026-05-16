@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-from pathlib import Path
-
 import pytest
 
 from .conftest import FIXTURES, wait_for_job
@@ -24,7 +22,7 @@ def test_transcription_happy_path_with_stubbed_whisper(
     final = wait_for_job(app_client, f"/lyrics/jobs/{job_id}", auth_headers)
     assert final["status"] == "completed", final
     result = final["result"]
-    assert "text" in result and result["text"]
+    assert result.get("text")
     assert "segments" in result and len(result["segments"]) >= 1
 
     calls = stub_whisper()
@@ -33,7 +31,9 @@ def test_transcription_happy_path_with_stubbed_whisper(
 
 
 def test_transcription_invalid_payload(app_client, auth_headers) -> None:
-    resp = app_client.post("/lyrics/transcribe", json={}, headers=auth_headers)
+    resp = app_client.post(
+        "/lyrics/transcribe", json={}, headers=auth_headers
+    )
     assert resp.status_code == 422
 
 

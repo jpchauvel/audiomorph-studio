@@ -1,14 +1,14 @@
 from __future__ import annotations
 
-from typing import Optional
-
 from sqlmodel import Session, select
 
 from ..schemas import GenerationResult
 from .models import Generation, Setting
 
 
-def record_generation(session: Session, result: GenerationResult) -> Generation:
+def record_generation(
+    session: Session, result: GenerationResult
+) -> Generation:
     row = Generation(
         job_id=result.job_id,
         model_id=result.model_id,
@@ -26,17 +26,28 @@ def record_generation(session: Session, result: GenerationResult) -> Generation:
     return row
 
 
-def list_generations(session: Session, limit: int = 50, offset: int = 0) -> list[Generation]:
-    stmt = select(Generation).order_by(Generation.id).offset(offset).limit(limit)
+def list_generations(
+    session: Session, limit: int = 50, offset: int = 0
+) -> list[Generation]:
+    stmt = (
+        select(Generation)
+        .order_by(Generation.id)  # type: ignore[arg-type]
+        .offset(offset)
+        .limit(limit)
+    )
     return list(session.exec(stmt).all())
 
 
-def get_generation_by_job_id(session: Session, job_id: str) -> Optional[Generation]:
+def get_generation_by_job_id(
+    session: Session, job_id: str
+) -> Generation | None:
     stmt = select(Generation).where(Generation.job_id == job_id)
     return session.exec(stmt).first()
 
 
-def get_setting(session: Session, key: str, default: Optional[str] = None) -> Optional[str]:
+def get_setting(
+    session: Session, key: str, default: str | None = None
+) -> str | None:
     row = session.get(Setting, key)
     return row.value_json if row is not None else default
 
