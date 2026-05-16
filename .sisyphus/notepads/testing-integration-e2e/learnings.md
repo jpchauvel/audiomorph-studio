@@ -309,3 +309,23 @@
   serves Next.js static export — but requires fresh `pnpm --filter renderer
   build` after any source change. Regression detection workflow: edit → build
   → test → revert → build → test.
+
+## T13 — Component CI guard
+
+- `_guard.spec.ts` consolidates 3 invariant assertions into ONE test to keep
+  the total count at 25 + 1 = 26 (matching the spec's expected outcome).
+  Splitting assertions across multiple `test()` blocks would inflate the count.
+- Guard invariants:
+  1. `process.env.AUDIOMORPH_TEST_MODE` ∈ {undefined, '1'} — catches CI typos
+     like `'wrong'`, `'true'`, `'false'` that would silently bypass test-mode
+     branching in production code.
+  2. `window.__AUDIOMORPH_IPC__` probe via `page.evaluate` returns without
+     throwing — catches breakage of the IPC injection contract.
+  3. `window.__AUDIOMORPH_INTEGRATION_SETUP__` is undefined — catches
+     accidental leak of integration-config `_setup.ts` into component runs.
+- Bad-env proof: `AUDIOMORPH_TEST_MODE=wrong pnpm exec playwright test ...
+  _guard.spec.ts` → 1 failed with clear assertion message including the bad
+  value. The `expect(..., message).toBe(true)` pattern produces actionable
+  failure output.
+- Component suite under split config: 26 passed in 6.8s — well under the
+  2-minute runtime budget.
