@@ -63,3 +63,26 @@
 - 22 vitest unit tests pass (all patterns, idempotency, atomic writes, directory recursion)
 - Evidence files: task-3-scrub-planted-secrets.txt, task-3-idempotent.txt, task-3-clean-unchanged.txt
 - Commit: "test(scrubber): add secret redaction helper with CLI"
+
+## [2026-05-16] Test fixtures created and getFixturePath implemented
+- Created fixture directory structure: `packages/test-helpers/fixtures/{audio,lyrics,openrouter}/`
+- Audio fixtures:
+  - `short.wav`: 1-second silent mono PCM at 44100 Hz, 16-bit (86 KB) — generated via ffmpeg lavfi anullsrc
+  - `short.mp3`: 1-second silent mono MP3 at 44100 Hz (4.3 KB) — generated via ffmpeg lavfi anullsrc with MP3 encoding
+  - `speech-3s.wav`: 3-second silent mono PCM at 44100 Hz, 16-bit (258 KB) — generated via Python wave module (espeak-ng not available)
+- Lyrics fixtures:
+  - `sample.txt`: 42 lines, 3 verses + chorus structure, ~1 KB
+  - `empty.txt`: 0 bytes (empty file)
+- OpenRouter fixtures:
+  - `chat-response.json`: Valid OpenRouter chat completion response with id, object, created, model, choices, usage
+  - `error-401.json`: Valid OpenRouter 401 error response with error.message, error.type, error.code
+- Implemented `packages/test-helpers/src/fixtures.ts`:
+  - `getFixturePath(category, name): string` — returns absolute path using import.meta.url (ESM-compatible)
+  - Uses fileURLToPath + dirname for path resolution
+  - Resolves to `packages/test-helpers/fixtures/{category}/{name}`
+- Created `.gitattributes` with binary markers: `*.wav binary`, `*.mp3 binary`, `*.png binary`
+- Total fixture size: 832 blocks (~427 KB), well under 500 KB limit
+- All WAV files have valid RIFF headers: `5249 4646 ... 5741 5645` (RIFF....WAVE)
+- TypeScript build passes with no errors
+- Path resolution tested: all 7 fixture paths resolve correctly to absolute paths
+- Evidence files: task-6-fixture-validity.txt, task-6-path-resolution.txt
