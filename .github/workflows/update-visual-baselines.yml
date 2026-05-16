@@ -80,7 +80,7 @@ jobs:
 
       - name: Install Python deps
         if: inputs.platforms == 'all' || inputs.platforms == matrix.platform
-        run: pip install -r apps/sidecar/requirements.txt
+        run: pip install -e "apps/sidecar[dev]"
 
       - name: Restore HF model cache
         if: inputs.platforms == 'all' || inputs.platforms == matrix.platform

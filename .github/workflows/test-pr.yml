@@ -44,7 +44,7 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       - name: Install Python deps
-        run: pip install -r apps/sidecar/requirements.txt
+        run: pip install -e "apps/sidecar[dev]"
 
       - name: Install Python lint/security tooling
         run: pip install ruff mypy bandit
