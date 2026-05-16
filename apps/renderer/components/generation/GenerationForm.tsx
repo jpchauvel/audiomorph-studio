@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { useGenerationStore } from '@/lib/stores/generation'
+import { usePromptAssistStore } from '@/lib/stores/prompt-assist'
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select'
 import { Slider } from '@/components/ui/slider'
 import { Input } from '@/components/ui/input'
@@ -9,6 +10,8 @@ import { Label } from '@/components/ui/label'
 import { Button } from '@/components/ui/button'
 import { ShimmerButton } from '@/components/magicui/shimmer-button'
 import { toast } from 'sonner'
+
+import { PromptAssistDrawer } from '@/components/prompt-assist/Drawer'
 
 type Model = {
   id: string
@@ -22,11 +25,9 @@ type Props = {
 }
 
 export function GenerationForm({ models, onSubmit, onCancel }: Props) {
-  const { phase } = useGenerationStore()
+  const { phase, promptDraft: prompt, lyricsDraft: lyrics, setPromptDraft: setPrompt, setLyricsDraft: setLyrics } = useGenerationStore()
   const isRunning = phase !== 'idle' && phase !== 'done' && phase !== 'error' && phase !== 'cancelled'
   
-  const [prompt, setPrompt] = useState('')
-  const [lyrics, setLyrics] = useState('')
   const [modelId, setModelId] = useState(models[0]?.id || '')
   const [duration, setDuration] = useState(30)
   const [seed, setSeed] = useState('')
@@ -66,7 +67,16 @@ export function GenerationForm({ models, onSubmit, onCancel }: Props) {
   return (
     <form onSubmit={handleSubmit} className="flex flex-col gap-6 w-full max-w-2xl mx-auto">
       <div className="flex flex-col gap-2">
-        <Label htmlFor="prompt">Prompt <span className="text-[var(--color-danger)]">*</span></Label>
+        <div className="flex justify-between items-center">
+          <Label htmlFor="prompt">Prompt <span className="text-[var(--color-danger)]">*</span></Label>
+          <button 
+            type="button" 
+            className="text-xs text-[var(--color-primary)] hover:underline flex items-center gap-1"
+            onClick={() => usePromptAssistStore.getState().setOpen(true)}
+          >
+            Improve with AI ✨
+          </button>
+        </div>
         <textarea
           id="prompt"
           value={prompt}
@@ -213,6 +223,7 @@ export function GenerationForm({ models, onSubmit, onCancel }: Props) {
           </Button>
         )}
       </div>
+      <PromptAssistDrawer />
     </form>
   )
 }
