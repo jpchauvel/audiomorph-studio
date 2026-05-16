@@ -1151,7 +1151,7 @@ print('OK')
 
   **Commit**: YES. `feat(lyrics): transcription endpoint via heartlib`. Files: `apps/sidecar/src/audiomorph/lyrics/**`, `routers/lyrics.py`, tests. Pre-commit: `uv run pytest tests/test_lyrics_*.py`.
 
-- [ ] W2.5. SQLite persistence layer (SQLModel) — jobs, generations, settings tables
+- [x] W2.5. SQLite persistence layer (SQLModel) — jobs, generations, settings tables
 
   **What to do**: Define `apps/sidecar/src/audiomorph/db/models.py` with SQLModel tables: `Generation(id, job_id, model_id, prompt, lyrics, seed, duration_s, file_path, created_at, status)`, `Job(id, kind, status, created_at, updated_at, error_code?, error_message?)`, `Setting(key, value_json)`. Open SQLite at `<app_data>/audiomorph.db` with WAL mode + busy_timeout=5000. Implement Alembic migrations or SQLModel `create_all()` with version table. Provide `db/repo.py` with CRUD helpers: `record_generation()`, `list_generations(limit, offset)`, `get_setting(key, default)`, `set_setting(key, value)`. RED tests: insert + list + WAL concurrent read while write. Wire `init_db()` into sidecar startup.
 
@@ -1178,7 +1178,7 @@ print('OK')
 
   **Commit**: YES. `feat(db): SQLModel persistence with WAL mode`. Files: `apps/sidecar/src/audiomorph/db/**`, tests. Pre-commit: `uv run pytest tests/test_db_*.py`.
 
-- [ ] W2.6. Export endpoint: ffmpeg-backed format conversion (WAV/MP3/FLAC)
+- [x] W2.6. Export endpoint: ffmpeg-backed format conversion (WAV/MP3/FLAC)
 
   **What to do**: Implement `routers/export.py` POST `/export` with body `{generation_id, format: wav|mp3|flac, bitrate_kbps?}` → returns `{file_path, format, size_bytes}`. Use bundled ffmpeg 8 (from W1.6) via subprocess; build cmd safely with `shlex` (never shell=True). Output to `<jobs_dir>/<gen_id>/export.<ext>`. Validate: format in allow-list; bitrate 64-320 for mp3 only. Capture ffmpeg stderr; on non-zero exit raise `ApiError(EXPORT_FAILED, hint=<first line of stderr>)`. Timeout 5min via `asyncio.wait_for`. RED tests: WAV→MP3 conversion, invalid format → VALIDATION_ERROR, ffmpeg missing → EXPORT_FAILED with actionable hint.
 
@@ -1206,7 +1206,7 @@ print('OK')
 
   **Commit**: YES. `feat(export): ffmpeg-backed format conversion`. Files: `routers/export.py`, `services/ffmpeg.py`, tests. Pre-commit: `uv run pytest tests/test_export_*.py`.
 
-- [ ] W2.7. OpenRouter proxy router (BYOK relay, no key persistence)
+- [x] W2.7. OpenRouter proxy router (BYOK relay, no key persistence)
 
   **What to do**: Implement `routers/openrouter.py` POST `/openrouter/chat` with body `{messages, model?, temperature?, max_tokens?}`. Read user's OpenRouter API key from per-request header `X-OpenRouter-Key` (passed by Electron from safeStorage/keytar per W4.5 — never stored sidecar-side). Forward to `https://openrouter.ai/api/v1/chat/completions` via `httpx.AsyncClient` with 60s timeout + 2 retries on 5xx. Stream response back as SSE if client requested `stream=true`. Validate: messages non-empty, key present. Surface OpenRouter errors as `ApiError(EXTERNAL_API_ERROR, hint=<openrouter message>)`. RED tests with `respx` mocking: happy path, missing key → 401-ish envelope, 5xx retry, stream pass-through.
 
@@ -1233,7 +1233,7 @@ print('OK')
 
   **Commit**: YES. `feat(openrouter): BYOK relay proxy`. Files: `routers/openrouter.py`, tests. Pre-commit: `uv run pytest tests/test_openrouter_*.py`.
 
-- [ ] W2.8. Settings endpoints + first-run state machine
+- [x] W2.8. Settings endpoints + first-run state machine
 
   **What to do**: Implement `routers/settings.py` with `GET /settings`, `PUT /settings/{key}` (value in body). Persist via W2.5 repo. Define typed schema for keys: `models_dir` (path), `cpu_fallback_enabled` (bool), `theme` (light|dark|system), `default_model_id` (str), `hf_token_present` (bool — reflective only, real token stays in keytar), `openrouter_key_present` (bool — reflective), `first_run_completed` (bool). Validate values via Pydantic per-key. Add `GET /first-run/status` → `{completed, missing_steps: [pick_models_dir|download_models|...]}`. RED tests: unknown key → VALIDATION_ERROR, type mismatch → VALIDATION_ERROR, first-run progression.
 

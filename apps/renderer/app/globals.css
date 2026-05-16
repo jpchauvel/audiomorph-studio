@@ -1,0 +1,51 @@
+@import "tailwindcss";
+
+@plugin "tailwindcss-animate";
+
+@theme inline {
+  --color-primary: oklch(65% 0.22 250);
+  --color-surface: oklch(12% 0.01 250);
+  --color-surface-2: oklch(16% 0.01 250);
+  --color-surface-3: oklch(20% 0.015 250);
+  --color-accent: oklch(70% 0.18 200);
+  --color-success: oklch(65% 0.18 145);
+  --color-warning: oklch(75% 0.18 80);
+  --color-danger: oklch(60% 0.22 25);
+  --color-text: oklch(95% 0.005 250);
+  --color-text-muted: oklch(60% 0.01 250);
+  --color-border: oklch(25% 0.01 250);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+
+  /* Shadcn UI compatibility mapping */
+  --color-background: var(--color-surface);
+  --color-foreground: var(--color-text);
+  --color-card: var(--color-surface-2);
+  --color-card-foreground: var(--color-text);
+  --color-popover: var(--color-surface-2);
+  --color-popover-foreground: var(--color-text);
+  --color-primary-foreground: var(--color-surface);
+  --color-secondary: var(--color-surface-3);
+  --color-secondary-foreground: var(--color-text);
+  --color-muted: var(--color-surface-3);
+  --color-muted-foreground: var(--color-text-muted);
+  --color-accent-foreground: var(--color-text);
+  --color-destructive: var(--color-danger);
+  --color-destructive-foreground: var(--color-text);
+  --color-ring: var(--color-accent);
+  --color-input: var(--color-border);
+  
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
+}
+
+:root {
+  --radius: 0.5rem;
+}
+
+body {
+  background-color: var(--color-surface);
+  color: var(--color-text);
+  font-family: var(--font-sans);
+}
