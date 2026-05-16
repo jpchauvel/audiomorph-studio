@@ -1,0 +1,81 @@
+from __future__ import annotations
+
+import json
+import os
+import secrets
+import subprocess
+import sys
+import time
+from urllib.error import HTTPError
+from urllib.request import Request, urlopen
+
+
+def _get_json(url: str, *, token: str | None = None) -> tuple[int, dict]:
+    headers = {}
+    if token:
+        headers["X-Audiomorph-Token"] = token
+
+    req = Request(url, headers=headers, method="GET")
+    try:
+        with urlopen(req, timeout=3) as response:
+            return response.getcode(), json.loads(response.read().decode("utf-8"))
+    except HTTPError as exc:
+        return exc.code, json.loads(exc.read().decode("utf-8"))
+
+
+def test_sidecar_lifecycle() -> None:
+    token = secrets.token_hex(16)
+    read_fd, write_fd = os.pipe()
+
+    proc = subprocess.Popen(
+        [
+            sys.executable,
+            "-m",
+            "audiomorph",
+            "--port=0",
+            "--host=127.0.0.1",
+            f"--parent-pid={os.getpid()}",
+            f"--handshake-fd={write_fd}",
+            f"--auth-token={token}",
+        ],
+        cwd=os.path.dirname(os.path.dirname(__file__)),
+        env={**os.environ, "PYTHONPATH": "src"},
+        pass_fds=(write_fd,),
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        text=True,
+    )
+    os.close(write_fd)
+
+    try:
+        handshake_raw = os.read(read_fd, 4096).decode("utf-8").strip()
+        handshake = json.loads(handshake_raw)
+
+        port = int(handshake["port"])
+        assert 1024 < port < 65536
+        assert handshake["token"] == token
+        assert handshake["pid"] == proc.pid
+
+        url = f"http://127.0.0.1:{port}/healthz"
+
+        for _ in range(30):
+            if proc.poll() is not None:
+                raise AssertionError("Sidecar exited before serving requests")
+
+            status, body = _get_json(url, token=token)
+            if status == 200:
+                assert body["ok"] is True
+                assert body["pid"] == proc.pid
+                break
+            time.sleep(0.1)
+        else:
+            raise AssertionError("Sidecar failed to serve /healthz")
+
+        status, body = _get_json(url)
+        assert status == 200
+        assert body["ok"] is True
+    finally:
+        os.close(read_fd)
+        proc.terminate()
+        proc.wait(timeout=5)
+        assert proc.returncode is not None

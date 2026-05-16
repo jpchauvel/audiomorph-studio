@@ -1,12 +1,14 @@
 {
   "name": "audiomorph-studio",
-  "type": "module",
   "private": true,
   "packageManager": "pnpm@9.15.0",
   "workspaces": ["apps/desktop", "apps/web", "packages/*"],
   "scripts": {
     "lint": "eslint . --ext .ts,.tsx",
     "format": "prettier --write .",
-    "typecheck": "tsc --noEmit -p tsconfig.base.json"
+    "typecheck": "tsc --noEmit -p tsconfig.base.json",
+    "test:ts": "vitest run",
+    "test:py": "cd apps/sidecar && python3 -m pytest",
+    "test": "pnpm test:ts && pnpm test:py"
   }
 }

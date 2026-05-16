@@ -1,6 +1,8 @@
 export { ErrorCode, HTTP_STATUS } from './errors';
 export type { ErrorCode as ErrorCodeType, ApiError } from './errors';
 
+import type { ApiError } from './errors';
+
 /**
  * Job status enumeration for generation tasks
  */
