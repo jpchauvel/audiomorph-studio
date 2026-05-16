@@ -22,18 +22,18 @@ jobs:
     timeout-minutes: 15
     steps:
       - name: Checkout
-        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
         with:
           submodules: true
 
       - name: Setup Node 22
-        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020  # v4
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: '22'
           cache: 'pnpm'
 
       - name: Setup Python 3.12
-        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065  # v5
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
         with:
           python-version: '3.12'
 
@@ -43,11 +43,35 @@ jobs:
       - name: Install Python deps
         run: pip install -r apps/sidecar/requirements.txt
 
-      - name: Typecheck
+      - name: Install Python lint/security tooling
+        run: pip install ruff mypy bandit
+
+      - name: Typecheck (TypeScript)
         run: pnpm typecheck
 
-      - name: Lint
+      - name: Lint (ESLint)
         run: pnpm lint
+
+      - name: Lint (Ruff)
+        working-directory: apps/sidecar
+        run: ruff check .
+
+      - name: Format check (Ruff)
+        working-directory: apps/sidecar
+        run: ruff format --check .
+
+      - name: Typecheck (mypy)
+        working-directory: apps/sidecar
+        run: mypy src
+
+      - name: Security (Bandit)
+        working-directory: apps/sidecar
+        run: bandit -c pyproject.toml -r src
+
+      - name: Secret scan (Gitleaks)
+        uses: gitleaks/gitleaks-action@44c470ffc35caa8b1eb3e8012ca53c2f9bea4eb5 # v2.3.6
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Component tests
         run: pnpm test:component
@@ -66,7 +90,7 @@ jobs:
 
       - name: Upload test results
         if: always()
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02  # v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: test-results-pr
           path: .test-results/*.xml
@@ -74,7 +98,7 @@ jobs:
 
       - name: Upload Playwright report on failure
         if: failure()
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02  # v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: playwright-report-pr
           path: playwright-report/
