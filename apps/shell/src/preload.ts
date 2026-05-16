@@ -132,4 +132,9 @@ const electronAPI: ElectronAPI = {
   },
 };
 
+// AUDIOMORPH_TEST_MODE hook
+if (process.env.AUDIOMORPH_TEST_MODE === "1") {
+  (window as any).__AUDIOMORPH_TEST_MODE__ = true;
+}
+
 contextBridge.exposeInMainWorld("electronAPI", electronAPI);

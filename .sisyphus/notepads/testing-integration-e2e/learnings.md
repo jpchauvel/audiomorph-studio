@@ -86,3 +86,17 @@
 - TypeScript build passes with no errors
 - Path resolution tested: all 7 fixture paths resolve correctly to absolute paths
 - Evidence files: task-6-fixture-validity.txt, task-6-path-resolution.txt
+
+## [2026-05-16] Playwright config split: component/integration/visual + E2E config
+- Split `apps/renderer/playwright.config.ts` into 3 configs:
+  - `playwright.component.config.ts`: testDir `tests/component/`, webServer enabled, retries 0
+  - `playwright.integration.config.ts`: testDir `tests/integration/`, NO webServer, retries 0, timeout 60s
+  - `playwright.visual.config.ts`: testDir `tests/visual/`, webServer enabled, retries 0, snapshotPathTemplate with {platform}
+- Created `apps/shell/playwright.e2e.config.ts`: testDir `tests/e2e/`, NO webServer, retries 1, timeout 120s
+- Added 8 root package.json scripts: test:component, test:integration, test:visual, test:visual:update, test:e2e, test:e2e:debug, test:sidecar-integration, test:all
+- All 25 component tests pass (no regression)
+- Integration config verified: grep -c "webServer" = 0 ✓
+- JUnit output pattern: `.test-results/{layer}.xml` (component, integration, visual, e2e, sidecar-integration)
+- Deleted original `apps/renderer/playwright.config.ts` after split
+- `.test-results/` already in `.gitignore` (line 25)
+- Evidence files: task-7-scripts-resolve.txt, task-7-component-config.txt, task-7-no-webserver.txt
