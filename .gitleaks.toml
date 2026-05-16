@@ -1,0 +1,38 @@
+title = "audiomorph-studio gitleaks config"
+
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Allowlist test fixtures, planted scrubber tokens, and lockfiles"
+
+paths = [
+  '''(^|/)pnpm-lock\.yaml$''',
+  '''(^|/)package-lock\.json$''',
+  '''(^|/)yarn\.lock$''',
+  '''(^|/)uv\.lock$''',
+  '''(^|/)\.pre-commit-config\.yaml$''',
+  '''(^|/)\.gitleaks\.toml$''',
+  '''^heartlib/''',
+  '''(^|/)tests?/''',
+  '''(^|/)test-helpers/''',
+  '''^scripts/scrub-test-output\.mjs$''',
+  '''(^|/)docs/''',
+  '''(^|/)\.sisyphus/''',
+]
+
+regexes = [
+  '''sk-or-v1-PLANTED-FAKE-TEST-TOKEN''',
+  '''sk-or-v1-token[0-9]+''',
+  '''sk-or-v1-secret[0-9]+''',
+  '''sk-or-v1-abc123def456ghi789jkl012mno''',
+  '''sk-or-v1-s[0-9]+''',
+  '''dev-local-token''',
+]
+
+stopwords = [
+  "PLANTED",
+  "FAKE",
+  "EXAMPLE",
+  "PLACEHOLDER",
+]

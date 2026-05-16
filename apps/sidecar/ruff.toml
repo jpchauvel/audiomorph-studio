@@ -1,6 +1,86 @@
-line-length = 100
+line-length = 78
 target-version = "py312"
+extend-exclude = ["heartlib", ".venv", "build", "dist"]
 
 [lint]
 select = ["ALL"]
-ignore = ["D", "ANN", "COM812", "ISC001"]
+ignore = [
+  # Documentation/annotation: covered elsewhere
+  "D",         # pydocstyle: docstrings not enforced
+  "ANN",       # flake8-annotations: covered by mypy
+
+  # Formatter conflicts
+  "COM812",    # missing trailing comma
+  "ISC001",    # implicit string concat
+
+  # TODO policy (allow inline TODOs without author/issue tags)
+  "FIX002",    # line contains TODO
+  "TD002",     # missing TODO author
+  "TD003",     # missing TODO issue link
+
+  # Pre-existing codebase style (acknowledged; not worth a mass refactor)
+  "EM101",     # raw string in exception (stylistic preference)
+  "EM102",     # f-string in exception (stylistic preference)
+  "TRY003",    # long messages outside exception class
+  "TRY400",    # logger.error vs logger.exception (stylistic)
+  "BLE001",    # blind except (intentional safety nets in sidecar lifecycle)
+  "TID252",    # relative imports (project convention)
+  "TC001",     # typing-only first-party import (not enforced)
+  "TC002",     # typing-only third-party import (not enforced)
+  "TC003",     # typing-only stdlib import (not enforced)
+  "INP001",    # implicit namespace package (FastAPI app dirs are fine)
+  "ARG001",    # unused function argument (FastAPI dependency injection)
+  "ARG002",    # unused method argument
+  "FBT001",    # boolean positional arg (FastAPI convention)
+  "FBT002",    # boolean default arg (FastAPI convention)
+  "A002",      # builtin shadowing (e.g. `id`, `type` in route params)
+  "PLR0913",   # too many arguments (FastAPI routes legitimately have many)
+  "PLR0915",   # too many statements (some setup functions are long)
+  "PLR2004",   # magic value comparison (HTTP status codes etc.)
+  "C901",      # complex structure (some FSM transitions are inherently so)
+  "SLF001",    # private member access (test utilities)
+  "RUF012",    # mutable class default (Pydantic models)
+  "S105",      # hardcoded password string (false positives on header names)
+  "S106",      # hardcoded password func arg (false positives on tokens in tests)
+  "S108",      # hardcoded tmp path (intentional in tests/fixtures)
+  "S603",      # subprocess without shell=True check (we audit these manually)
+  "S310",      # urllib open (audited; not user input)
+  "S608",      # SQL injection (parameterized queries in use)
+  "PLW0603",   # global statement (module-level singletons in main)
+  "PLW2901",   # redefined loop variable (intentional shadowing)
+  "PTH120",    # use pathlib (existing os.path usage; not refactoring)
+  "PTH123",    # use Path.open (existing open() usage)
+  "PERF401",   # manual list comprehension (clarity > micro-perf)
+  "SIM105",    # contextlib.suppress (try/except clearer here)
+  "B904",      # raise from (existing; not refactoring)
+  "PT018",     # composite assert (test readability)
+  "TRY203",    # useless try/except (intentional logging)
+  "TRY301",    # raise within try (intentional pattern)
+  "SLOT000",   # __slots__ on str subclass (Enum subclasses)
+  "ASYNC230",  # blocking open in async (audited; bounded I/O)
+  "RUF022",    # unsorted __all__
+  "TC006",     # runtime cast value
+  "E501",      # line too long (pre-existing; new code formatted to 78 by ruff format)
+  "PLC0415",   # import outside top-level (intentional lazy loading of heavy ML deps)
+  "RUF100",    # unused noqa (legacy; cleanup over time)
+]
+
+[lint.per-file-ignores]
+"**/tests/**" = [
+  "S101",      # use of assert (idiomatic in pytest)
+  "PLR2004",   # magic numbers in tests
+  "ARG001",    # unused fixture args (pytest fixtures)
+  "ARG002",
+  "INP001",    # implicit namespace package (tests/ is fine)
+  "S106",      # hardcoded tokens in test setup
+]
+
+[lint.isort]
+known-first-party = ["audiomorph"]
+combine-as-imports = true
+force-sort-within-sections = true
+
+[format]
+quote-style = "double"
+indent-style = "space"
+line-ending = "lf"

@@ -10,7 +10,7 @@
   "scripts": {
     "lint": "eslint . --ext .ts,.tsx",
     "format": "prettier --write .",
-    "typecheck": "tsc --noEmit -p tsconfig.base.json",
+    "typecheck": "pnpm -r --filter './apps/*' --filter './packages/*' run typecheck",
     "test:ts": "pnpm -r --filter './apps/*' --filter './packages/*' run test",
     "test:py": "cd apps/sidecar && python3 -m pytest",
     "test": "pnpm test:ts && pnpm test:py",
@@ -29,7 +29,7 @@
     "dist:win": "pnpm --filter @audiomorph/shell dist:win",
     "dist:linux": "pnpm --filter @audiomorph/shell dist:linux",
     "scrub-secrets": "node scripts/scrub-test-output.mjs",
-    "test:fast": "pnpm test:component && pnpm --filter @audiomorph/sidecar test",
+    "test:fast": "pnpm test:component && pnpm test:py",
     "test:mid": "pnpm test:fast && pnpm test:integration && pnpm test:sidecar-integration && pnpm test:visual",
     "test:full": "pnpm test:mid && pnpm test:e2e",
     "test:e2e:headed": "PWDEBUG=1 pnpm exec playwright test --config=apps/shell/playwright.e2e.config.ts --headed",
@@ -39,5 +39,8 @@
     "ci:hf:verify": "node scripts/ci-hf-cache-verify.mjs",
     "smoke:engines": "node scripts/smoke-real-engines.mjs"
   },
-  "version": "2.0.0"
+  "version": "2.0.0",
+  "devDependencies": {
+    "prettier": "^3.8.3"
+  }
 }
