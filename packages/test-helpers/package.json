@@ -1,0 +1,42 @@
+{
+  "name": "@audiomorph/test-helpers",
+  "version": "2.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    "./sidecar": {
+      "import": "./dist/sidecar.js",
+      "types": "./dist/sidecar.d.ts"
+    },
+    "./scrubber": {
+      "import": "./dist/scrubber.js",
+      "types": "./dist/scrubber.d.ts"
+    },
+    "./hf-cache": {
+      "import": "./dist/hf-cache.js",
+      "types": "./dist/hf-cache.d.ts"
+    },
+    "./electron": {
+      "import": "./dist/electron.js",
+      "types": "./dist/electron.d.ts"
+    },
+    "./test-mode": {
+      "import": "./dist/test-mode.js",
+      "types": "./dist/test-mode.d.ts"
+    },
+    "./fixtures": {
+      "import": "./dist/fixtures.js",
+      "types": "./dist/fixtures.d.ts"
+    }
+  },
+  "scripts": {
+    "build": "tsc",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run --reporter=default --reporter=junit --outputFile=../../.test-results/test-helpers.xml"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.48.2",
+    "@types/node": "^20.19.0",
+    "typescript": "^5.7.2"
+  }
+}
