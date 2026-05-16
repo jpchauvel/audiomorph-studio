@@ -18,9 +18,12 @@ import * as process from "node:process";
 
 const REPO_ROOT = path.resolve(path.dirname(new URL(import.meta.url).pathname), "..");
 
+// NOTE: `.sisyphus/` is internal tooling (notepads, evidence, plans) — not CI
+// output. Evidence files intentionally contain real-shaped fake tokens as
+// documentation, so scanning them produces false positives. Only scan
+// genuine CI/test output directories.
 const SCAN_DIRS = [
   ".test-results",
-  ".sisyphus/evidence",
   "playwright-report",
   "test-results",
 ];
