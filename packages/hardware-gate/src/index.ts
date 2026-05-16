@@ -1,2 +1,2 @@
-export type { HardwareFailure, HardwareReport } from "./detect";
-export { detect } from "./detect";
+export type { HardwareFailure, HardwareReport } from "./detect.js";
+export { detect } from "./detect.js";
