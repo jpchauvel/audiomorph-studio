@@ -1,0 +1,76 @@
+name: Test — PR Smoke
+
+on:
+  pull_request:
+
+permissions:
+  contents: read
+  pull-requests: write
+
+concurrency:
+  group: pr-${{ github.head_ref }}
+  cancel-in-progress: true
+
+jobs:
+  pr-smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4
+        with:
+          submodules: true
+
+      - name: Setup Node 22
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020  # v4
+        with:
+          node-version: '22'
+          cache: 'pnpm'
+
+      - name: Setup Python 3.12
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065  # v5
+        with:
+          python-version: '3.12'
+
+      - name: Install JS deps
+        run: pnpm install --frozen-lockfile
+
+      - name: Install Python deps
+        run: pip install -r apps/sidecar/requirements.txt
+
+      - name: Typecheck
+        run: pnpm typecheck
+
+      - name: Lint
+        run: pnpm lint
+
+      - name: Component tests
+        run: pnpm test:component
+
+      - name: Sidecar unit tests
+        run: pnpm --filter @audiomorph/sidecar test
+
+      - name: Renderer integration tests
+        run: pnpm test:integration
+
+      - name: Sidecar integration tests
+        run: pnpm test:sidecar-integration
+
+      - name: Scrub secrets from test output
+        run: pnpm scrub-secrets
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02  # v4
+        with:
+          name: test-results-pr
+          path: .test-results/*.xml
+          retention-days: 7
+
+      - name: Upload Playwright report on failure
+        if: failure()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02  # v4
+        with:
+          name: playwright-report-pr
+          path: playwright-report/
+          retention-days: 3
