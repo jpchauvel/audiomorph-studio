@@ -47,6 +47,11 @@
 - Generation output path currently writes via `torchaudio.save(..., 48000)` after `HeartCodec.detokenize`; adapter should wrap temp path and return WAV bytes.
 - Lyrics transcription entry is `HeartTranscriptorPipeline` (Whisper ASR pipeline subclass) using inherited `__call__` rather than custom `transcribe()`.
 
+## [2026-05-16] W1.5 sidecar lifecycle bootstrap
+- Sidecar bootstrap now uses pre-bound loopback socket + fd handshake payload (`port`, `token`, `pid`) before `uvicorn.Server.run()`.
+- Parent-death watchdog pattern: daemon thread polling every second, setting `server.should_exit` before process exit.
+- Auth middleware uses `hmac.compare_digest` on `X-Audiomorph-Token`; token-leak evidence confirms known token string is absent from captured logs.
+
 ## [2026-05-16] W1.3 - Error Envelope Contract + Structured Logging
 - **Task:** Define unified error envelope contract and error code catalog
 - **Status:** ✅ Complete

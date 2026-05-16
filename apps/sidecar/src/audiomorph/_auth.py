@@ -1,19 +1,25 @@
 from __future__ import annotations
 
 import hmac
+from collections.abc import Awaitable, Callable
 
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
 from starlette.responses import JSONResponse, Response
+from starlette.types import ASGIApp
 
 
 class AuthMiddleware(BaseHTTPMiddleware):
-    def __init__(self, app, token: str, exempt_paths: set[str] | None = None) -> None:
+    def __init__(self, app: ASGIApp, token: str, exempt_paths: set[str] | None = None) -> None:
         super().__init__(app)
         self._token = token
         self._exempt_paths = exempt_paths or {"/healthz"}
 
-    async def dispatch(self, request: Request, call_next) -> Response:
+    async def dispatch(
+        self,
+        request: Request,
+        call_next: Callable[[Request], Awaitable[Response]],
+    ) -> Response:
         if request.url.path in self._exempt_paths:
             return await call_next(request)
 

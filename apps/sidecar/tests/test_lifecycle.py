@@ -7,12 +7,13 @@ import select
 import subprocess
 import sys
 import time
+from typing import Any
 from urllib.error import HTTPError
 from urllib.request import Request, urlopen
 
 
-def _get_json(url: str, *, token: str | None = None) -> tuple[int, dict]:
-    headers = {}
+def _get_json(url: str, *, token: str | None = None) -> tuple[int, dict[str, Any]]:
+    headers: dict[str, str] = {}
     if token:
         headers["X-Audiomorph-Token"] = token
 

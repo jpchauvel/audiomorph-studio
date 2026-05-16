@@ -4,11 +4,16 @@ import os
 import sys
 import threading
 import time
+from typing import Protocol
 
 import psutil
 
 
-def start_watchdog(parent_pid: int, server) -> threading.Thread:
+class SupportsShouldExit(Protocol):
+    should_exit: bool
+
+
+def start_watchdog(parent_pid: int, server: SupportsShouldExit) -> threading.Thread:
     def _monitor() -> None:
         while True:
             time.sleep(1.0)

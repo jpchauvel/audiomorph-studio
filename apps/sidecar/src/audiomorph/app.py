@@ -12,7 +12,7 @@ def create_app(auth_token: str) -> FastAPI:
     app.add_middleware(AuthMiddleware, token=auth_token)
 
     @app.get("/healthz")
-    async def healthz() -> dict[str, int | str | bool]:
+    async def healthz() -> dict[str, int | str | bool]:  # pyright: ignore[reportUnusedFunction]
         return {"ok": True, "version": "0.1.0", "pid": os.getpid()}
 
     return app
