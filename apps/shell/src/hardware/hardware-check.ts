@@ -12,6 +12,9 @@ function formatFailureList(report: Awaited<ReturnType<typeof detect>>): string {
 }
 
 export async function enforceHardwareRequirements(): Promise<void> {
+  // AUDIOMORPH_TEST_MODE hook — skip hardware gate in test mode
+  if (process.env.AUDIOMORPH_TEST_MODE === "1") return;
+
   const report = await detect();
   if (report.ok) {
     return;
