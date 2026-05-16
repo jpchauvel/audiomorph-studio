@@ -1,9 +1,9 @@
-import { app, BrowserWindow, ipcMain, nativeImage } from "electron";
-import * as path from "node:path";
-import * as process from "node:process";
+import { app, BrowserWindow, ipcMain, nativeImage } from 'electron';
+import * as path from 'node:path';
+import * as process from 'node:process';
 
-const APP_PROTOCOL = "audiomorph";
-const DEEP_LINK_EVENT = "deep-link:received";
+const APP_PROTOCOL = 'audiomorph';
+const DEEP_LINK_EVENT = 'deep-link:received';
 
 let isQuitting = false;
 
@@ -14,19 +14,19 @@ export function getPlatform(): NodeJS.Platform {
 export function maskDeepLinkUrl(rawUrl: string): string {
   try {
     const parsed = new URL(rawUrl);
-    parsed.search = "";
+    parsed.search = '';
     return parsed.toString();
   } catch {
-    return rawUrl.split("?")[0] ?? rawUrl;
+    return rawUrl.split('?')[0] ?? rawUrl;
   }
 }
 
 export function resolveAppIconPath(): string {
   if (app.isPackaged) {
-    return path.join(process.resourcesPath, "icons", "icon.png");
+    return path.join(process.resourcesPath, 'icons', 'icon.png');
   }
 
-  return path.join(__dirname, "..", "..", "..", "..", "apps", "shell", "assets", "icon.png");
+  return path.join(__dirname, '..', '..', '..', '..', 'apps', 'shell', 'assets', 'icon.png');
 }
 
 function extractDeepLinkFromArgv(argv: string[]): string | null {
@@ -44,12 +44,12 @@ function applyPlatformIcon(getMainWindow: () => BrowserWindow | null): void {
   const icon = nativeImage.createFromPath(resolveAppIconPath());
   if (icon.isEmpty()) return;
 
-  if (getPlatform() === "darwin" && app.dock) {
+  if (getPlatform() === 'darwin' && app.dock) {
     app.dock.setIcon(icon);
     return;
   }
 
-  if (getPlatform() === "win32") {
+  if (getPlatform() === 'win32') {
     const win = getMainWindow();
     win?.setIcon(icon);
   }
@@ -64,23 +64,23 @@ export function setupAppLifecycle(getMainWindow: () => BrowserWindow | null): vo
   app.setAsDefaultProtocolClient(APP_PROTOCOL);
 
   // AUDIOMORPH_TEST_MODE hook
-  if (process.env.AUDIOMORPH_TEST_MODE === "1") {
-    console.info("[lifecycle] test mode enabled");
+  if (process.env.AUDIOMORPH_TEST_MODE === '1') {
+    console.info('[lifecycle] test mode enabled');
   }
 
-  app.on("before-quit", () => {
+  app.on('before-quit', () => {
     isQuitting = true;
   });
 
-  app.on("browser-window-created", (_event, window) => {
-    window.on("close", () => {
+  app.on('browser-window-created', (_event, window) => {
+    window.on('close', () => {
       // Future hide-to-tray support: this flag is the branch point.
       if (!isQuitting) {
         return;
       }
     });
 
-    if (getPlatform() === "win32") {
+    if (getPlatform() === 'win32') {
       const icon = nativeImage.createFromPath(resolveAppIconPath());
       if (!icon.isEmpty()) {
         window.setIcon(icon);
@@ -88,7 +88,7 @@ export function setupAppLifecycle(getMainWindow: () => BrowserWindow | null): vo
     }
   });
 
-  app.on("second-instance", (_event, argv) => {
+  app.on('second-instance', (_event, argv) => {
     const window = getMainWindow();
     if (window) {
       if (window.isMinimized()) {
@@ -97,7 +97,7 @@ export function setupAppLifecycle(getMainWindow: () => BrowserWindow | null): vo
       window.focus();
     }
 
-    if (getPlatform() !== "darwin") {
+    if (getPlatform() !== 'darwin') {
       const deepLink = extractDeepLinkFromArgv(argv);
       if (deepLink) {
         emitDeepLink(deepLink);
@@ -105,18 +105,18 @@ export function setupAppLifecycle(getMainWindow: () => BrowserWindow | null): vo
     }
   });
 
-  app.on("open-url", (event, url) => {
+  app.on('open-url', (event, url) => {
     event.preventDefault();
     emitDeepLink(url);
   });
 
-  app.on("window-all-closed", () => {
-    if (getPlatform() !== "darwin") {
+  app.on('window-all-closed', () => {
+    if (getPlatform() !== 'darwin') {
       app.quit();
     }
   });
 
-  app.on("activate", () => {
+  app.on('activate', () => {
     const window = getMainWindow();
     if (!window) {
       void getMainWindow();
@@ -131,7 +131,7 @@ export function setupAppLifecycle(getMainWindow: () => BrowserWindow | null): vo
   void app.whenReady().then(() => {
     applyPlatformIcon(getMainWindow);
 
-    if (getPlatform() !== "darwin") {
+    if (getPlatform() !== 'darwin') {
       const startupDeepLink = extractDeepLinkFromArgv(process.argv);
       if (startupDeepLink) {
         emitDeepLink(startupDeepLink);

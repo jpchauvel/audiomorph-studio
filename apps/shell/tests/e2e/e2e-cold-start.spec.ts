@@ -8,19 +8,21 @@ test.describe('E2E: cold start', () => {
     if (handle) await handle.teardown();
   });
 
-  test.fixme('launches shell, sidecar healthy on test-mode port, first window ready', async () => { handle = await launchAudiomorph();
-  
-  expect(handle.sidecar.port).toBeGreaterThan(0);
-  expect(handle.sidecar.token).toMatch(/.+/);
-  
-  const health = await fetch(`${handle.sidecar.baseUrl}/healthz`, {
-    headers: { 'X-Audiomorph-Token': handle.sidecar.token },
+  test.fixme('launches shell, sidecar healthy on test-mode port, first window ready', async () => {
+    handle = await launchAudiomorph();
+
+    expect(handle.sidecar.port).toBeGreaterThan(0);
+    expect(handle.sidecar.token).toMatch(/.+/);
+
+    const health = await fetch(`${handle.sidecar.baseUrl}/healthz`, {
+      headers: { 'X-Audiomorph-Token': handle.sidecar.token },
+    });
+    expect(health.status).toBe(200);
+
+    const win = handle.window as unknown as import('@playwright/test').Page;
+    await win.waitForSelector('[data-testid="route-ready"]', {
+      state: 'attached',
+      timeout: 30_000,
+    });
   });
-  expect(health.status).toBe(200);
-  
-  const win = handle.window as unknown as import('@playwright/test').Page;
-  await win.waitForSelector('[data-testid="route-ready"]', {
-    state: 'attached',
-    timeout: 30_000,
-  }); });
 });

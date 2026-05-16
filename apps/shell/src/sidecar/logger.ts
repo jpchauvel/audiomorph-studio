@@ -1,11 +1,11 @@
-import * as fs from "node:fs";
-import * as path from "node:path";
+import * as fs from 'node:fs';
+import * as path from 'node:path';
 
 const DEFAULT_MAX_BYTES = 10 * 1024 * 1024;
 const DEFAULT_MAX_ROTATIONS = 5;
 
 export interface SidecarLogWriter {
-  log(stream: "stdout" | "stderr", line: string): void;
+  log(stream: 'stdout' | 'stderr', line: string): void;
 }
 
 export interface SidecarFileLoggerOptions {
@@ -23,7 +23,7 @@ function nextLogPath(logDir: string, now: Date): string {
 }
 
 export function maskToken(token: string): string {
-  if (!token) return "***";
+  if (!token) return '***';
   return `${token.slice(0, 1)}***`;
 }
 
@@ -33,17 +33,17 @@ export class SidecarFileLogger implements SidecarLogWriter {
   private readonly maxRotations: number;
 
   public constructor(options: SidecarFileLoggerOptions) {
-    this.logDir = path.join(options.userDataPath, "logs");
+    this.logDir = path.join(options.userDataPath, 'logs');
     this.maxBytes = options.maxBytes ?? DEFAULT_MAX_BYTES;
     this.maxRotations = options.maxRotations ?? DEFAULT_MAX_ROTATIONS;
   }
 
-  public log(stream: "stdout" | "stderr", line: string): void {
+  public log(stream: 'stdout' | 'stderr', line: string): void {
     fs.mkdirSync(this.logDir, { recursive: true });
     const logPath = nextLogPath(this.logDir, new Date());
     const payload = `${new Date().toISOString()} [${stream}] ${line}\n`;
-    this.rotateIfNeeded(logPath, Buffer.byteLength(payload, "utf8"));
-    fs.appendFileSync(logPath, payload, "utf8");
+    this.rotateIfNeeded(logPath, Buffer.byteLength(payload, 'utf8'));
+    fs.appendFileSync(logPath, payload, 'utf8');
   }
 
   private rotateIfNeeded(logPath: string, incomingBytes: number): void {

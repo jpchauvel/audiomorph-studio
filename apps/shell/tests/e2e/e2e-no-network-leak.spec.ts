@@ -11,28 +11,31 @@ test.describe('E2E: no network leak', () => {
     if (handle) await handle.teardown();
   });
 
-  test.fixme('renderer makes zero external network requests on cold start', async () => { handle = await launchAudiomorph();
-  const win = handle.window as unknown as import('@playwright/test').Page;
-  
-  const offending: string[] = [];
-  const monitor = (req: Request) => {
-    const url = req.url();
-    try {
-      const u = new URL(url);
-      if (ALLOWED_SCHEMES.has(u.protocol)) return;
-      if ((u.protocol === 'http:' || u.protocol === 'https:') && ALLOWED_HOSTS.has(u.hostname)) return;
-      offending.push(url);
-    } catch {
-      offending.push(url);
-    }
-  };
-  win.on('request', monitor);
-  
-  await win.waitForSelector('[data-testid="route-ready"]', {
-    state: 'attached',
-    timeout: 30_000,
+  test.fixme('renderer makes zero external network requests on cold start', async () => {
+    handle = await launchAudiomorph();
+    const win = handle.window as unknown as import('@playwright/test').Page;
+
+    const offending: string[] = [];
+    const monitor = (req: Request) => {
+      const url = req.url();
+      try {
+        const u = new URL(url);
+        if (ALLOWED_SCHEMES.has(u.protocol)) return;
+        if ((u.protocol === 'http:' || u.protocol === 'https:') && ALLOWED_HOSTS.has(u.hostname))
+          return;
+        offending.push(url);
+      } catch {
+        offending.push(url);
+      }
+    };
+    win.on('request', monitor);
+
+    await win.waitForSelector('[data-testid="route-ready"]', {
+      state: 'attached',
+      timeout: 30_000,
+    });
+
+    win.off('request', monitor);
+    expect(offending, `unexpected external requests: ${offending.join(', ')}`).toEqual([]);
   });
-  
-  win.off('request', monitor);
-  expect(offending, `unexpected external requests: ${offending.join(', ')}`).toEqual([]); });
 });

@@ -7,12 +7,12 @@ directories:
 files:
   - dist/**/*
   - package.json
-  - "!**/*.map"
+  - '!**/*.map'
 extraResources:
   - from: ../renderer/out
     to: renderer/out
     filter:
-      - "**/*"
+      - '**/*'
 asar: true
 nodeGypRebuild: false
 npmRebuild: false

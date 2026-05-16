@@ -1,13 +1,13 @@
-import { EventEmitter } from "node:events";
-import * as fs from "node:fs";
-import * as http from "node:http";
-import * as path from "node:path";
-import * as process from "node:process";
-import * as readline from "node:readline";
-import { randomBytes } from "node:crypto";
-import { spawn, spawnSync } from "node:child_process";
+import { EventEmitter } from 'node:events';
+import * as fs from 'node:fs';
+import * as http from 'node:http';
+import * as path from 'node:path';
+import * as process from 'node:process';
+import * as readline from 'node:readline';
+import { randomBytes } from 'node:crypto';
+import { spawn, spawnSync } from 'node:child_process';
 
-import { maskToken, SidecarFileLogger, type SidecarLogWriter } from "./logger";
+import { maskToken, SidecarFileLogger, type SidecarLogWriter } from './logger';
 
 type SidecarProcess = ReturnType<typeof spawn>;
 
@@ -35,9 +35,9 @@ interface CrashPayload {
 }
 
 const PLATFORM_MAP: Record<string, string> = {
-  darwin: "macos-arm64",
-  win32: "windows-x64",
-  linux: "linux-x64",
+  darwin: 'macos-arm64',
+  win32: 'windows-x64',
+  linux: 'linux-x64',
 };
 
 const HEALTH_FAILURE_THRESHOLD = 3;
@@ -70,7 +70,7 @@ export class SidecarManager extends EventEmitter {
   public static getInstance(options?: SidecarManagerOptions): SidecarManager {
     if (!SidecarManager.instance) {
       if (!options) {
-        throw new Error("SidecarManager.getInstance requires options on first call");
+        throw new Error('SidecarManager.getInstance requires options on first call');
       }
       SidecarManager.instance = new SidecarManager(options);
     }
@@ -91,19 +91,19 @@ export class SidecarManager extends EventEmitter {
     this.termWaitMs = options.termWaitMs ?? 3_000;
     this.now = options.now ?? (() => Date.now());
     this.processKiller = options.processKiller ?? ((pid, signal) => process.kill(pid, signal));
-    this.tokenGenerator = options.tokenGenerator ?? (() => randomBytes(32).toString("hex"));
+    this.tokenGenerator = options.tokenGenerator ?? (() => randomBytes(32).toString('hex'));
   }
 
   public getApiBaseUrl(): string {
     if (this.port == null) {
-      throw new Error("Sidecar is not ready");
+      throw new Error('Sidecar is not ready');
     }
     return `http://127.0.0.1:${this.port}`;
   }
 
   public getApiToken(): string {
     if (!this.token) {
-      throw new Error("Sidecar token is not available");
+      throw new Error('Sidecar token is not available');
     }
     return this.token;
   }
@@ -113,7 +113,7 @@ export class SidecarManager extends EventEmitter {
     await this.reapZombieProcess();
     await this.spawnAndHandshake();
     this.startHealthChecks();
-    this.emit("sidecar:ready");
+    this.emit('sidecar:ready');
   }
 
   public async shutdown(): Promise<void> {
@@ -126,9 +126,9 @@ export class SidecarManager extends EventEmitter {
       }
 
       if (!(await this.waitForExit(this.shutdownWaitMs))) {
-        this.sendSignal("SIGTERM");
+        this.sendSignal('SIGTERM');
         if (!(await this.waitForExit(this.termWaitMs))) {
-          this.sendSignal("SIGKILL");
+          this.sendSignal('SIGKILL');
           await this.waitForExit(250);
         }
       }
@@ -146,12 +146,12 @@ export class SidecarManager extends EventEmitter {
         return;
       }
 
-      const raw = fs.readFileSync(pidPath, "utf8").trim();
+      const raw = fs.readFileSync(pidPath, 'utf8').trim();
       const pid = Number.parseInt(raw, 10);
       if (Number.isFinite(pid) && this.isProcessAlive(pid)) {
         const cmdline = this.readProcessCommandLine(pid);
-        if (cmdline.includes("audiomorph.main")) {
-          this.processKiller(pid, "SIGKILL");
+        if (cmdline.includes('audiomorph.main')) {
+          this.processKiller(pid, 'SIGKILL');
         }
       }
     } finally {
@@ -162,18 +162,19 @@ export class SidecarManager extends EventEmitter {
   private async spawnAndHandshake(): Promise<void> {
     const pythonPath = this.resolvePythonPath();
     const launchToken = this.tokenGenerator();
-    
+
     // AUDIOMORPH_TEST_MODE hook
-    const env = process.env.AUDIOMORPH_TEST_MODE === "1" 
-      ? { ...process.env, AUDIOMORPH_TEST_MODE: "1" }
-      : process.env;
-    
+    const env =
+      process.env.AUDIOMORPH_TEST_MODE === '1'
+        ? { ...process.env, AUDIOMORPH_TEST_MODE: '1' }
+        : process.env;
+
     const proc = spawn(
       pythonPath,
-      ["-m", "audiomorph.main", "--port", "0", "--token", launchToken],
+      ['-m', 'audiomorph.main', '--port', '0', '--token', launchToken],
       {
         detached: false,
-        stdio: ["ignore", "pipe", "pipe"],
+        stdio: ['ignore', 'pipe', 'pipe'],
         env,
       },
     );
@@ -183,7 +184,7 @@ export class SidecarManager extends EventEmitter {
     this.port = null;
     this.healthFailures = 0;
     this.attachExitHandler(proc);
-    fs.writeFileSync(this.pidFilePath(), `${proc.pid}\n`, "utf8");
+    fs.writeFileSync(this.pidFilePath(), `${proc.pid}\n`, 'utf8');
 
     const payload = await this.readHandshake(proc, launchToken);
     this.port = payload.port;
@@ -191,9 +192,9 @@ export class SidecarManager extends EventEmitter {
   }
 
   private resolvePythonPath(): string {
-    if (process.env.NODE_ENV === "development") {
-      const repoRoot = path.resolve(__dirname, "..", "..", "..", "..");
-      return path.join(repoRoot, ".venv", "bin", "python");
+    if (process.env.NODE_ENV === 'development') {
+      const repoRoot = path.resolve(__dirname, '..', '..', '..', '..');
+      return path.join(repoRoot, '.venv', 'bin', 'python');
     }
 
     const mapped = PLATFORM_MAP[process.platform];
@@ -201,7 +202,7 @@ export class SidecarManager extends EventEmitter {
       throw new Error(`Unsupported platform for sidecar runtime: ${process.platform}`);
     }
 
-    return path.join(process.resourcesPath, "python", mapped, "bin", "python");
+    return path.join(process.resourcesPath, 'python', mapped, 'bin', 'python');
   }
 
   private readHandshake(proc: SidecarProcess, launchToken: string): Promise<HandshakePayload> {
@@ -209,7 +210,7 @@ export class SidecarManager extends EventEmitter {
       const stdout = proc.stdout;
       const stderr = proc.stderr;
       if (!stdout || !stderr) {
-        reject(new Error("Sidecar stdio pipes not available"));
+        reject(new Error('Sidecar stdio pipes not available'));
         return;
       }
 
@@ -222,8 +223,8 @@ export class SidecarManager extends EventEmitter {
         settled = true;
         outRl.close();
         errRl.close();
-        this.sendSignal("SIGKILL");
-        reject(new Error("Timed out waiting for sidecar handshake"));
+        this.sendSignal('SIGKILL');
+        reject(new Error('Timed out waiting for sidecar handshake'));
       }, this.handshakeTimeoutMs);
 
       const finish = (payload: HandshakePayload): void => {
@@ -240,35 +241,42 @@ export class SidecarManager extends EventEmitter {
         reject(err);
       };
 
-      outRl.once("line", (line) => {
+      outRl.once('line', (line) => {
         this.pushRecentLog(this.sanitizeLine(line, launchToken));
         try {
           const parsed = JSON.parse(line) as Partial<HandshakePayload>;
-          if (parsed.event !== "listening" || typeof parsed.port !== "number" || typeof parsed.token !== "string") {
-            fail(new Error("Invalid sidecar handshake payload"));
+          if (
+            parsed.event !== 'listening' ||
+            typeof parsed.port !== 'number' ||
+            typeof parsed.token !== 'string'
+          ) {
+            fail(new Error('Invalid sidecar handshake payload'));
             return;
           }
 
-          this.logger.log("stdout", `sidecar listening on 127.0.0.1:${parsed.port}, token=${maskToken(parsed.token)}`);
+          this.logger.log(
+            'stdout',
+            `sidecar listening on 127.0.0.1:${parsed.port}, token=${maskToken(parsed.token)}`,
+          );
 
-          outRl.on("line", (nextLine) => {
-            this.handleOutputLine("stdout", nextLine);
+          outRl.on('line', (nextLine) => {
+            this.handleOutputLine('stdout', nextLine);
           });
           finish(parsed as HandshakePayload);
         } catch {
-          fail(new Error("Handshake line is not valid JSON"));
+          fail(new Error('Handshake line is not valid JSON'));
         }
       });
 
-      errRl.on("line", (line) => {
-        this.handleOutputLine("stderr", line);
+      errRl.on('line', (line) => {
+        this.handleOutputLine('stderr', line);
       });
 
-      proc.once("error", (err) => {
+      proc.once('error', (err) => {
         fail(err instanceof Error ? err : new Error(String(err)));
       });
 
-      proc.once("exit", (code) => {
+      proc.once('exit', (code) => {
         if (!settled) {
           fail(new Error(`Sidecar exited before handshake (code=${String(code)})`));
         }
@@ -277,7 +285,7 @@ export class SidecarManager extends EventEmitter {
   }
 
   private attachExitHandler(proc: SidecarProcess): void {
-    proc.on("exit", (code) => {
+    proc.on('exit', (code) => {
       const exitCode = code ?? -1;
       const unexpected = !this.shuttingDown && exitCode !== 0;
       this.stopHealthChecks();
@@ -286,7 +294,7 @@ export class SidecarManager extends EventEmitter {
           exitCode,
           lastLogs: [...this.recentLogs],
         };
-        this.emit("sidecar:crashed", crashPayload);
+        this.emit('sidecar:crashed', crashPayload);
         void this.restartAfterFailure();
       }
     });
@@ -323,7 +331,7 @@ export class SidecarManager extends EventEmitter {
     }
 
     this.healthFailures = 0;
-    this.emit("sidecar:unhealthy");
+    this.emit('sidecar:unhealthy');
     await this.restartAfterFailure();
   }
 
@@ -336,10 +344,10 @@ export class SidecarManager extends EventEmitter {
 
       const req = http.get(
         {
-          hostname: "127.0.0.1",
+          hostname: '127.0.0.1',
           port: this.port,
-          path: "/healthz",
-          method: "GET",
+          path: '/healthz',
+          method: 'GET',
           timeout: 2_000,
         },
         (res) => {
@@ -348,11 +356,11 @@ export class SidecarManager extends EventEmitter {
         },
       );
 
-      req.on("timeout", () => {
+      req.on('timeout', () => {
         req.destroy();
         resolve(false);
       });
-      req.on("error", () => resolve(false));
+      req.on('error', () => resolve(false));
     });
   }
 
@@ -368,17 +376,17 @@ export class SidecarManager extends EventEmitter {
     }
 
     if (this.restartTimestamps.length >= RESTART_LIMIT) {
-      this.emit("sidecar:fatal");
+      this.emit('sidecar:fatal');
       return;
     }
 
     this.restartTimestamps.push(nowTs);
-    this.sendSignal("SIGKILL");
+    this.sendSignal('SIGKILL');
     await this.waitForExit(500);
     this.deletePidFile();
     await this.spawnAndHandshake();
     this.startHealthChecks();
-    this.emit("sidecar:ready");
+    this.emit('sidecar:ready');
   }
 
   private async postInternalShutdown(): Promise<void> {
@@ -389,12 +397,12 @@ export class SidecarManager extends EventEmitter {
       }
       const req = http.request(
         {
-          hostname: "127.0.0.1",
+          hostname: '127.0.0.1',
           port: this.port,
-          path: "/internal/shutdown",
-          method: "POST",
+          path: '/internal/shutdown',
+          method: 'POST',
           headers: {
-            "X-Audiomorph-Token": this.token,
+            'X-Audiomorph-Token': this.token,
           },
           timeout: 2_000,
         },
@@ -403,11 +411,11 @@ export class SidecarManager extends EventEmitter {
           resolve();
         },
       );
-      req.on("timeout", () => {
+      req.on('timeout', () => {
         req.destroy();
         resolve();
       });
-      req.on("error", () => resolve());
+      req.on('error', () => resolve());
       req.end();
     });
   }
@@ -425,19 +433,19 @@ export class SidecarManager extends EventEmitter {
         if (done) return;
         done = true;
         clearTimeout(timer);
-        proc.off("exit", onExit);
+        proc.off('exit', onExit);
         resolve(result);
       };
 
       const onExit = () => finish(true);
       const timer = setTimeout(() => finish(false), timeoutMs);
-      proc.once("exit", onExit);
+      proc.once('exit', onExit);
     });
   }
 
   private sendSignal(signal: NodeJS.Signals): void {
     const proc = this.child;
-    if (!proc || typeof proc.pid !== "number") {
+    if (!proc || typeof proc.pid !== 'number') {
       return;
     }
     try {
@@ -447,8 +455,8 @@ export class SidecarManager extends EventEmitter {
     }
   }
 
-  private handleOutputLine(stream: "stdout" | "stderr", line: string): void {
-    const safe = this.sanitizeLine(line, this.token ?? "");
+  private handleOutputLine(stream: 'stdout' | 'stderr', line: string): void {
+    const safe = this.sanitizeLine(line, this.token ?? '');
     this.pushRecentLog(safe);
     this.logger.log(stream, safe);
   }
@@ -473,7 +481,7 @@ export class SidecarManager extends EventEmitter {
   }
 
   private pidFilePath(): string {
-    return path.join(this.userDataPath, "sidecar.pid");
+    return path.join(this.userDataPath, 'sidecar.pid');
   }
 
   private deletePidFile(): void {
@@ -496,16 +504,16 @@ export class SidecarManager extends EventEmitter {
   }
 
   private readProcessCommandLine(pid: number): string {
-    if (process.platform === "win32") {
-      return "";
+    if (process.platform === 'win32') {
+      return '';
     }
     try {
-      const result = spawnSync("ps", ["-p", String(pid), "-o", "command="], {
-        encoding: "utf8",
+      const result = spawnSync('ps', ['-p', String(pid), '-o', 'command='], {
+        encoding: 'utf8',
       });
-      return (result.stdout ?? "").trim();
+      return (result.stdout ?? '').trim();
     } catch {
-      return "";
+      return '';
     }
   }
 }

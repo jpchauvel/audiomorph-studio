@@ -1,10 +1,10 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 type Handler = (...args: unknown[]) => void;
-let mockPlatform: NodeJS.Platform = "darwin";
+let mockPlatform: NodeJS.Platform = 'darwin';
 
-vi.mock("node:process", async () => {
-  const actual = await vi.importActual<typeof import("node:process")>("node:process");
+vi.mock('node:process', async () => {
+  const actual = await vi.importActual<typeof import('node:process')>('node:process');
   return {
     ...actual,
     get platform() {
@@ -13,7 +13,7 @@ vi.mock("node:process", async () => {
   };
 });
 
-vi.mock("electron", () => {
+vi.mock('electron', () => {
   const app = {
     whenReady: vi.fn(() => Promise.resolve()),
     on: vi.fn(),
@@ -46,7 +46,7 @@ vi.mock("electron", () => {
 });
 
 async function loadLifecycleModule() {
-  return import("../../src/lifecycle/app-lifecycle");
+  return import('../../src/lifecycle/app-lifecycle');
 }
 
 function emitAppEvent(
@@ -62,8 +62,8 @@ function emitAppEvent(
 
 beforeEach(async () => {
   vi.resetModules();
-  mockPlatform = "darwin";
-  const electron = (await import("electron")) as unknown as {
+  mockPlatform = 'darwin';
+  const electron = (await import('electron')) as unknown as {
     app: { requestSingleInstanceLock: ReturnType<typeof vi.fn> };
   };
   electron.app.requestSingleInstanceLock.mockReturnValue(true);
@@ -73,11 +73,11 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
-describe("setupAppLifecycle", () => {
-  it("single-instance lock acquired proceeds normally", async () => {
-    mockPlatform = "darwin";
+describe('setupAppLifecycle', () => {
+  it('single-instance lock acquired proceeds normally', async () => {
+    mockPlatform = 'darwin';
     const { setupAppLifecycle } = await loadLifecycleModule();
-    const electron = (await import("electron")) as unknown as {
+    const electron = (await import('electron')) as unknown as {
       app: {
         requestSingleInstanceLock: ReturnType<typeof vi.fn>;
         quit: ReturnType<typeof vi.fn>;
@@ -89,12 +89,12 @@ describe("setupAppLifecycle", () => {
 
     expect(electron.app.requestSingleInstanceLock).toHaveBeenCalledOnce();
     expect(electron.app.quit).not.toHaveBeenCalled();
-    expect(electron.app.setAsDefaultProtocolClient).toHaveBeenCalledWith("audiomorph");
+    expect(electron.app.setAsDefaultProtocolClient).toHaveBeenCalledWith('audiomorph');
   });
 
-  it("single-instance lock failure quits immediately", async () => {
+  it('single-instance lock failure quits immediately', async () => {
     const { setupAppLifecycle } = await loadLifecycleModule();
-    const electron = (await import("electron")) as unknown as {
+    const electron = (await import('electron')) as unknown as {
       app: {
         requestSingleInstanceLock: ReturnType<typeof vi.fn>;
         quit: ReturnType<typeof vi.fn>;
@@ -107,10 +107,10 @@ describe("setupAppLifecycle", () => {
     expect(electron.app.quit).toHaveBeenCalledOnce();
   });
 
-  it("second-instance focuses and restores existing window", async () => {
-    mockPlatform = "win32";
+  it('second-instance focuses and restores existing window', async () => {
+    mockPlatform = 'win32';
     const { setupAppLifecycle } = await loadLifecycleModule();
-    const electron = (await import("electron")) as unknown as {
+    const electron = (await import('electron')) as unknown as {
       app: { on: ReturnType<typeof vi.fn> };
       BrowserWindow: new () => {
         isMinimized: ReturnType<typeof vi.fn>;
@@ -123,53 +123,58 @@ describe("setupAppLifecycle", () => {
     win.isMinimized.mockReturnValue(true);
     setupAppLifecycle(() => win);
 
-    emitAppEvent(electron.app.on, "second-instance", {}, ["app.exe"]);
+    emitAppEvent(electron.app.on, 'second-instance', {}, ['app.exe']);
 
     expect(win.restore).toHaveBeenCalledOnce();
     expect(win.focus).toHaveBeenCalledOnce();
   });
 
-  it("window-all-closed on non-macOS quits app", async () => {
-    mockPlatform = "linux";
+  it('window-all-closed on non-macOS quits app', async () => {
+    mockPlatform = 'linux';
     const { setupAppLifecycle } = await loadLifecycleModule();
-    const electron = (await import("electron")) as unknown as {
+    const electron = (await import('electron')) as unknown as {
       app: { on: ReturnType<typeof vi.fn>; quit: ReturnType<typeof vi.fn> };
     };
 
     setupAppLifecycle(() => null);
-    emitAppEvent(electron.app.on, "window-all-closed");
+    emitAppEvent(electron.app.on, 'window-all-closed');
 
     expect(electron.app.quit).toHaveBeenCalledOnce();
   });
 
-  it("window-all-closed on macOS does not quit app", async () => {
-    mockPlatform = "darwin";
+  it('window-all-closed on macOS does not quit app', async () => {
+    mockPlatform = 'darwin';
     const { setupAppLifecycle } = await loadLifecycleModule();
-    const electron = (await import("electron")) as unknown as {
+    const electron = (await import('electron')) as unknown as {
       app: { on: ReturnType<typeof vi.fn>; quit: ReturnType<typeof vi.fn> };
     };
 
     setupAppLifecycle(() => null);
-    emitAppEvent(electron.app.on, "window-all-closed");
+    emitAppEvent(electron.app.on, 'window-all-closed');
 
     expect(electron.app.quit).not.toHaveBeenCalled();
   });
 
-  it("deep-link URL logging is masked (no query params)", async () => {
-    mockPlatform = "darwin";
-    const infoSpy = vi.spyOn(console, "info").mockImplementation(() => undefined);
+  it('deep-link URL logging is masked (no query params)', async () => {
+    mockPlatform = 'darwin';
+    const infoSpy = vi.spyOn(console, 'info').mockImplementation(() => undefined);
     const { setupAppLifecycle } = await loadLifecycleModule();
-    const electron = (await import("electron")) as unknown as {
+    const electron = (await import('electron')) as unknown as {
       app: { on: ReturnType<typeof vi.fn> };
       ipcMain: { emit: ReturnType<typeof vi.fn> };
     };
 
     setupAppLifecycle(() => null);
     const preventDefault = vi.fn();
-    emitAppEvent(electron.app.on, "open-url", { preventDefault }, "audiomorph://open?token=secret&x=1");
+    emitAppEvent(
+      electron.app.on,
+      'open-url',
+      { preventDefault },
+      'audiomorph://open?token=secret&x=1',
+    );
 
     expect(preventDefault).toHaveBeenCalledOnce();
-    expect(infoSpy).toHaveBeenCalledWith("[lifecycle] deep-link received: audiomorph://open");
-    expect(electron.ipcMain.emit).toHaveBeenCalledWith("deep-link:received", "audiomorph://open");
+    expect(infoSpy).toHaveBeenCalledWith('[lifecycle] deep-link received: audiomorph://open');
+    expect(electron.ipcMain.emit).toHaveBeenCalledWith('deep-link:received', 'audiomorph://open');
   });
 });

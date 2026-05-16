@@ -17,23 +17,20 @@
  *   - prod: file://<resourcesPath>/renderer/index.html (static export)
  */
 
-import { app, BrowserWindow, shell } from "electron";
-import * as path from "node:path";
-import * as process from "node:process";
-import { setupCrashReporter } from "./crash/crash-reporter";
-import {
-  enforceHardwareRequirements,
-  registerHardwareIpcHandler,
-} from "./hardware/hardware-check";
-import { registerIpcBridge } from "./ipc/bridge";
-import { registerVaultHandlers } from "./ipc/vault-handlers";
-import { setupAppLifecycle } from "./lifecycle/app-lifecycle";
-import { buildMenu } from "./menu/menu-builder";
-import { disableAutoUpdater } from "./updater/no-updater";
+import { app, BrowserWindow, shell } from 'electron';
+import * as path from 'node:path';
+import * as process from 'node:process';
+import { setupCrashReporter } from './crash/crash-reporter';
+import { enforceHardwareRequirements, registerHardwareIpcHandler } from './hardware/hardware-check';
+import { registerIpcBridge } from './ipc/bridge';
+import { registerVaultHandlers } from './ipc/vault-handlers';
+import { setupAppLifecycle } from './lifecycle/app-lifecycle';
+import { buildMenu } from './menu/menu-builder';
+import { disableAutoUpdater } from './updater/no-updater';
 
 disableAutoUpdater();
 
-const isDev = process.env.NODE_ENV === "development";
+const isDev = process.env.NODE_ENV === 'development';
 let mainWindow: BrowserWindow | null = null;
 
 function getMainWindow(): BrowserWindow | null {
@@ -59,11 +56,11 @@ export const SECURE_WEB_PREFERENCES = {
 } as const;
 
 export function resolvePreloadPath(): string {
-  return path.join(__dirname, "preload.js");
+  return path.join(__dirname, 'preload.js');
 }
 
 export function resolveRendererEntry(): string {
-  return path.join(__dirname, "..", "..", "renderer", "out", "index.html");
+  return path.join(__dirname, '..', '..', 'renderer', 'out', 'index.html');
 }
 
 export function buildWindowOptions(): Electron.BrowserWindowConstructorOptions {
@@ -73,7 +70,7 @@ export function buildWindowOptions(): Electron.BrowserWindowConstructorOptions {
     minWidth: WINDOW_DEFAULTS.minWidth,
     minHeight: WINDOW_DEFAULTS.minHeight,
     show: false,
-    backgroundColor: "#0a0a0a",
+    backgroundColor: '#0a0a0a',
     webPreferences: {
       contextIsolation: SECURE_WEB_PREFERENCES.contextIsolation,
       nodeIntegration: SECURE_WEB_PREFERENCES.nodeIntegration,
@@ -82,8 +79,8 @@ export function buildWindowOptions(): Electron.BrowserWindowConstructorOptions {
     },
   };
 
-  if (process.platform === "darwin") {
-    base.titleBarStyle = "hiddenInset";
+  if (process.platform === 'darwin') {
+    base.titleBarStyle = 'hiddenInset';
   } else {
     base.frame = false;
   }
@@ -95,7 +92,7 @@ async function createWindow(): Promise<BrowserWindow> {
   const win = new BrowserWindow(buildWindowOptions());
   mainWindow = win;
 
-  win.on("closed", () => {
+  win.on('closed', () => {
     if (mainWindow === win) {
       mainWindow = null;
     }
@@ -103,40 +100,39 @@ async function createWindow(): Promise<BrowserWindow> {
 
   // Harden: block opening arbitrary new windows; route external links to OS browser.
   win.webContents.setWindowOpenHandler(({ url }) => {
-    if (url.startsWith("http://") || url.startsWith("https://")) {
+    if (url.startsWith('http://') || url.startsWith('https://')) {
       void shell.openExternal(url);
     }
-    return { action: "deny" };
+    return { action: 'deny' };
   });
 
   // Harden: block navigation away from our app origin.
-  win.webContents.on("will-navigate", (event, navUrl) => {
+  win.webContents.on('will-navigate', (event, navUrl) => {
     const allowed =
-      (isDev && navUrl.startsWith("http://localhost:3000")) ||
-      navUrl.startsWith("file://");
+      (isDev && navUrl.startsWith('http://localhost:3000')) || navUrl.startsWith('file://');
     if (!allowed) {
       event.preventDefault();
-      if (navUrl.startsWith("https://")) void shell.openExternal(navUrl);
+      if (navUrl.startsWith('https://')) void shell.openExternal(navUrl);
     }
   });
 
   if (isDev) {
-    await win.loadURL("http://localhost:3000");
+    await win.loadURL('http://localhost:3000');
   } else {
     await win.loadFile(resolveRendererEntry());
   }
 
-  win.once("ready-to-show", () => win.show());
+  win.once('ready-to-show', () => win.show());
   return win;
 }
 
 // Only wire Electron lifecycle when actually running under Electron
 // (skip during unit tests which import this module under Node).
-if (app && typeof app.whenReady === "function" && !process.env.AUDIOMORPH_SHELL_TEST) {
+if (app && typeof app.whenReady === 'function' && !process.env.AUDIOMORPH_SHELL_TEST) {
   setupAppLifecycle(getMainWindow);
 
   app.whenReady().then(async () => {
-    setupCrashReporter(app.getPath("userData"));
+    setupCrashReporter(app.getPath('userData'));
     await enforceHardwareRequirements();
     registerIpcBridge();
     registerHardwareIpcHandler();
@@ -145,7 +141,7 @@ if (app && typeof app.whenReady === "function" && !process.env.AUDIOMORPH_SHELL_
       buildMenu(window);
     });
 
-    app.on("activate", () => {
+    app.on('activate', () => {
       const existing = getMainWindow();
       if (existing) {
         existing.focus();
@@ -159,7 +155,7 @@ if (app && typeof app.whenReady === "function" && !process.env.AUDIOMORPH_SHELL_
   });
 
   // Harden: deny all permission requests by default (W4.4 will whitelist).
-  app.on("web-contents-created", (_event, contents) => {
+  app.on('web-contents-created', (_event, contents) => {
     contents.session.setPermissionRequestHandler((_wc, _permission, callback) => {
       callback(false);
     });

@@ -1,6 +1,6 @@
-import { autoUpdater } from "electron";
+import { autoUpdater } from 'electron';
 
-const DISABLED_MESSAGE = "Auto-update is disabled in AudioMorph Studio";
+const DISABLED_MESSAGE = 'Auto-update is disabled in AudioMorph Studio';
 
 type AutoUpdaterNoopResult = {
   readonly updateInfo: null;
@@ -34,7 +34,7 @@ export function disableAutoUpdater(): void {
   guardedUpdater.checkForUpdates = makeNoop as typeof guardedUpdater.checkForUpdates;
   guardedUpdater.checkForUpdatesAndNotify = makeNoop;
 
-  guardedUpdater.on("update-available", () => {
+  guardedUpdater.on('update-available', () => {
     logDisabled();
   });
 }
