@@ -1,0 +1,3 @@
+[submodule "heartlib"]
+	path = heartlib
+	url = git@github.com:jpchauvel/heartlib.git
