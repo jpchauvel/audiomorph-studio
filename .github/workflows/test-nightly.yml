@@ -57,6 +57,9 @@ jobs:
       - name: Warm HF cache if missing
         run: node scripts/ci-hf-cache-verify.mjs || pnpm test:hf:warm
 
+      - name: Build workspace packages
+        run: pnpm -r --filter "./packages/*" build
+
       - name: Typecheck
         run: pnpm typecheck
 

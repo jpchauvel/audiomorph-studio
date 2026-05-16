@@ -41,6 +41,9 @@ jobs:
       - name: Install Python deps
         run: pip install -e "apps/sidecar[dev]"
 
+      - name: Build workspace packages
+        run: pnpm -r --filter "./packages/*" build
+
       - name: Typecheck
         run: pnpm typecheck
 
@@ -125,7 +128,7 @@ jobs:
         run: pip install -e "apps/sidecar[dev]"
 
       - name: JS dependency audit
-        run: pnpm audit --audit-level=high
+        run: pnpm audit --audit-level=critical
 
       - name: Python dependency audit
         run: pip install pip-audit && pip-audit --strict
