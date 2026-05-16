@@ -25,6 +25,10 @@ def get_models_dir() -> Path:
     return get_user_data_dir() / "models"
 
 
+def get_jobs_dir() -> Path:
+    return ensure_dir(get_user_data_dir() / "jobs")
+
+
 def get_logs_dir() -> Path:
     return get_user_data_dir() / "logs"
 

@@ -68,3 +68,32 @@
 - **Verification:** All 11 error codes present in docs/error-envelope.md, HTTP_STATUS complete, ApiError interface validated
 - **Commit:** f73e0de "feat(types): unified ApiError envelope + error code catalog"
 - **Evidence:** `.sisyphus/evidence/task-W1.3-error-coverage.txt`
+
+## [2026-05-16] W2.1 FastAPI app skeleton + global handlers
+- `create_app(auth_token: str = "")` now wires: AuthMiddleware, localhost-only CORS regex (`^http://localhost:\d+$`), request logging middleware, global ApiError + Exception handlers, and placeholder routers (`/models`, `/jobs`, `/lyrics`, `/export`, `/settings`).
+- Python-side `ApiError` class maps to shared error HTTP statuses and always emits envelope shape `{code, message, hint, retriable}`.
+- Unhandled exceptions are logged via structlog with full traceback in logs only, while API response is sanitized to INTERNAL_ERROR envelope without traceback details.
+- `/healthz` contract updated to `{ok, version, gpu, models_dir, python_version}` and remains auth-exempt through existing `_auth.py` exemption.
+- GPU detection pattern: soft-import torch; fallback to `{available: false}` when torch is missing; use CUDA device props for `name` + `vram_gb`; use MPS availability on Apple Silicon.
+- Sidecar dependencies updated for this slice: `structlog` runtime + `httpx` dev dependency for FastAPI testclient support.
+
+## [2026-05-16] W2.2 model download manager
+- Added `ModelDownloadManager` with strict required-model catalog, model_id validation (`[A-Za-z0-9_/-]`, no `..`), and containment guard to keep downloads under `<models_dir>/<repo_id>/`.
+- Download path uses `huggingface_hub.snapshot_download(..., resume_download=True, max_workers=4, etag_timeout=30)` with BYOK via `HF_TOKEN` env var only; no token persistence and no token logging.
+- Global download concurrency is enforced with a single `asyncio.Lock()`; jobs are queued by scheduling task then serialized during execution.
+- Added disk-space precheck using `free < bytes_total*1.2` to raise `ApiError(code="DOWNLOAD_FAILED", hint="Need X GB free")` before download start.
+- Added async SHA256 verification against HF metadata (`model_info(..., files_metadata=True)`) with hashing through `ThreadPoolExecutor(max_workers=4)` and state transitions to verified/corrupted.
+- Implemented model router endpoints (`GET /models`, start/cancel download, verify, delete) and SSE progress stream endpoint `/models/jobs/{job_id}/events` using `EventSourceResponse` (with safe fallback for local test env).
+
+## [2026-05-16] Post-verification fixes (healthz pid + ApiError identity)
+- Added `pid: os.getpid()` to `/healthz` response so lifecycle tests can assert process identity.
+- Extracted sidecar `ApiError` and `ERROR_HTTP_STATUS` into `src/audiomorph/_errors.py` to avoid class identity drift when `audiomorph.app` is reloaded in tests.
+- Updated imports in `app.py`, `models/manager.py`, and tests to use the shared error module, stabilizing `pytest.raises(ApiError)` across reload boundaries.
+
+## [2026-05-16] W2.3 generation endpoint + engine patterns
+- Generation engine follows strict single-flight concurrency with a module-level singleton and an internal `asyncio.Lock`; immediate lock check returns `VALIDATION_ERROR` with 429 via a custom ApiError subclass.
+- heartlib and torch are lazy-loaded only inside generation methods; pipeline is cached after first successful `from_pretrained(...)` call.
+- Cancellation is modeled per-job with `asyncio.Event`; cancellation is checked before progress emissions and after thread execution, then partial `<jobs>/<job_id>/audio.wav` is deleted on cancel/failure.
+- OOM recovery pattern: detect `torch.cuda.OutOfMemoryError` (plus generic runtime "out of memory"), run `torch.cuda.empty_cache()` + `gc.collect()`, retry exactly once at half duration, then return `OUT_OF_MEMORY` with actionable hint.
+- Progress contract uses SSE-friendly payload `{step,total_steps,eta_s,phase}` across phases `loading|generating|encoding|finalizing`, and jobs router forwards these as SSE `progress` events with terminal `done/error` events.
+- Jobs output path is centralized via new `get_jobs_dir()` in `paths.py`, ensuring all generation artifacts remain scoped to `<app_data>/jobs/<job_id>/`.

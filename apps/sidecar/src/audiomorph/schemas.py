@@ -3,13 +3,14 @@ Auto-generated Pydantic v2 models from TypeScript type contracts.
 DO NOT EDIT MANUALLY - regenerate with: pnpm --filter @audiomorph/shared-types gen:python
 """
 
+from enum import Enum
 from typing import Optional, List
-from pydantic import BaseModel, Field
+from pydantic import BaseModel
 
 
-class JobStatus(str):
+class JobStatus(str, Enum):
     """Job status enumeration"""
-    queued = "queued"
+    pending = "pending"
     running = "running"
     completed = "completed"
     failed = "failed"
@@ -27,7 +28,7 @@ class ApiError(BaseModel):
     """API error response structure"""
     code: str
     message: str
-    details: Optional[dict] = None
+    details: Optional[dict[str, object]] = None
     retriable: bool
     hint: Optional[str] = None
 
@@ -35,14 +36,10 @@ class ApiError(BaseModel):
 class GenerationRequest(BaseModel):
     """Request to generate music using heartlib"""
     prompt: str
-    lyrics: str
-    duration_seconds: int
-    seed: int
+    lyrics: str = ""
+    duration_seconds: float
+    seed: int = 0
     model_id: str
-    tags: Optional[str] = None
-    reference_audio_path: Optional[str] = None
-    temperature: Optional[float] = None
-    cfg_scale: Optional[float] = None
 
 
 class GenerationStatus(BaseModel):
@@ -59,7 +56,7 @@ class GenerationResult(BaseModel):
     """Result of a completed generation job"""
     job_id: str
     file_path: str
-    duration_seconds: int
+    duration_seconds: float
     model_id: str
     seed: int
     prompt: str
