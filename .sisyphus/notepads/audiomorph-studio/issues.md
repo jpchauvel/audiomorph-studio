@@ -1,7 +1,9 @@
 ## [2026-05-16] Session Init
+
 - No issues yet — Phase 0 starting
 
 ## [2026-05-16] Renderer blocking violations resolution
+
 - Fixed 5 hardcoded settings fetch URLs by introducing `API_BASE()`/`TOKEN()`/`headers()` in `app/settings/page.tsx`; all settings fetches now use dynamic base URL + `X-Audiomorph-Token`.
 - Removed forbidden `next/font/google` Geist usage from `app/layout.tsx`; kept `geist/font/sans` + `geist/font/mono` package imports only.
 - Updated `ShimmerButton` defaults to OKLCH tokens (`oklch(1 0 0)` and `oklch(0 0 0)`).

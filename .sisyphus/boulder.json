@@ -1,9 +1,7 @@
 {
   "active_plan": "/Users/hellhound/projects/mine/audiomorph-studio/.sisyphus/plans/testing-integration-e2e.md",
   "started_at": "2026-05-16T19:08:23.349Z",
-  "session_ids": [
-    "ses_1cef35312ffeupqA90Up40ilE2"
-  ],
+  "session_ids": ["ses_1cef35312ffeupqA90Up40ilE2"],
   "session_origins": {
     "ses_1cef35312ffeupqA90Up40ilE2": "direct"
   },

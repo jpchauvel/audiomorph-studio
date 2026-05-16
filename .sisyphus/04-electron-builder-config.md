@@ -22,11 +22,7 @@
       "output": "dist-app",
       "buildResources": "build"
     },
-    "files": [
-      "dist/electron/**/*",
-      "frontend/out/**/*",
-      "package.json"
-    ],
+    "files": ["dist/electron/**/*", "frontend/out/**/*", "package.json"],
     "extraResources": [
       {
         "from": "resources/python",
@@ -43,9 +39,7 @@
         "to": "bin/ffmpeg"
       }
     ],
-    "asarUnpack": [
-      "node_modules/ffmpeg-static/**"
-    ],
+    "asarUnpack": ["node_modules/ffmpeg-static/**"],
     "mac": {
       "target": [
         { "target": "dmg", "arch": ["arm64", "x64"] },
@@ -62,9 +56,7 @@
       "icon": "build/icon.icns"
     },
     "win": {
-      "target": [
-        { "target": "nsis", "arch": ["x64"] }
-      ],
+      "target": [{ "target": "nsis", "arch": ["x64"] }],
       "icon": "build/icon.ico",
       "certificateSubjectName": "${WIN_CERT_SUBJECT}",
       "signingHashAlgorithms": ["sha256"],
@@ -138,26 +130,27 @@
 ```javascript
 // scripts/win-sign.cjs
 // Called by electron-builder for each binary
-const { execSync } = require('child_process')
+const { execSync } = require('child_process');
 
 module.exports = async function sign(config) {
-  if (process.platform !== 'win32') return
+  if (process.platform !== 'win32') return;
   if (!process.env.AZURE_TENANT_ID) {
-    console.warn('Skipping signing: AZURE_TENANT_ID not set')
-    return
+    console.warn('Skipping signing: AZURE_TENANT_ID not set');
+    return;
   }
 
   // Azure Trusted Signing via signtool + dlib
   execSync(
     `signtool sign /v /fd SHA256 /tr http://timestamp.acs.microsoft.com ` +
-    `/td SHA256 /dlib "azure-code-signing-dlib.dll" ` +
-    `/dmdf "azure-signing-metadata.json" "${config.path}"`,
-    { stdio: 'inherit' }
-  )
-}
+      `/td SHA256 /dlib "azure-code-signing-dlib.dll" ` +
+      `/dmdf "azure-signing-metadata.json" "${config.path}"`,
+    { stdio: 'inherit' },
+  );
+};
 ```
 
 Required env vars for CI:
+
 - `AZURE_TENANT_ID`
 - `AZURE_CLIENT_ID`
 - `AZURE_CLIENT_SECRET`
@@ -181,9 +174,9 @@ jobs:
     strategy:
       matrix:
         include:
-          - os: macos-14       # arm64
+          - os: macos-14 # arm64
             platform: mac
-          - os: macos-13       # x64
+          - os: macos-13 # x64
             platform: mac
           - os: windows-latest
             platform: win
@@ -227,39 +220,43 @@ jobs:
 
 ```typescript
 // electron/updater.ts
-import { autoUpdater } from 'electron-updater'
-import { dialog, BrowserWindow } from 'electron'
-import log from 'electron-log'
+import { autoUpdater } from 'electron-updater';
+import { dialog, BrowserWindow } from 'electron';
+import log from 'electron-log';
 
-autoUpdater.logger = log
-autoUpdater.autoDownload = false  // Ask user first
+autoUpdater.logger = log;
+autoUpdater.autoDownload = false; // Ask user first
 
 export function initAutoUpdater(mainWindow: BrowserWindow): void {
   autoUpdater.on('update-available', (info) => {
-    dialog.showMessageBox(mainWindow, {
-      type: 'info',
-      title: 'Update Available',
-      message: `Version ${info.version} is available. Download now?`,
-      buttons: ['Download', 'Later'],
-    }).then(({ response }) => {
-      if (response === 0) autoUpdater.downloadUpdate()
-    })
-  })
+    dialog
+      .showMessageBox(mainWindow, {
+        type: 'info',
+        title: 'Update Available',
+        message: `Version ${info.version} is available. Download now?`,
+        buttons: ['Download', 'Later'],
+      })
+      .then(({ response }) => {
+        if (response === 0) autoUpdater.downloadUpdate();
+      });
+  });
 
   autoUpdater.on('update-downloaded', () => {
-    dialog.showMessageBox(mainWindow, {
-      type: 'info',
-      title: 'Update Ready',
-      message: 'Restart to apply the update.',
-      buttons: ['Restart Now', 'Later'],
-    }).then(({ response }) => {
-      if (response === 0) autoUpdater.quitAndInstall()
-    })
-  })
+    dialog
+      .showMessageBox(mainWindow, {
+        type: 'info',
+        title: 'Update Ready',
+        message: 'Restart to apply the update.',
+        buttons: ['Restart Now', 'Later'],
+      })
+      .then(({ response }) => {
+        if (response === 0) autoUpdater.quitAndInstall();
+      });
+  });
 
   // Check on startup, then every 4 hours
-  autoUpdater.checkForUpdates()
-  setInterval(() => autoUpdater.checkForUpdates(), 4 * 60 * 60 * 1000)
+  autoUpdater.checkForUpdates();
+  setInterval(() => autoUpdater.checkForUpdates(), 4 * 60 * 60 * 1000);
 }
 ```
 

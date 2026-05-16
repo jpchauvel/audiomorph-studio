@@ -3,6 +3,7 @@
 ## Overview
 
 The first-run wizard handles everything that cannot be bundled:
+
 1. Detect GPU hardware (NVIDIA CUDA / Apple MPS / CPU-only)
 2. Install the correct PyTorch variant into the bundled PBS Python runtime
 3. Verify heartlib and other ML deps are functional
@@ -16,33 +17,43 @@ This runs **before** the main app window opens, in a dedicated setup window.
 
 ```typescript
 // electron/setup-state.ts
-import { app } from 'electron'
-import path from 'path'
-import fs from 'fs'
+import { app } from 'electron';
+import path from 'path';
+import fs from 'fs';
 
-const SETUP_MARKER = path.join(app.getPath('userData'), 'setup_complete.json')
+const SETUP_MARKER = path.join(app.getPath('userData'), 'setup_complete.json');
 
 export interface SetupState {
-  version: number          // bump when setup needs to re-run
-  torchVariant: 'cuda' | 'mps' | 'cpu'
-  cudaVersion?: string
-  completedAt: string
+  version: number; // bump when setup needs to re-run
+  torchVariant: 'cuda' | 'mps' | 'cpu';
+  cudaVersion?: string;
+  completedAt: string;
 }
 
-export const CURRENT_SETUP_VERSION = 1
+export const CURRENT_SETUP_VERSION = 1;
 
 export function isFirstRun(): boolean {
-  if (!fs.existsSync(SETUP_MARKER)) return true
+  if (!fs.existsSync(SETUP_MARKER)) return true;
   try {
-    const state: SetupState = JSON.parse(fs.readFileSync(SETUP_MARKER, 'utf8'))
-    return state.version < CURRENT_SETUP_VERSION
-  } catch { return true }
+    const state: SetupState = JSON.parse(fs.readFileSync(SETUP_MARKER, 'utf8'));
+    return state.version < CURRENT_SETUP_VERSION;
+  } catch {
+    return true;
+  }
 }
 
 export function markSetupComplete(state: Omit<SetupState, 'completedAt'>): void {
-  fs.writeFileSync(SETUP_MARKER, JSON.stringify({
-    ...state, completedAt: new Date().toISOString(),
-  }, null, 2))
+  fs.writeFileSync(
+    SETUP_MARKER,
+    JSON.stringify(
+      {
+        ...state,
+        completedAt: new Date().toISOString(),
+      },
+      null,
+      2,
+    ),
+  );
 }
 ```
 

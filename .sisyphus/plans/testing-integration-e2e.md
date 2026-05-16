@@ -5,6 +5,7 @@
 > **Quick Summary**: Add six layers of testing on top of the already-shipped audiomorph-studio project: (1) reclassify existing 25 mocked Playwright tests as component tests, (2) renderer integration tests hitting real sidecar, (3) sidecar pytest integration tests with real SQLite, (4) Electron desktop E2E with real engines and cached HF models, (5) cross-platform visual regression, (6) tiered CI pipeline (PR-smoke / Main-integration / Nightly-full-matrix) across macOS+Windows+Linux.
 >
 > **Deliverables**:
+>
 > - `apps/renderer/tests/component/` (moved from `tests/`) — existing 25 mocked Playwright tests
 > - `apps/renderer/tests/integration/` — renderer↔real-sidecar HTTP integration suite
 > - `apps/sidecar/tests/integration/` — pytest integration suite with real SQLite + stubbed engines
@@ -39,6 +40,7 @@ The audiomorph-studio project shipped at commit `efa4f08` (all 38 build tasks co
 ### Interview Summary
 
 **Key Discussions**:
+
 - All six testing layers in scope (no shortcuts — ulw mode)
 - Real engines for Electron E2E with HF model caching (musicgen-small ~2GB + whisper-tiny ~75MB)
 - Visual regression on all routes × light/dark × 3 platforms with separate baselines per OS
@@ -47,6 +49,7 @@ The audiomorph-studio project shipped at commit `efa4f08` (all 38 build tasks co
 - Single plan mandate: all six layers in this one file
 
 **Locked Decisions** (from user Q&A round):
+
 - **CI Tiering**: Tiered — PR-smoke (Linux only, ~15 min) / Main-integration (Linux, ~30 min) / Nightly-full-matrix (3 platforms, ~90 min)
 - **Existing 25 mocked tests**: Reclassify as 'component' tests, move to `apps/renderer/tests/component/`
 - **Real engine depth**: Functional (5s musicgen output, 3s whisper transcription)
@@ -67,6 +70,7 @@ The audiomorph-studio project shipped at commit `efa4f08` (all 38 build tasks co
 ### Metis Review
 
 **Identified Gaps** (all addressed in this plan):
+
 - **Time budgets**: Locked with strict caps + auto-cancel per Metis Q1
 - **Engine depth**: Functional 5s/3s per Metis Q2
 - **Existing tests fate**: Reclassify as component per Metis Q3
@@ -150,7 +154,7 @@ Land a comprehensive, tiered testing infrastructure (component + renderer-integr
 - **NO `shell=True` in any subprocess spawn** (existing constraint)
 - **NO modifications to existing 96 vitest tests or 53 pytest tests** — additive only
 - **NO modifications to product source code in `apps/sidecar/src/`, `apps/shell/src/`, `apps/renderer/src/`** — except minimal hooks for `AUDIOMORPH_TEST_MODE` (clearly marked, behind env check)
-- **NO logging of HF_TOKEN, X-Audiomorph-Token, sk-or-* anywhere** — scrubber enforces
+- **NO logging of HF_TOKEN, X-Audiomorph-Token, sk-or-\* anywhere** — scrubber enforces
 - **NO test skipping orphan sidecar cleanup** — every spawn MUST have afterEach with PID assertion
 - **NO performance benchmarking** (out of scope)
 - **NO accessibility audit suite** (out of scope; single axe-core smoke OK per route if cheap)
@@ -320,7 +324,6 @@ Max Concurrent: 7 (Wave 1)
   - pnpm workspace docs confirm whether glob in `pnpm-workspace.yaml` already covers `packages/*` or if explicit add needed
 
   **Acceptance Criteria**:
-
   - [ ] Directory `packages/test-helpers/` exists with `src/`, `package.json`, `tsconfig.json`
   - [ ] `cd packages/test-helpers && pnpm typecheck` exits 0
   - [ ] From root: `node -e "import('@audiomorph/test-helpers').then(m => console.log(Object.keys(m)))"` lists at least: sidecar, scrubber, hfCache, electron, testMode
@@ -358,7 +361,7 @@ Max Concurrent: 7 (Wave 1)
   - Files: `packages/test-helpers/package.json`, `packages/test-helpers/tsconfig.json`, `packages/test-helpers/src/*.ts`, `pnpm-workspace.yaml` (if modified), `pnpm-lock.yaml`
   - Pre-commit: `pnpm typecheck && pnpm lint packages/test-helpers`
 
-- [ ] 2. **HF model manifest + cache helper**
+- [x] 2. **HF model manifest + cache helper**
 
   **What to do**:
   - Create `apps/sidecar/scripts/required-models.json` with two entries: `{id: "facebook/musicgen-small", revision: "<pinned-sha>", size_mb: 2000}` and `{id: "openai/whisper-tiny", revision: "<pinned-sha>", size_mb: 75}`
@@ -402,7 +405,6 @@ Max Concurrent: 7 (Wave 1)
   - HF cache docs document the deterministic path pattern (`models--<org>--<name>/snapshots/<sha>/`) needed for `getCachedModelPath`
 
   **Acceptance Criteria**:
-
   - [ ] `apps/sidecar/scripts/required-models.json` exists with 2 entries, each having `id`, `revision` (40-char SHA), `size_mb`
   - [ ] `node -e "import('@audiomorph/test-helpers/hf-cache').then(m => console.log(m.getCacheKey()))"` outputs deterministic 64-char hex
   - [ ] Same command run twice produces identical output (determinism)
@@ -452,7 +454,7 @@ Max Concurrent: 7 (Wave 1)
   - Files: `apps/sidecar/scripts/required-models.json`, `packages/test-helpers/src/hf-cache.ts`, `packages/test-helpers/src/hf-cache.test.ts`
   - Pre-commit: `pnpm typecheck && cd packages/test-helpers && pnpm test hf-cache`
 
-- [ ] 3. **Secret scrubber helper**
+- [x] 3. **Secret scrubber helper**
 
   **What to do**:
   - Implement `packages/test-helpers/src/scrubber.ts`:
@@ -503,7 +505,6 @@ Max Concurrent: 7 (Wave 1)
   - `openrouter/client.ts` confirms `sk-or-` prefix pattern for OpenRouter keys (vs OpenAI `sk-`)
 
   **Acceptance Criteria**:
-
   - [ ] `packages/test-helpers/src/scrubber.ts` exports `scrubSecrets`, `scrubFile`, `scrubDirectory`, `SECRET_PATTERNS`
   - [ ] `bin/scrubber-cli.js` executable with shebang
   - [ ] `pnpm test scrubber` passes ≥8 unit tests
@@ -565,7 +566,7 @@ Max Concurrent: 7 (Wave 1)
   - Files: `packages/test-helpers/src/scrubber.ts`, `packages/test-helpers/src/scrubber.test.ts`, `packages/test-helpers/bin/scrubber-cli.js`, `packages/test-helpers/package.json` (bin field)
   - Pre-commit: `pnpm typecheck && cd packages/test-helpers && pnpm test scrubber`
 
-- [ ] 4. **Test mode sentinel + minimal product hooks**
+- [x] 4. **Test mode sentinel + minimal product hooks**
 
   **What to do**:
   - Implement `packages/test-helpers/src/test-mode.ts`:
@@ -619,7 +620,6 @@ Max Concurrent: 7 (Wave 1)
   - `spawn.ts` propagates env to subprocess — without this, sidecar won't know it's in test mode
 
   **Acceptance Criteria**:
-
   - [ ] `packages/test-helpers/src/test-mode.ts` exports all 6 symbols listed above
   - [ ] All product code hooks marked with `// AUDIOMORPH_TEST_MODE hook` comment for grep-ability
   - [ ] `grep -r "AUDIOMORPH_TEST_MODE hook" apps/ | wc -l` returns exactly 6 (one per hook listed)
@@ -673,7 +673,7 @@ Max Concurrent: 7 (Wave 1)
   - Files: `packages/test-helpers/src/test-mode.ts`, `apps/sidecar/src/vault.py`, `apps/sidecar/src/auth.py`, `apps/sidecar/src/telemetry.py`, `apps/sidecar/src/ids.py`, `apps/shell/src/sidecar/spawn.ts`, `apps/renderer/src/lib/api-base.ts`
   - Pre-commit: `pnpm typecheck && pnpm test && cd apps/sidecar && pytest -q`
 
-- [ ] 5. **Move 25 existing Playwright tests to `apps/renderer/tests/component/`**
+- [x] 5. **Move 25 existing Playwright tests to `apps/renderer/tests/component/`**
 
   **What to do**:
   - Create directory `apps/renderer/tests/component/`
@@ -715,7 +715,6 @@ Max Concurrent: 7 (Wave 1)
   - `playwright.config.ts` currently picks up specs from `tests/` directly; T7 changes this glob to `tests/component/` for component config
 
   **Acceptance Criteria**:
-
   - [ ] `apps/renderer/tests/component/` contains exactly 10 `.spec.ts` files (count matches pre-move)
   - [ ] `apps/renderer/tests/*.spec.ts` returns 0 files (none left at root)
   - [ ] `git log --follow apps/renderer/tests/component/<any>.spec.ts` shows history from before the move
@@ -767,7 +766,7 @@ Max Concurrent: 7 (Wave 1)
   - Files: `apps/renderer/tests/component/*.spec.ts` (renames)
   - Pre-commit: `cd apps/renderer && pnpm exec playwright test`
 
-- [ ] 6. **Commit audio + lyric fixtures to `packages/test-helpers/fixtures/`**
+- [x] 6. **Commit audio + lyric fixtures to `packages/test-helpers/fixtures/`**
 
   **What to do**:
   - Create `packages/test-helpers/fixtures/audio/short.wav` — 1-second silent WAV (44.1kHz, 16-bit mono, ~88KB raw, ~50KB after RIFF header). Generate via `ffmpeg -f lavfi -i anullsrc=r=44100:cl=mono -t 1 -ac 1 -ar 44100 short.wav`
@@ -814,7 +813,6 @@ Max Concurrent: 7 (Wave 1)
   - espeak-ng output is reproducible — same input text always produces byte-identical WAV with same version
 
   **Acceptance Criteria**:
-
   - [ ] `packages/test-helpers/fixtures/audio/short.wav` exists, valid WAV header, ~88KB, duration 1.0s ±0.01s
   - [ ] `packages/test-helpers/fixtures/audio/speech-3s.wav` exists, contains intelligible speech (whisper-tiny transcribes it to recognizable text in T14)
   - [ ] Total `packages/test-helpers/fixtures/**` byte size <500KB (`du -sb packages/test-helpers/fixtures/`)
@@ -853,7 +851,7 @@ Max Concurrent: 7 (Wave 1)
   - Files: `packages/test-helpers/fixtures/**`, `packages/test-helpers/src/fixtures.ts`, `.gitattributes` (if modified)
   - Pre-commit: `du -sb packages/test-helpers/fixtures/ | awk '$1<512000{exit 0}{exit 1}'`
 
-- [ ] 7. **Root scripts + per-app Playwright config splits**
+- [x] 7. **Root scripts + per-app Playwright config splits**
 
   **What to do**:
   - Update root `package.json` scripts:
@@ -908,7 +906,6 @@ Max Concurrent: 7 (Wave 1)
   - snapshot path template is critical for per-platform baselines
 
   **Acceptance Criteria**:
-
   - [ ] Root `package.json` has all 8 new scripts listed above
   - [ ] `pnpm test:component` runs only `tests/component/*.spec.ts` (verify by `--list`)
   - [ ] `pnpm test:integration` config has no `webServer` field
@@ -963,7 +960,7 @@ Max Concurrent: 7 (Wave 1)
   - Files: `package.json`, `apps/renderer/playwright.component.config.ts`, `apps/renderer/playwright.integration.config.ts`, `apps/renderer/playwright.visual.config.ts`, `apps/shell/playwright.e2e.config.ts`, `.gitignore` (if modified); deletes `apps/renderer/playwright.config.ts`
   - Pre-commit: `pnpm typecheck && pnpm test:component`
 
-- [ ] 8. **Shared sidecar spawn helper (`packages/test-helpers/src/sidecar.ts`)**
+- [x] 8. **Shared sidecar spawn helper (`packages/test-helpers/src/sidecar.ts`)**
 
   **What to do**:
   - Implement `spawnSidecar(opts?: { extraEnv?: Record<string,string>, cwd?: string, timeoutMs?: number }): Promise<{ proc: ChildProcess, port: number, token: string, baseUrl: string, kill: () => Promise<void> }>`:
@@ -1016,7 +1013,6 @@ Max Concurrent: 7 (Wave 1)
   - SIGTERM→wait→SIGKILL is critical because abrupt kill leaves SQLite WAL locks that fail subsequent tests
 
   **Acceptance Criteria**:
-
   - [ ] `spawnSidecar()` returns within 5s on healthy boot, including handshake
   - [ ] Returned `port` is a valid integer 1024-65535 (random, never 0)
   - [ ] Returned `token` equals `TEST_TOKEN` constant from T4
@@ -1091,7 +1087,7 @@ Max Concurrent: 7 (Wave 1)
   - Files: `packages/test-helpers/src/sidecar.ts`, `packages/test-helpers/src/sidecar.test.ts`
   - Pre-commit: `pnpm typecheck && cd packages/test-helpers && pnpm test sidecar`
 
-- [ ] 9. **Electron launch helper (`packages/test-helpers/src/electron.ts`)**
+- [x] 9. **Electron launch helper (`packages/test-helpers/src/electron.ts`)**
 
   **What to do**:
   - Implement `launchElectronApp(opts?: { extraEnv?: Record<string,string>, args?: string[], timeoutMs?: number }): Promise<{ app: ElectronApplication, firstWindow: Page, sidecarPort: number, sidecarToken: string, close: () => Promise<void> }>`:
@@ -1143,7 +1139,6 @@ Max Concurrent: 7 (Wave 1)
   - Sidecar PID tracking is the only way to verify cleanup; helper needs access to this
 
   **Acceptance Criteria**:
-
   - [ ] `launchElectronApp()` returns within 30s on healthy boot
   - [ ] `firstWindow.title()` returns string containing "Audiomorph"
   - [ ] `sidecarPort` is integer >1024; `sidecarToken` equals `TEST_TOKEN`
@@ -1203,7 +1198,7 @@ Max Concurrent: 7 (Wave 1)
   - Files: `packages/test-helpers/src/electron.ts`, `packages/test-helpers/src/electron.test.ts`, `apps/shell/src/main/ipc.ts` (or equivalent)
   - Pre-commit: `pnpm typecheck && pnpm --filter @audiomorph/shell build && cd packages/test-helpers && pnpm test electron`
 
-- [ ] 10. **Renderer integration suite — 6 user-journey specs against real sidecar**
+- [x] 10. **Renderer integration suite — 6 user-journey specs against real sidecar**
 
   **What to do**:
   - Create `apps/renderer/tests/integration/journey-first-run.spec.ts` — App first launch: model panel empty → trigger model download (use small whisper-tiny only, ~75MB, cached via T2) → status updates streamed via SSE → ready badge appears → assert API key not visible anywhere in DOM
@@ -1261,7 +1256,6 @@ Max Concurrent: 7 (Wave 1)
   - OpenRouter doc shapes the stub's response — divergence breaks lyrics spec
 
   **Acceptance Criteria**:
-
   - [ ] All 6 spec files exist at `apps/renderer/tests/integration/journey-*.spec.ts`
   - [ ] `pnpm test:integration` runs all 6 specs without `webServer` (each spec manages its own services)
   - [ ] All specs pass with HF models cached (via T2 helper)
@@ -1316,7 +1310,7 @@ Max Concurrent: 7 (Wave 1)
   - Files: `apps/renderer/tests/integration/journey-*.spec.ts` (6 files), `apps/renderer/tests/integration/_setup.ts` (shared spawn/teardown)
   - Pre-commit: `pnpm typecheck && pnpm test:integration`
 
-- [ ] 11. **Sidecar pytest integration suite — 7 files exercising real SQLite + stubbed engines**
+- [x] 11. **Sidecar pytest integration suite — 7 files exercising real SQLite + stubbed engines**
 
   **What to do**:
   - Create `apps/sidecar/tests/integration/__init__.py`
@@ -1381,7 +1375,6 @@ Max Concurrent: 7 (Wave 1)
   - Migration runner is needed in `sqlite_db` fixture to produce a real schema
 
   **Acceptance Criteria**:
-
   - [ ] 7 test files exist under `apps/sidecar/tests/integration/`
   - [ ] `pnpm test:sidecar-integration` runs all 7 files and writes JUnit XML to `.test-results/sidecar-integration.xml`
   - [ ] All 7 files pass with HF stubs (no real models)
@@ -1440,7 +1433,7 @@ Max Concurrent: 7 (Wave 1)
   - Files: `apps/sidecar/tests/integration/**`, `apps/sidecar/pytest.ini` (if modified)
   - Pre-commit: `pnpm test:sidecar-integration && cd apps/sidecar && pytest tests/ -q`
 
-- [ ] 12. **Visual regression suite — all routes × {light,dark} × per-platform baselines**
+- [x] 12. **Visual regression suite — all routes × {light,dark} × per-platform baselines**
 
   **What to do**:
   - Create `apps/renderer/tests/visual/routes.spec.ts`:
@@ -1496,7 +1489,6 @@ Max Concurrent: 7 (Wave 1)
   - `{platform}` token in snapshot path is the key to per-OS baseline isolation
 
   **Acceptance Criteria**:
-
   - [ ] `apps/renderer/tests/visual/routes.spec.ts` exists
   - [ ] First run with `--update-snapshots` produces baselines under `__snapshots__/{darwin|win32|linux}/routes.spec.ts/`
   - [ ] Subsequent runs without changes pass with 0 diff
@@ -1544,7 +1536,7 @@ Max Concurrent: 7 (Wave 1)
   - Files: `apps/renderer/tests/visual/routes.spec.ts`, `apps/renderer/tests/visual/README.md`, `apps/renderer/tests/visual/__snapshots__/.gitkeep`, `apps/renderer/playwright.visual.config.ts` (config polish if needed); `apps/renderer/src/app/(routes)/**/layout.tsx` adds `data-testid="route-ready"` test-mode hooks
   - Pre-commit: `pnpm test:visual:update && pnpm test:visual`
 
-- [ ] 13. **Component config update + ensure 25 existing tests pass under new split config**
+- [x] 13. **Component config update + ensure 25 existing tests pass under new split config**
 
   **What to do**:
   - Verify `apps/renderer/playwright.component.config.ts` (created in T7) picks up exactly the 10 spec files / 25 tests moved in T5
@@ -1592,7 +1584,6 @@ Max Concurrent: 7 (Wave 1)
   - The moved spec files may have relative imports that broke during move; this task fixes those
 
   **Acceptance Criteria**:
-
   - [ ] `pnpm test:component` lists exactly 25 tests
   - [ ] `pnpm test:component` passes all 25 with 0 failures
   - [ ] `_guard.spec.ts` asserts environment cleanliness
@@ -1632,7 +1623,7 @@ Max Concurrent: 7 (Wave 1)
   - Files: `apps/renderer/tests/component/_guard.spec.ts`, any minor import fixes in moved specs
   - Pre-commit: `pnpm test:component`
 
-- [ ] 14. **Electron E2E suite — 6 specs launching real Electron + sidecar + real engines**
+- [x] 14. **Electron E2E suite — 6 specs launching real Electron + sidecar + real engines**
 
   **What to do**:
   - Create `apps/shell/tests/e2e/_setup.ts` exporting `launchAudiomorph()` that uses helper from T9:
@@ -1694,7 +1685,6 @@ Max Concurrent: 7 (Wave 1)
   - Network-leak spec depends on Playwright's `page.route` for renderer-side; sidecar-side requires socket-level mock from T11 pattern
 
   **Acceptance Criteria**:
-
   - [ ] 6 E2E specs exist under `apps/shell/tests/e2e/`
   - [ ] `pnpm test:e2e` runs all 6 and writes `.test-results/e2e.xml`
   - [ ] Cold-start completes <15s
@@ -1749,7 +1739,7 @@ Max Concurrent: 7 (Wave 1)
   - Files: `apps/shell/tests/e2e/**`, `apps/shell/playwright.e2e.config.ts` (final polish if needed)
   - Pre-commit: `pnpm typecheck && pnpm test:e2e`
 
-- [ ] 15. **Scrubber CI integration — fail builds on secrets in test output/evidence**
+- [x] 15. **Scrubber CI integration — fail builds on secrets in test output/evidence**
 
   **What to do**:
   - Create `scripts/scrub-test-output.mjs` (root):
@@ -1796,7 +1786,6 @@ Max Concurrent: 7 (Wave 1)
   - Exit codes are how CI knows to fail the job
 
   **Acceptance Criteria**:
-
   - [ ] `scripts/scrub-test-output.mjs` exists and is executable
   - [ ] Running on clean `.test-results/` exits 0
   - [ ] Planting fake `sk-or-v1-abc123def456ghi789jkl012` in a temp file under `.test-results/` → script exits 1 with file:line
@@ -1839,7 +1828,7 @@ Max Concurrent: 7 (Wave 1)
   - Files: `scripts/scrub-test-output.mjs`, `package.json` (script entry), `packages/test-helpers/src/scrubber.test.ts` (positive-control case)
   - Pre-commit: `pnpm scrub-secrets && pnpm --filter @audiomorph/test-helpers test`
 
-- [ ] 16. **Visual baseline directory bootstrap + PR-diff comment bot**
+- [x] 16. **Visual baseline directory bootstrap + PR-diff comment bot**
 
   **What to do**:
   - Create `scripts/post-visual-diff-comment.mjs`:
@@ -1885,7 +1874,6 @@ Max Concurrent: 7 (Wave 1)
   - Marker comment pattern is the standard idiom for idempotent bot comments
 
   **Acceptance Criteria**:
-
   - [ ] `scripts/post-visual-diff-comment.mjs` exists
   - [ ] Local mode (no GITHUB_TOKEN) prints summary to stdout, exits 0
   - [ ] Per-platform `__snapshots__/{darwin,win32,linux}/.gitkeep` committed
@@ -1927,7 +1915,7 @@ Max Concurrent: 7 (Wave 1)
   - Files: `scripts/post-visual-diff-comment.mjs`, `apps/renderer/tests/visual/__snapshots__/{darwin,win32,linux}/.gitkeep`
   - Pre-commit: `node scripts/post-visual-diff-comment.mjs`
 
-- [ ] 17. **Local developer helper scripts — single-command test tiers**
+- [x] 17. **Local developer helper scripts — single-command test tiers**
 
   **What to do**:
   - Add to root `package.json` scripts:
@@ -1977,7 +1965,6 @@ Max Concurrent: 7 (Wave 1)
   - HF cache helpers from T2 already exist; this task only exposes them at root
 
   **Acceptance Criteria**:
-
   - [ ] All 7 new scripts present in root `package.json` and runnable
   - [ ] `pnpm test:fast` completes <5min on warm cache
   - [ ] `docs/testing.md` exists, ≤3 pages, includes decision tree
@@ -2028,7 +2015,7 @@ Max Concurrent: 7 (Wave 1)
   - Files: `package.json`, `docs/testing.md`
   - Pre-commit: `pnpm test:fast`
 
-- [ ] 18. **HF cache CI integration helper — restore/save with manifest-SHA cache key**
+- [x] 18. **HF cache CI integration helper — restore/save with manifest-SHA cache key**
 
   **What to do**:
   - Create `scripts/ci-hf-cache-key.mjs`:
@@ -2076,7 +2063,6 @@ Max Concurrent: 7 (Wave 1)
   - HF cache layout determines what files to verify exist
 
   **Acceptance Criteria**:
-
   - [ ] `pnpm ci:hf:key` prints deterministic key with manifest SHA prefix
   - [ ] `pnpm ci:hf:verify` exits 0 after warm, exits 1 after `rm -rf ~/.cache/huggingface/hub/models--*`
   - [ ] Cache key changes when manifest content changes
@@ -2123,7 +2109,7 @@ Max Concurrent: 7 (Wave 1)
   - Files: `scripts/ci-hf-cache-key.mjs`, `scripts/ci-hf-cache-verify.mjs`, `package.json`, `docs/testing.md` (extend)
   - Pre-commit: `pnpm ci:hf:key && pnpm ci:hf:verify`
 
-- [ ] 19. **Real-engine smoke validator — independent sanity for nightly tier**
+- [x] 19. **Real-engine smoke validator — independent sanity for nightly tier**
 
   **What to do**:
   - Create `scripts/smoke-real-engines.mjs`:
@@ -2173,7 +2159,6 @@ Max Concurrent: 7 (Wave 1)
   - Duration check catches model truncation/padding bugs
 
   **Acceptance Criteria**:
-
   - [ ] `scripts/smoke-real-engines.mjs` exists
   - [ ] Runs end-to-end against real sidecar + real engines in <150s
   - [ ] Exits 0 on success with `[smoke] OK: generate=Xms, transcribe=Yms` line
@@ -2214,7 +2199,7 @@ Max Concurrent: 7 (Wave 1)
   - Files: `scripts/smoke-real-engines.mjs`, `package.json` (script entry `smoke:engines`)
   - Pre-commit: `node scripts/smoke-real-engines.mjs` (skipped if no HF cache)
 
-- [ ] 20. **CI workflow — `test-pr.yml` (PR tier, Linux smoke, <15min budget)**
+- [x] 20. **CI workflow — `test-pr.yml` (PR tier, Linux smoke, <15min budget)**
 
   **What to do**:
   - Create `.github/workflows/test-pr.yml`:
@@ -2277,7 +2262,6 @@ Max Concurrent: 7 (Wave 1)
   - Linux-only PR tier is the single biggest cost optimization
 
   **Acceptance Criteria**:
-
   - [ ] `.github/workflows/test-pr.yml` exists
   - [ ] `actionlint` passes on the workflow file
   - [ ] All action references use 40-char SHA, not version tags
@@ -2337,7 +2321,7 @@ Max Concurrent: 7 (Wave 1)
   - Files: `.github/workflows/test-pr.yml`
   - Pre-commit: `actionlint .github/workflows/test-pr.yml`
 
-- [ ] 21. **CI workflow — `test-main.yml` (main tier, Linux + visual regression, <30min)**
+- [x] 21. **CI workflow — `test-main.yml` (main tier, Linux + visual regression, <30min)**
 
   **What to do**:
   - Create `.github/workflows/test-main.yml`:
@@ -2392,7 +2376,6 @@ Max Concurrent: 7 (Wave 1)
   - pip-audit catches Python supply-chain issues that pnpm audit misses
 
   **Acceptance Criteria**:
-
   - [ ] `.github/workflows/test-main.yml` exists
   - [ ] `actionlint` passes
   - [ ] All action refs SHA-pinned
@@ -2444,7 +2427,7 @@ Max Concurrent: 7 (Wave 1)
   - Files: `.github/workflows/test-main.yml`
   - Pre-commit: `actionlint .github/workflows/test-main.yml`
 
-- [ ] 22. **CI workflow — `test-nightly.yml` (3-platform matrix, real engines, <90min)**
+- [x] 22. **CI workflow — `test-nightly.yml` (3-platform matrix, real engines, <90min)**
 
   **What to do**:
   - Create `.github/workflows/test-nightly.yml`:
@@ -2511,7 +2494,6 @@ Max Concurrent: 7 (Wave 1)
   - `fail-fast: false` means a Windows-specific bug doesn't mask macOS/Linux passes
 
   **Acceptance Criteria**:
-
   - [ ] `.github/workflows/test-nightly.yml` exists
   - [ ] `actionlint` passes
   - [ ] Matrix has exactly 3 OSes: ubuntu-latest, macos-14, windows-latest
@@ -2578,7 +2560,7 @@ Max Concurrent: 7 (Wave 1)
   - Files: `.github/workflows/test-nightly.yml`
   - Pre-commit: `actionlint .github/workflows/test-nightly.yml`
 
-- [ ] 23. **CI workflow — `update-visual-baselines.yml` (manual dispatch, per-OS)**
+- [x] 23. **CI workflow — `update-visual-baselines.yml` (manual dispatch, per-OS)**
 
   **What to do**:
   - Create `.github/workflows/update-visual-baselines.yml`:
@@ -2638,7 +2620,6 @@ Max Concurrent: 7 (Wave 1)
   - Actor gate enforces human-reviewed baseline updates only
 
   **Acceptance Criteria**:
-
   - [ ] `.github/workflows/update-visual-baselines.yml` exists
   - [ ] `actionlint` passes
   - [ ] Only `workflow_dispatch` trigger present (no schedule, push, or PR)
@@ -2698,7 +2679,7 @@ Max Concurrent: 7 (Wave 1)
   - Files: `.github/workflows/update-visual-baselines.yml`
   - Pre-commit: `actionlint .github/workflows/update-visual-baselines.yml`
 
-- [ ] 24. **CI cost guards — concurrency, path filters, fork protection**
+- [x] 24. **CI cost guards — concurrency, path filters, fork protection**
 
   **What to do**:
   - Audit all four new workflows (`test-pr.yml`, `test-main.yml`, `test-nightly.yml`, `update-visual-baselines.yml`) and add:
@@ -2755,7 +2736,6 @@ Max Concurrent: 7 (Wave 1)
   - Minute multipliers (mac=10x, win=2x) explain why nightly-only multi-OS matters
 
   **Acceptance Criteria**:
-
   - [ ] All four workflow files have explicit `permissions:` block
   - [ ] All four have concurrency groups with correct cancel-in-progress policy
   - [ ] `test-pr.yml` has `paths-ignore` filter for docs
@@ -2839,21 +2819,21 @@ Max Concurrent: 7 (Wave 1)
 
 > 4 review agents run in PARALLEL. ALL must APPROVE. Present consolidated results to user and get explicit "okay" before completing.
 
-- [ ] F1. **Plan Compliance Audit** — `oracle`
-  Read the plan end-to-end. For each "Must Have": verify implementation exists (file present, command exits 0). For each "Must NOT Have": search codebase for forbidden patterns — reject with file:line if found. Check evidence files exist in `.sisyphus/evidence/`. Verify `release.yml` untouched (`git diff main..HEAD -- .github/workflows/release.yml` empty). Verify existing 96 vitest + 53 pytest test counts unchanged.
-  Output: `Must Have [N/N] | Must NOT Have [N/N] | Tasks [N/N] | VERDICT: APPROVE/REJECT`
+- [x] F1. **Plan Compliance Audit** — `oracle`
+      Read the plan end-to-end. For each "Must Have": verify implementation exists (file present, command exits 0). For each "Must NOT Have": search codebase for forbidden patterns — reject with file:line if found. Check evidence files exist in `.sisyphus/evidence/`. Verify `release.yml` untouched (`git diff main..HEAD -- .github/workflows/release.yml` empty). Verify existing 96 vitest + 53 pytest test counts unchanged.
+      Output: `Must Have [N/N] | Must NOT Have [N/N] | Tasks [N/N] | VERDICT: APPROVE/REJECT`
 
-- [ ] F2. **Code Quality Review** — `unspecified-high`
-  Run `pnpm typecheck` + `pnpm lint` + full `pnpm test` (unit + integration + sidecar-integration + e2e + visual + component). Review all changed files for: `as any`/`@ts-ignore`, empty catches, console.log in prod paths, commented-out code, unused imports, `page.waitForTimeout()` usage in integration/E2E. Check AI slop: excessive comments, over-abstraction, generic names (data/result/item/temp). Verify scrubber unit tests pass (planted-token grep returns empty).
-  Output: `Build [PASS/FAIL] | Lint [PASS/FAIL] | Tests [N pass/N fail] | Files [N clean/N issues] | VERDICT`
+- [x] F2. **Code Quality Review** — `unspecified-high`
+      Run `pnpm typecheck` + `pnpm lint` + full `pnpm test` (unit + integration + sidecar-integration + e2e + visual + component). Review all changed files for: `as any`/`@ts-ignore`, empty catches, console.log in prod paths, commented-out code, unused imports, `page.waitForTimeout()` usage in integration/E2E. Check AI slop: excessive comments, over-abstraction, generic names (data/result/item/temp). Verify scrubber unit tests pass (planted-token grep returns empty).
+      Output: `Build [PASS/FAIL] | Lint [PASS/FAIL] | Tests [N pass/N fail] | Files [N clean/N issues] | VERDICT`
 
-- [ ] F3. **Real CI QA** — `unspecified-high` (+ `playwright` skill if local repro needed)
-  Push branch `test/verify-ci` with all changes. Trigger each workflow: `gh workflow run test-pr.yml`, `gh workflow run test-main.yml`, `gh workflow run test-nightly.yml`, `gh workflow run update-visual-baselines.yml`. Wait for completion. Verify all green, wall times within budget (PR<15min, Main<30min, Nightly<90min). Download artifacts, verify `.test-results/*.xml` present, verify scrubber works (grep planted token in logs returns 0). Push deliberate 1-pixel UI change to a tracked component, verify visual regression fails on next run with diff artifact on PR. Push commit with model revision SHA changed, verify cache miss + re-download in next nightly run.
-  Output: `Workflows [4/4 GREEN] | Budgets [N/N within cap] | Cache [HIT/MISS as expected] | Scrubber [0 leaks] | Visual diff [TRIGGERED] | VERDICT`
+- [x] F3. **Real CI QA** — `unspecified-high` (+ `playwright` skill if local repro needed)
+      Push branch `test/verify-ci` with all changes. Trigger each workflow: `gh workflow run test-pr.yml`, `gh workflow run test-main.yml`, `gh workflow run test-nightly.yml`, `gh workflow run update-visual-baselines.yml`. Wait for completion. Verify all green, wall times within budget (PR<15min, Main<30min, Nightly<90min). Download artifacts, verify `.test-results/*.xml` present, verify scrubber works (grep planted token in logs returns 0). Push deliberate 1-pixel UI change to a tracked component, verify visual regression fails on next run with diff artifact on PR. Push commit with model revision SHA changed, verify cache miss + re-download in next nightly run.
+      Output: `Workflows [4/4 GREEN] | Budgets [N/N within cap] | Cache [HIT/MISS as expected] | Scrubber [0 leaks] | Visual diff [TRIGGERED] | VERDICT`
 
-- [ ] F4. **Scope Fidelity Check** — `deep`
-  For each task: read "What to do", read actual diff (git log/diff). Verify 1:1 — everything in spec was built (no missing), nothing beyond spec was built (no creep). Check "Must NOT do" compliance per task. Detect cross-task contamination: Task N touching Task M's files. Flag unaccounted changes. Specifically verify: zero modifications to `apps/sidecar/src/`, `apps/shell/src/`, `apps/renderer/src/` (except test-mode env hooks clearly marked behind `if (process.env.AUDIOMORPH_TEST_MODE)` guards). Verify `release.yml` byte-identical to commit `efa4f08`.
-  Output: `Tasks [N/N compliant] | Contamination [CLEAN/N issues] | Unaccounted [CLEAN/N files] | Product code [UNTOUCHED/MODIFIED] | release.yml [UNTOUCHED/MODIFIED] | VERDICT`
+- [x] F4. **Scope Fidelity Check** — `deep`
+      For each task: read "What to do", read actual diff (git log/diff). Verify 1:1 — everything in spec was built (no missing), nothing beyond spec was built (no creep). Check "Must NOT do" compliance per task. Detect cross-task contamination: Task N touching Task M's files. Flag unaccounted changes. Specifically verify: zero modifications to `apps/sidecar/src/`, `apps/shell/src/`, `apps/renderer/src/` (except test-mode env hooks clearly marked behind `if (process.env.AUDIOMORPH_TEST_MODE)` guards). Verify `release.yml` byte-identical to commit `efa4f08`.
+      Output: `Tasks [N/N compliant] | Contamination [CLEAN/N issues] | Unaccounted [CLEAN/N files] | Product code [UNTOUCHED/MODIFIED] | release.yml [UNTOUCHED/MODIFIED] | VERDICT`
 
 ---
 

@@ -5,6 +5,7 @@
 **Chosen approach:** `astral-sh/python-build-standalone` (PBS)
 
 **Rationale:**
+
 - torch GPU variants (CUDA/MPS/CPU) must be installed at first-run — PBS allows `pip install` into the bundled runtime; PyInstaller cannot
 - heartlib and HF deps may require native extensions that PyInstaller hooks miss
 - PBS 20260408 release has full Python 3.14 support
@@ -42,56 +43,62 @@ Runs during `electron-builder` `beforeBuild` hook.
 
 ```javascript
 // scripts/stage-backend.cjs
-const { execSync } = require('child_process')
-const fs = require('fs')
-const path = require('path')
-const os = require('os')
+const { execSync } = require('child_process');
+const fs = require('fs');
+const path = require('path');
+const os = require('os');
 
-const PBS_VERSION = '20260408'
-const PYTHON_VERSION = '3.14.0'
+const PBS_VERSION = '20260408';
+const PYTHON_VERSION = '3.14.0';
 
 const PLATFORM_MAP = {
   darwin: {
     arm64: `cpython-${PYTHON_VERSION}+${PBS_VERSION}-aarch64-apple-darwin-install_only.tar.gz`,
-    x64:   `cpython-${PYTHON_VERSION}+${PBS_VERSION}-x86_64-apple-darwin-install_only.tar.gz`,
+    x64: `cpython-${PYTHON_VERSION}+${PBS_VERSION}-x86_64-apple-darwin-install_only.tar.gz`,
   },
   linux: {
-    x64:   `cpython-${PYTHON_VERSION}+${PBS_VERSION}-x86_64-unknown-linux-gnu-install_only.tar.gz`,
+    x64: `cpython-${PYTHON_VERSION}+${PBS_VERSION}-x86_64-unknown-linux-gnu-install_only.tar.gz`,
     arm64: `cpython-${PYTHON_VERSION}+${PBS_VERSION}-aarch64-unknown-linux-gnu-install_only.tar.gz`,
   },
   win32: {
-    x64:   `cpython-${PYTHON_VERSION}+${PBS_VERSION}-x86_64-pc-windows-msvc-install_only.tar.gz`,
+    x64: `cpython-${PYTHON_VERSION}+${PBS_VERSION}-x86_64-pc-windows-msvc-install_only.tar.gz`,
   },
-}
+};
 
 async function main() {
-  const platform = process.platform
-  const arch = process.arch
-  const filename = PLATFORM_MAP[platform]?.[arch]
-  if (!filename) throw new Error(`Unsupported platform: ${platform}/${arch}`)
+  const platform = process.platform;
+  const arch = process.arch;
+  const filename = PLATFORM_MAP[platform]?.[arch];
+  if (!filename) throw new Error(`Unsupported platform: ${platform}/${arch}`);
 
-  const url = `https://github.com/astral-sh/python-build-standalone/releases/download/${PBS_VERSION}/${filename}`
-  const dest = path.join(__dirname, '..', 'resources', 'python')
+  const url = `https://github.com/astral-sh/python-build-standalone/releases/download/${PBS_VERSION}/${filename}`;
+  const dest = path.join(__dirname, '..', 'resources', 'python');
 
   if (fs.existsSync(dest)) {
-    console.log('Python runtime already staged, skipping download.')
-    return
+    console.log('Python runtime already staged, skipping download.');
+    return;
   }
 
-  console.log(`Downloading PBS: ${filename}`)
-  execSync(`curl -L "${url}" | tar -xz -C resources/`, { stdio: 'inherit' })
-  fs.renameSync(path.join('resources', 'python', `cpython-${PYTHON_VERSION}+${PBS_VERSION}-*`), dest)
+  console.log(`Downloading PBS: ${filename}`);
+  execSync(`curl -L "${url}" | tar -xz -C resources/`, { stdio: 'inherit' });
+  fs.renameSync(
+    path.join('resources', 'python', `cpython-${PYTHON_VERSION}+${PBS_VERSION}-*`),
+    dest,
+  );
 
   // Pre-install everything except torch (torch installed at first-run)
-  const pip = path.join(dest, 'bin', platform === 'win32' ? 'pip3.exe' : 'pip3')
+  const pip = path.join(dest, 'bin', platform === 'win32' ? 'pip3.exe' : 'pip3');
   execSync(`"${pip}" install fastapi uvicorn[standard] huggingface_hub hf_xet heartlib`, {
-    stdio: 'inherit'
-  })
+    stdio: 'inherit',
+  });
 
-  console.log('Python runtime staged successfully.')
+  console.log('Python runtime staged successfully.');
 }
 
-main().catch(e => { console.error(e); process.exit(1) })
+main().catch((e) => {
+  console.error(e);
+  process.exit(1);
+});
 ```
 
 ---
@@ -142,44 +149,44 @@ if __name__ == "__main__":
 ## Electron: Sidecar Lifecycle (electron/sidecar.ts)
 
 ```typescript
-import { spawn, ChildProcess } from 'child_process'
-import { app } from 'electron'
-import path from 'path'
-import net from 'net'
+import { spawn, ChildProcess } from 'child_process';
+import { app } from 'electron';
+import path from 'path';
+import net from 'net';
 
-let sidecarProcess: ChildProcess | null = null
-let sidecarPort: number | null = null
+let sidecarProcess: ChildProcess | null = null;
+let sidecarPort: number | null = null;
 
 function getPythonPath(): string {
   const base = app.isPackaged
     ? path.join(process.resourcesPath, 'python')
-    : path.join(__dirname, '..', 'resources', 'python')
+    : path.join(__dirname, '..', 'resources', 'python');
 
   return process.platform === 'win32'
     ? path.join(base, 'python.exe')
-    : path.join(base, 'bin', 'python3.14')
+    : path.join(base, 'bin', 'python3.14');
 }
 
 function getBackendPath(): string {
   return app.isPackaged
     ? path.join(process.resourcesPath, 'backend', 'main.py')
-    : path.join(__dirname, '..', 'backend', 'main.py')
+    : path.join(__dirname, '..', 'backend', 'main.py');
 }
 
 async function findFreePort(): Promise<number> {
-  return new Promise(resolve => {
-    const srv = net.createServer()
+  return new Promise((resolve) => {
+    const srv = net.createServer();
     srv.listen(0, '127.0.0.1', () => {
-      const port = (srv.address() as net.AddressInfo).port
-      srv.close(() => resolve(port))
-    })
-  })
+      const port = (srv.address() as net.AddressInfo).port;
+      srv.close(() => resolve(port));
+    });
+  });
 }
 
 export async function startSidecar(): Promise<number> {
-  const port = await findFreePort()
-  const python = getPythonPath()
-  const script = getBackendPath()
+  const port = await findFreePort();
+  const python = getPythonPath();
+  const script = getBackendPath();
 
   sidecarProcess = spawn(python, [script, '--port', String(port)], {
     stdio: ['ignore', 'pipe', 'pipe'],
@@ -188,53 +195,50 @@ export async function startSidecar(): Promise<number> {
       PYTHONUNBUFFERED: '1',
       PYTHONDONTWRITEBYTECODE: '1',
     },
-  })
+  });
 
   await new Promise<void>((resolve, reject) => {
-    const timeout = setTimeout(
-      () => reject(new Error('Sidecar startup timeout (30s)')),
-      30_000
-    )
+    const timeout = setTimeout(() => reject(new Error('Sidecar startup timeout (30s)')), 30_000);
 
     sidecarProcess!.stdout!.on('data', (chunk: Buffer) => {
       if (chunk.toString().includes('SIDECAR_READY')) {
-        clearTimeout(timeout)
-        resolve()
+        clearTimeout(timeout);
+        resolve();
       }
-    })
+    });
 
     sidecarProcess!.stderr!.on('data', (chunk: Buffer) => {
-      console.error('[sidecar]', chunk.toString())
-    })
+      console.error('[sidecar]', chunk.toString());
+    });
 
     sidecarProcess!.on('exit', (code, signal) => {
-      clearTimeout(timeout)
-      reject(new Error(`Sidecar exited unexpectedly: code=${code} signal=${signal}`))
-    })
-  })
+      clearTimeout(timeout);
+      reject(new Error(`Sidecar exited unexpectedly: code=${code} signal=${signal}`));
+    });
+  });
 
-  sidecarPort = port
-  return port
+  sidecarPort = port;
+  return port;
 }
 
 export function stopSidecar(): void {
-  if (!sidecarProcess) return
+  if (!sidecarProcess) return;
 
   if (process.platform === 'win32') {
     // Kill entire process tree on Windows
     spawn('taskkill', ['/pid', String(sidecarProcess.pid), '/f', '/t'], {
       stdio: 'ignore',
-    })
+    });
   } else {
-    sidecarProcess.kill('SIGTERM')
+    sidecarProcess.kill('SIGTERM');
   }
 
-  sidecarProcess = null
-  sidecarPort = null
+  sidecarProcess = null;
+  sidecarPort = null;
 }
 
 export function getSidecarPort(): number | null {
-  return sidecarPort
+  return sidecarPort;
 }
 ```
 
