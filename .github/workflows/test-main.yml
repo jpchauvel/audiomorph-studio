@@ -131,4 +131,8 @@ jobs:
         run: pnpm audit --audit-level=critical
 
       - name: Python dependency audit
-        run: pip install pip-audit && pip-audit --strict
+        run: |
+          pip install pip-audit
+          # Audit installed deps but skip the local editable audiomorph-sidecar
+          # package (unpublished, not on PyPI).
+          pip-audit --strict --skip-editable
