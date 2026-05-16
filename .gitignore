@@ -21,6 +21,10 @@ yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
 
+# Test results
+.test-results/
+
+
 # Python
 __pycache__/
 *.py[cod]

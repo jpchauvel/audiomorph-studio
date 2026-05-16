@@ -23,3 +23,8 @@ build-backend = "hatchling.build"
 dev-dependencies = [
   "pytest>=8.0.0",
 ]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q --strict-markers --junit-xml=.test-results/pytest.xml"
+

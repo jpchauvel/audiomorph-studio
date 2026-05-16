@@ -1,17 +1,12 @@
 {
   "name": "audiomorph-studio",
+  "type": "module",
   "private": true,
   "packageManager": "pnpm@9.15.0",
-  "workspaces": [
-    "apps/desktop",
-    "apps/web",
-    "packages/*"
-  ],
-  "devDependencies": {
-    "@typescript-eslint/eslint-plugin": "^8.59.3",
-    "@typescript-eslint/parser": "^8.59.3",
-    "@vitest/coverage-v8": "^4.1.6",
-    "eslint": "^10.4.0",
-    "vitest": "^1.0.4"
+  "workspaces": ["apps/desktop", "apps/web", "packages/*"],
+  "scripts": {
+    "lint": "eslint . --ext .ts,.tsx",
+    "format": "prettier --write .",
+    "typecheck": "tsc --noEmit -p tsconfig.base.json"
   }
 }

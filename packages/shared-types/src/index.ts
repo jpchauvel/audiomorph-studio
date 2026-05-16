@@ -1,5 +1,5 @@
-export { ErrorCode, ApiError, HTTP_STATUS } from './errors';
-export type { ErrorCode as ErrorCodeType } from './errors';
+export { ErrorCode, HTTP_STATUS } from './errors';
+export type { ErrorCode as ErrorCodeType, ApiError } from './errors';
 
 /**
  * Job status enumeration for generation tasks
