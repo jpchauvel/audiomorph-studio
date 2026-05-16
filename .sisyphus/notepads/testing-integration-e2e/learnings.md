@@ -243,3 +243,43 @@
   catches any accidental rendering of the auth token into the DOM.
 - Auth header convention enforced: only `X-Audiomorph-Token`, never
   `Authorization: Bearer` (see journey-settings.spec.ts authProbe).
+
+## T11 — Sidecar pytest integration suite (2026-05-16)
+- 7 files + conftest under `apps/sidecar/tests/integration/`, 25 tests, exit 0,
+  JUnit at `.test-results/sidecar-integration.xml`. 53 unit tests still pass.
+- `OPENROUTER_URL` in `routers/openrouter.py` is a hardcoded module constant
+  with NO env-var override. Stubbing requires
+  `monkeypatch.setattr(or_router, "OPENROUTER_URL", stub_url)` per-test;
+  setting `AUDIOMORPH_OPENROUTER_BASE_URL` env is a no-op today.
+- User-data env var is `AUDIOMORPH_DATA_DIR` (not `AUDIOMORPH_USER_DATA_DIR`).
+  `db.session._engine_cache: dict[str, Engine]` must be `.clear()`ed before and
+  after each test, AND `init_db(path)` re-called, otherwise stale engine is
+  reused and tests share state.
+- `routers/jobs.py` does `_ENGINE = get_engine()` at import. Patch on the
+  **class** (`GenerationEngine.generate`), not the module attr — the existing
+  `_ENGINE` instance picks up class-level method patches via MRO.
+- FastAPI VALIDATION_ERROR returns 422 (not 400) per `_errors.py`
+  `_ERROR_CODE_STATUS` map. Adjusted lyrics negative-path expectations.
+- `httpx` request headers preserve casing (`Authorization` capital A); use a
+  case-insensitive lookup when asserting recorded forwarded headers.
+- Telemetry-absence assertion must check exact module prefixes
+  (`sentry_sdk`, `posthog`, `analytics`, `segment_analytics`, `mixpanel`);
+  naive substring `"segment" in mod` false-positives on `rich.segment`.
+- No `transcriptions` table in the DB schema (only `Generation`, `Job`,
+  `Setting`). Transcription endpoint tests assert response shape only.
+- No vault/keyring/telemetry code exists in sidecar yet. Tests assert
+  **absence** (`keyring not in sys.modules`, no telemetry-module prefix,
+  healthz `test_mode: true`) rather than mock-and-verify-zero-calls.
+- TestClient yields to FastAPI background tasks between requests via its
+  internal portal; polling `GET /jobs/{id}` in a tight loop without
+  `time.sleep()` works for stubbed sub-second jobs (helper `wait_for_job`
+  caps at 50 iterations).
+- Per-test SQLite tempfile under `tmp_path` proven isolated by
+  `test_second_run_does_not_see_prior_test_data` (would fail loudly on leak)
+  and `test_sqlite_path_is_under_temp_dir` (no escape to real user data dir).
+- OpenRouter stub: stdlib `ThreadingHTTPServer` on `127.0.0.1:0`, ephemeral
+  port, JSON fixture from `packages/test-helpers/fixtures/openrouter/`.
+  Records forwarded request body + headers for assertion.
+- Pyenv local: Python 3.14.0 runs the suite despite `pyproject.toml`
+  declaring `requires-python = ">=3.12,<3.13"` — pytest invocation works
+  because the constraint is a metadata hint, not a runtime gate.

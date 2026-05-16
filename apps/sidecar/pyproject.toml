@@ -38,3 +38,6 @@ packages = ["src/audiomorph"]
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 addopts = "-q --strict-markers --junit-xml=.test-results/pytest.xml"
+markers = [
+  "integration: real-SQLite + stubbed-engine integration tests (slower, isolated tempdir)",
+]

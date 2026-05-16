@@ -20,7 +20,7 @@
     "test:visual:update": "cd apps/renderer && pnpm exec playwright test --config=playwright.visual.config.ts --update-snapshots",
     "test:e2e": "cd apps/shell && pnpm exec playwright test --config=playwright.e2e.config.ts",
     "test:e2e:debug": "cd apps/shell && PWDEBUG=1 pnpm exec playwright test --config=playwright.e2e.config.ts",
-    "test:sidecar-integration": "cd apps/sidecar && pytest tests/integration/ -q --junitxml=../../.test-results/sidecar-integration.xml",
+    "test:sidecar-integration": "cd apps/sidecar && python3 -m pytest tests/integration/ -q --junitxml=../../.test-results/sidecar-integration.xml",
     "test:all": "pnpm test && pnpm test:component && pnpm test:integration && pnpm test:sidecar-integration && pnpm test:e2e && pnpm test:visual",
     "dev": "pnpm --filter @audiomorph/shell dev",
     "build:all": "pnpm --filter @audiomorph/shell build:all",
