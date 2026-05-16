@@ -133,6 +133,7 @@ jobs:
       - name: Python dependency audit
         run: |
           pip install pip-audit
-          # Audit installed deps but skip the local editable audiomorph-sidecar
-          # package (unpublished, not on PyPI).
-          pip-audit --strict --skip-editable
+          # Audit the sidecar project directly from its pyproject.toml,
+          # not the installed environment (which contains the local
+          # editable audiomorph-sidecar package, unpublished to PyPI).
+          pip-audit apps/sidecar --strict
