@@ -46,3 +46,20 @@
 - Generation inputs accept inline strings OR file paths for `tags` and `lyrics`; both are lowercased and tags are normalized to `<tag>...</tag>`.
 - Generation output path currently writes via `torchaudio.save(..., 48000)` after `HeartCodec.detokenize`; adapter should wrap temp path and return WAV bytes.
 - Lyrics transcription entry is `HeartTranscriptorPipeline` (Whisper ASR pipeline subclass) using inherited `__call__` rather than custom `transcribe()`.
+
+## [2026-05-16] W1.3 - Error Envelope Contract + Structured Logging
+- **Task:** Define unified error envelope contract and error code catalog
+- **Status:** ✅ Complete
+- **Key Deliverables:**
+  - `packages/shared-types/src/errors.ts`: ErrorCode enum (11 codes), ApiError interface, HTTP_STATUS mapping
+  - `packages/shared-types/src/index.ts`: Re-exports for error types
+  - `packages/shared-types/src/__tests__/errors.test.ts`: 5 comprehensive tests (all passing)
+  - `docs/error-envelope.md`: Complete error code catalog with HTTP status, descriptions, retriable flags, usage guidelines
+- **Error Codes (11 total):**
+  - VALIDATION_ERROR (422), MODEL_NOT_FOUND (404), GPU_UNAVAILABLE (503), OUT_OF_MEMORY (503)
+  - SIDECAR_DOWN (503), JOB_NOT_FOUND (404), CANCELLED (409), EXPORT_FAILED (500)
+  - DOWNLOAD_FAILED (500), KEY_VAULT_ERROR (500), INTERNAL_ERROR (500)
+- **Test Results:** 8 tests passing (5 in errors.test.ts, 3 in contracts.test.ts)
+- **Verification:** All 11 error codes present in docs/error-envelope.md, HTTP_STATUS complete, ApiError interface validated
+- **Commit:** f73e0de "feat(types): unified ApiError envelope + error code catalog"
+- **Evidence:** `.sisyphus/evidence/task-W1.3-error-coverage.txt`
