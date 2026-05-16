@@ -577,7 +577,7 @@ Max Concurrent: 8 (Wave 3)
   - Files: `package.json`, `pnpm-workspace.yaml`, `pnpm-lock.yaml`, `.gitignore`, `README.md`, `.editorconfig`, `.nvmrc`, `.tool-versions`, `apps/sidecar/pyproject.toml`, `apps/*/`, `packages/*/`
   - Pre-commit: `pnpm install --frozen-lockfile`
 
-- [ ] W1.2. Define shared TypeScript + Python type contracts in packages/shared-types
+- [x] W1.2. Define shared TypeScript + Python type contracts in packages/shared-types
 
   **What to do**:
   - In `packages/shared-types/`, create `package.json` with name `@audiomorph/shared-types`, main `dist/index.js`, types `dist/index.d.ts`
@@ -654,7 +654,7 @@ Max Concurrent: 8 (Wave 3)
   - Files: `packages/shared-types/**`, `apps/sidecar/src/audiomorph/schemas.py`
   - Pre-commit: `pnpm --filter @audiomorph/shared-types test && pnpm --filter @audiomorph/shared-types build`
 
-- [ ] W1.3. Define error envelope contract + structured logging conventions
+- [x] W1.3. Define error envelope contract + structured logging conventions
 
   **What to do**: In `packages/shared-types/src/errors.ts`, define `ApiError` with `{code, message, details?, retriable, hint?}`; define `ErrorCode` string enum covering: VALIDATION_ERROR, MODEL_NOT_FOUND, GPU_UNAVAILABLE, OUT_OF_MEMORY, SIDECAR_DOWN, JOB_NOT_FOUND, CANCELLED, EXPORT_FAILED, DOWNLOAD_FAILED, KEY_VAULT_ERROR, INTERNAL_ERROR. Document mapping to HTTP status in `docs/error-envelope.md`. Add Python `ApiError` Pydantic model in regen output. Write test `errors.test.ts` (RED) asserting all 11 codes are exported and each has a documented HTTP status.
 
@@ -680,7 +680,7 @@ Max Concurrent: 8 (Wave 3)
 
   **Commit**: YES. `feat(types): unified ApiError envelope + error code catalog`. Files: `packages/shared-types/src/errors.ts`, `docs/error-envelope.md`. Pre-commit: `pnpm --filter @audiomorph/shared-types test`.
 
-- [ ] W1.4. Centralize app paths + platform detection helpers
+- [x] W1.4. Centralize app paths + platform detection helpers
 
   **What to do**: Create `packages/platform/` package with TS exports `getUserDataDir()`, `getModelsDir()`, `getLogsDir()`, `getCacheDir()`, `getPlatform()` (returns `'darwin-arm64'|'win32-x64'|'linux-x64'`), `getDefaultModelsDir()`. Use Electron `app.getPath('userData')` when in main, fall back to env-derived paths in renderer/tests. Mirror in Python: `apps/sidecar/src/audiomorph/paths.py` using `platformdirs` library, exposing same 5 functions. Write RED tests for both — assert paths exist after `ensureDir()` and resolve to OS-correct locations (`~/Library/Application Support/AudioMorph Studio/` on macOS, `%APPDATA%\AudioMorph Studio\` on Windows, `~/.config/audiomorph-studio/` on Linux).
 
@@ -707,7 +707,7 @@ Max Concurrent: 8 (Wave 3)
 
   **Commit**: YES. `feat(platform): cross-platform path resolution (TS+Python)`. Files: `packages/platform/**`, `apps/sidecar/src/audiomorph/paths.py`. Pre-commit: `pnpm --filter @audiomorph/platform test`.
 
-- [ ] W1.5. **[HIGH-RISK]** Sidecar bootstrap: discoverable Python runtime + port allocation + handshake
+- [x] W1.5. **[HIGH-RISK]** Sidecar bootstrap: discoverable Python runtime + port allocation + handshake
 
   **What to do**:
   - Create `apps/sidecar/src/audiomorph/__main__.py` accepting CLI flags: `--port=0` (request OS-assigned), `--host=127.0.0.1` (always loopback), `--parent-pid=<pid>` (parent watchdog), `--handshake-fd=<fd>` (write port+token to fd after bind, or `--handshake-file=<path>` on Windows), `--auth-token=<random-32-bytes-hex>` (required on every request)
@@ -814,7 +814,7 @@ print('OK')
   - Files: `apps/sidecar/src/audiomorph/__main__.py`, `apps/sidecar/src/audiomorph/_watchdog.py`, `apps/sidecar/src/audiomorph/_auth.py`, `apps/sidecar/tests/test_lifecycle.py`, `docs/sidecar-protocol.md`
   - Pre-commit: `cd apps/sidecar && uv run pytest tests/test_lifecycle.py`
 
-- [ ] W1.6. Configure ESLint, Prettier, Ruff, Pyright with shared root configs
+- [x] W1.6. Configure ESLint, Prettier, Ruff, Pyright with shared root configs
 
   **What to do**: Add root `eslint.config.js` (flat config), `prettier.config.js`, `apps/sidecar/ruff.toml` (line-length 100, target py314, full rule set ALL minus D), `apps/sidecar/pyrightconfig.json` (strict mode, venvPath, pythonVersion 3.14). Wire up `pnpm lint`, `pnpm format`, `pnpm typecheck` at root (recursive). Add `.husky/pre-commit` running `pnpm lint-staged` (formats only staged files). Write RED test in each package that asserts no lint/type errors on the empty scaffold.
 
@@ -841,7 +841,7 @@ print('OK')
 
   **Commit**: YES. `chore(quality): configure eslint+prettier+ruff+pyright + pre-commit hook`. Files: `eslint.config.js`, `prettier.config.js`, `apps/sidecar/ruff.toml`, `apps/sidecar/pyrightconfig.json`, `.husky/**`, `package.json` (scripts). Pre-commit: `pnpm lint && pnpm typecheck`.
 
-- [ ] W1.7. Wire up Vitest (TS) + pytest (Python) test harnesses with CI-friendly output
+- [x] W1.7. Wire up Vitest (TS) + pytest (Python) test harnesses with CI-friendly output
 
   **What to do**: Add root Vitest config (`vitest.config.ts`) with workspace mode covering all `packages/*` and `apps/web`. Configure JUnit XML reporter to `.test-results/vitest.xml`. Configure pytest in `apps/sidecar/pyproject.toml` `[tool.pytest.ini_options]`: testpaths=tests, addopts=`-q --strict-markers --junit-xml=.test-results/pytest.xml`. Add `pnpm test` at root running both (`pnpm -r test && cd apps/sidecar && uv run pytest`). Write 1 trivial green test per package to verify wiring.
 
@@ -868,7 +868,7 @@ print('OK')
 
   **Commit**: YES. `chore(test): wire vitest+pytest with JUnit reporters`. Files: `vitest.config.ts`, `apps/sidecar/pyproject.toml`, `package.json`. Pre-commit: `pnpm test`.
 
-- [ ] W2.1. FastAPI app skeleton with global error handler + request logging
+- [x] W2.1. FastAPI app skeleton with global error handler + request logging
 
   **What to do**: Create `apps/sidecar/src/audiomorph/app.py` exporting `create_app() -> FastAPI`. Mount routers (placeholders for `/models`, `/jobs`, `/lyrics`, `/export`, `/settings`). Global exception handler: catch `ApiError` subclasses → return JSON envelope per W1.3 with correct HTTP status; catch `Exception` → log full traceback, return `INTERNAL_ERROR` envelope (no traceback in response). Mount auth middleware from W1.5. Add `/healthz` returning `{ok, version, gpu:{available, name?, vram_gb?}, models_dir, python_version}`. Request-logging middleware: log `{method, path, status, duration_ms, request_id}` as JSON line via structlog. Wire CORS for `http://localhost:*` only (Electron dev). Write RED tests asserting: ApiError → correct envelope; uncaught Exception → INTERNAL_ERROR; /healthz returns gpu info; auth required on non-healthz routes.
 
@@ -905,7 +905,7 @@ print('OK')
 
   **Commit**: YES. `feat(api): FastAPI app with error envelope + structlog + healthz`. Files: `apps/sidecar/src/audiomorph/app.py`, `apps/sidecar/src/audiomorph/_logging.py`, `apps/sidecar/tests/test_app.py`. Pre-commit: `cd apps/sidecar && uv run pytest`.
 
-- [ ] W2.2. **[HIGH-RISK]** Model download manager: HF hub integration with resume, SHA256, concurrency cap, BYOK token
+- [x] W2.2. **[HIGH-RISK]** Model download manager: HF hub integration with resume, SHA256, concurrency cap, BYOK token
 
   **What to do**:
   - Implement `apps/sidecar/src/audiomorph/models/manager.py`:
@@ -1010,7 +1010,7 @@ print('OK')
   - Files: `apps/sidecar/src/audiomorph/models/**`, `apps/sidecar/src/audiomorph/routers/models.py`, `apps/sidecar/tests/test_models_*.py`
   - Pre-commit: `cd apps/sidecar && uv run pytest tests/test_models_*.py`
 
-- [ ] W2.3. **[HIGH-RISK]** Generation endpoint: heartlib invocation, cancel, OOM recovery, SSE progress
+- [x] W2.3. **[HIGH-RISK]** Generation endpoint: heartlib invocation, cancel, OOM recovery, SSE progress
 
   **What to do**:
   - Implement `apps/sidecar/src/audiomorph/generation/engine.py`:
@@ -1123,7 +1123,7 @@ print('OK')
   - Files: `apps/sidecar/src/audiomorph/generation/**`, `apps/sidecar/src/audiomorph/routers/jobs.py`, `apps/sidecar/tests/test_generation_*.py`
   - Pre-commit: `cd apps/sidecar && uv run pytest tests/test_generation_*.py`
 
-- [ ] W2.4. Lyrics transcription endpoint (heartlib-backed)
+- [x] W2.4. Lyrics transcription endpoint (heartlib-backed)
 
   **What to do**: Implement `routers/lyrics.py` POST `/lyrics/transcribe` with body `{audio_path | audio_base64}` → returns `LyricsResult{text, timings: [{start_s, end_s, line}], language?}`. Use heartlib lyrics pipeline (per `heartlib/examples/run_lyrics_transcription.py`). Same concurrency cap (1) + cancel support pattern as W2.3. Validate file size ≤ 50MB, duration ≤ 10min. Stream progress via SSE at `/lyrics/jobs/{id}/events`. RED tests for: happy path with sample WAV, invalid format → VALIDATION_ERROR, oversize → VALIDATION_ERROR, cancel mid-transcription.
 

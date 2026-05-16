@@ -107,3 +107,12 @@
 - **Pyright pragma**: Routers wrapping engines with `Any`-typed heartlib results need `reportUnknownMemberType=false, reportUnknownArgumentType=false` (matches `routers/models.py` pattern).
 - **Sparse-file test trick**: `seek(MAX+1) + write(b"\x00")` creates >50MB file for validation tests without consuming disk — keep the comment explaining the trick.
 - **Device policy**: MPS → CUDA → CPU fallback; `AUDIOMORPH_REQUIRE_GPU=1` env triggers `GPU_UNAVAILABLE` error when no accelerator available.
+
+## W2.5 — SQLite persistence (SQLModel)
+
+- **WAL mode** must be set via `PRAGMA journal_mode=WAL` per-connection through a SQLAlchemy `event.listens_for(engine, "connect")` hook, NOT in the URL. Also set `busy_timeout=5000`, `synchronous=NORMAL`, `foreign_keys=ON` there.
+- Use `Session(engine, expire_on_commit=False)` when caller reads attributes after `session_scope` exits — otherwise `DetachedInstanceError` on attribute access post-commit.
+- Cache engines per DB path (module-level dict) — `create_engine` is expensive and connect-event handlers must register once per engine.
+- For startup hooks, prefer FastAPI `lifespan` async context manager over deprecated `@app.on_event("startup")`.
+- SQLModel table classes auto-register on `SQLModel.metadata` at import time — import `db.models` from `db.session` to ensure `create_all` sees them.
+- Test concurrent WAL behavior with two `threading.Thread`s doing interleaved write/read in separate `session_scope` blocks; absence of `SQLITE_BUSY` exceptions = WAL working.

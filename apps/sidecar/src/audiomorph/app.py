@@ -5,8 +5,9 @@ from __future__ import annotations
 import platform
 import traceback
 import os
+from contextlib import asynccontextmanager
 from time import perf_counter
-from typing import Any, cast
+from typing import Any, AsyncIterator, cast
 from uuid import uuid4
 
 from fastapi import APIRouter, FastAPI, Request
@@ -16,6 +17,7 @@ from starlette.middleware.cors import CORSMiddleware
 from ._auth import AuthMiddleware
 from ._errors import ApiError
 from ._logging import get_logger, setup_logging
+from .db.session import init_db
 from .paths import get_models_dir
 from .routers.export import router as export_router
 from .routers.jobs import router as jobs_router
@@ -52,7 +54,16 @@ def _gpu_info() -> dict[str, Any]:
 def create_app(auth_token: str = "") -> FastAPI:
     setup_logging()
     logger = get_logger("audiomorph.api")
-    app = FastAPI()
+
+    @asynccontextmanager
+    async def lifespan(_: FastAPI) -> AsyncIterator[None]:
+        try:
+            init_db()
+        except Exception as e:
+            logger.error("db_init_failed", error=str(e))
+        yield
+
+    app = FastAPI(lifespan=lifespan)
 
     app.add_middleware(
         CORSMiddleware,
