@@ -1261,7 +1261,7 @@ print('OK')
 
   **Commit**: YES. `feat(settings): typed settings + first-run state`. Files: `routers/settings.py`, `services/first_run.py`, tests. Pre-commit: `uv run pytest tests/test_settings_*.py`.
 
-- [ ] W3.1. Next.js 15 app scaffold (static export) + Tailwind + shadcn/ui + Magic UI + Geist + OKLCH tokens
+- [x] W3.1. Next.js 15 app scaffold (static export) + Tailwind + shadcn/ui + Magic UI + Geist + OKLCH tokens
 
   **What to do**: Initialize `apps/renderer/` as Next.js 15 (App Router, TypeScript strict, `output: 'export'`, `images.unoptimized: true`, `trailingSlash: true`, `basePath: ''`, `assetPrefix: './'`). Install Tailwind v4 with `@theme inline` block defining OKLCH color tokens (primary, surface, surface-2, surface-3, accent, success, warning, danger, text, text-muted, border). Wire Geist Sans + Geist Mono via `next/font/local` (bundled, no Google fetch). Install shadcn/ui CLI + add base components: button, dialog, input, label, select, slider, progress, tabs, toast, card, badge, separator, scroll-area, tooltip. Install Magic UI components: shimmer-button, animated-beam, marquee, number-ticker, magic-card (copy source per their installation pattern — vendored). Create `lib/design-tokens.ts` exporting CSS var names. Set up Zustand store skeleton at `lib/stores/` with `useAppStore`, `useGenerationStore`, `useSettingsStore`. Provide `.env.example` documenting `NEXT_PUBLIC_API_BASE_URL` (overridden at runtime by Electron preload injection per W4.4). Write RED Playwright test: app boots, dark-mode default, primary OKLCH token resolves to expected hex range, locale `en-US` + `de-DE` + `ja-JP` render without layout breaks, HiDPI screenshot at 2x DPR captures.
 
@@ -1298,7 +1298,7 @@ print('OK')
 
   **Commit**: YES. `feat(renderer): Next.js 15 static export + Tailwind + shadcn/ui + Magic UI + Geist + OKLCH tokens`. Files: `apps/renderer/**`. Pre-commit: `cd apps/renderer && bun run build && bun test`.
 
-- [ ] W3.2. First-run wizard UI: 4-step (welcome → pick models dir → download models → ready)
+- [x] W3.2. First-run wizard UI: 4-step (welcome → pick models dir → download models → ready)
 
   **What to do**: Build `apps/renderer/app/first-run/page.tsx` with shadcn `<Dialog>` (non-dismissible, full-screen) + step indicator. Steps: (1) Welcome — branding + brief explainer + "Get started" button; (2) Pick models dir — native dir picker via Electron IPC `dialog:openDirectory` (preload-exposed per W4.4), shows free space + required ~10 GB warning; (3) Download models — list 3 required models from `GET /models`, per-row `<Progress>` bound to SSE from W2.2 (`/models/jobs/{id}/events`), retry button on error, total ETA, cancel-all button; (4) Ready — confirmation + "Open Studio" CTA. Wire to `GET /first-run/status` (W2.8) — if `completed=true`, redirect to `/`. Optimistic store updates with rollback on API failure. Toasts via shadcn/sonner on error. Keyboard nav (Tab/Enter/Esc-disabled on step 3 during active download). RED Playwright tests: step progression, error retry, cancel mid-download, locale rendering (en/de/ja), screen-reader landmarks present.
 
@@ -1342,7 +1342,7 @@ print('OK')
 
   **Commit**: YES. `feat(renderer): first-run wizard with model download UI`. Files: `apps/renderer/app/first-run/**`, `apps/renderer/lib/stores/first-run.ts`, tests. Pre-commit: `bun test apps/renderer/tests/first-run.*`.
 
-- [ ] W3.3. Model library page — list, download, verify, delete with live SSE
+- [x] W3.3. Model library page — list, download, verify, delete with live SSE
 
   **What to do**: Build `apps/renderer/app/models/page.tsx`. Fetch `GET /models` on mount; render shadcn `<Card>` per model with: name, repo id, size, state badge (missing|downloading|verified|partial|corrupted), per-model action buttons (Download / Verify / Delete / Cancel). On Download click → POST `/models/{id}/download`, subscribe to SSE `/models/jobs/{job_id}/events`, animate progress with Magic UI `<NumberTicker>` + shadcn `<Progress>` showing bytes_done/total + speed_mbps + current_file. Wire delete confirmation via shadcn `<AlertDialog>`. Zustand slice `useModelsStore` holds map of jobId→progress. Disable Download globally when any model is downloading (W2.2 single-job lock). RED Playwright tests: list renders, download progress reflects SSE within 1s, verify-mismatch shows error UI, delete confirms before destructive action.
 
@@ -1376,7 +1376,7 @@ print('OK')
 
   **Commit**: YES. `feat(renderer): model library page with live progress`. Files: `apps/renderer/app/models/**`, `lib/stores/models.ts`, tests. Pre-commit: `bun test apps/renderer/tests/models.*`.
 
-- [ ] W3.4. Generation form — prompt, lyrics, model, duration, seed, advanced panel
+- [x] W3.4. Generation form — prompt, lyrics, model, duration, seed, advanced panel
 
   **What to do**: Build `apps/renderer/app/page.tsx` (root = generation studio). Form fields via shadcn: `<Textarea>` for prompt (max 2000, char counter), `<Textarea>` for lyrics (max 4000, optional, with "Insert from Lyrics Workspace" link to W3.8), `<Select>` for model (only verified models from W2.2 `GET /models`), `<Slider>` for duration (1-240s, default 30), `<Input type="number">` for seed (placeholder "random" with dice button), `<Collapsible>` "Advanced" panel for temperature/top_p (defer if heartlib doesn't expose). Submit → POST `/jobs/generate`; on success store `job_id` in `useGenerationStore`, subscribe to SSE `/jobs/{id}/events`, transition UI to "Generating" state with phase indicator (loading→generating→encoding→finalizing) using shadcn `<Tabs>` styled as steps + Magic UI `<AnimatedBeam>`. Big shadcn-shimmer Cancel button while running. On terminal event → render result card (passes generation_id to W3.6 player). Block submit if no verified model OR if generation in flight. RED Playwright tests: validation (over-length prompt → inline error), happy submit flow, cancel mid-gen, no-models empty state, OOM error toast.
 
@@ -1411,7 +1411,7 @@ print('OK')
 
   **Commit**: YES. `feat(renderer): generation form + live phase UI`. Files: `apps/renderer/app/page.tsx`, `components/generation/**`, `lib/stores/generation.ts`, tests. Pre-commit: `bun test apps/renderer/tests/generation.*`.
 
-- [ ] W3.5. Prompt-assist drawer — OpenRouter chat with BYOK key prompt
+- [x] W3.5. Prompt-assist drawer — OpenRouter chat with BYOK key prompt
 
   **What to do**: Build `apps/renderer/components/prompt-assist/Drawer.tsx` using shadcn `<Sheet>` (slide-in from right, triggered from W3.4 form via "Improve with AI" button). Streaming chat: user sends free-form intent → assistant returns enhanced prompt + suggested lyrics. POST `/openrouter/chat` (W2.7) with `stream=true`, parse SSE chunks, render as typewriter via Magic UI. Model dropdown (default `anthropic/claude-3.5-sonnet`, allow override). "Use this prompt" / "Use these lyrics" action buttons inject text back into W3.4 form via Zustand. If `openrouter_key_present=false` (W2.8 setting), show inline `<AlertDialog>` linking to W3.9 settings to set key. Pass key via `X-OpenRouter-Key` header — preload reads from keytar (W4.5). RED Playwright tests: streaming render, missing-key flow, inject-prompt updates form.
 
@@ -1446,7 +1446,7 @@ print('OK')
 
   **Commit**: YES. `feat(renderer): prompt-assist drawer with OpenRouter streaming`. Files: `apps/renderer/components/prompt-assist/**`, tests. Pre-commit: `bun test apps/renderer/tests/prompt-assist.*`.
 
-- [ ] W3.6. Audio playback + waveform/spectrum (wavesurfer.js v7, lazy-loaded)
+- [x] W3.6. Audio playback + waveform/spectrum (wavesurfer.js v7, lazy-loaded)
 
   **What to do**: Build `apps/renderer/components/player/AudioPlayer.tsx` with wavesurfer.js v7 (dynamic import via `next/dynamic` with `{ssr:false}` — avoids static-export crash). Props: `{generationId, fileUrl}` (fileUrl resolved via `file://` from Electron `getFilePath` IPC per W4.4 OR via `GET /jobs/{id}/file` streaming endpoint — pick file:// for perf). Render: waveform on top, spectrum (wavesurfer spectrogram plugin) on bottom, transport controls (play/pause/stop/seek), time display (current/total), zoom slider. Theme wavesurfer colors from OKLCH tokens (W3.1). Handle missing file → graceful empty state. Lazy-load on mount only when generation is `done`. RED Playwright tests: loads waveform from local fixture WAV, play/pause toggles, seek updates currentTime, zoom changes pixels-per-second.
 
@@ -1481,7 +1481,7 @@ print('OK')
 
   **Commit**: YES. `feat(renderer): wavesurfer.js v7 player with spectrum`. Files: `apps/renderer/components/player/**`, tests. Pre-commit: `bun test apps/renderer/tests/player.*`.
 
-- [ ] W3.7. Export dialog — format/bitrate selection + save-as
+- [x] W3.7. Export dialog — format/bitrate selection + save-as
 
   **What to do**: Build `apps/renderer/components/export/ExportDialog.tsx` using shadcn `<Dialog>`, triggered from W3.6 player toolbar. Fields: `<RadioGroup>` for format (WAV/MP3/FLAC), conditional `<Slider>` for MP3 bitrate (64-320, default 192). Submit → POST `/export` (W2.6) with `{generation_id, format, bitrate_kbps?}`. On success, call Electron IPC `dialog:saveAs` (preload-exposed per W4.4) with returned file_path as source, user picks destination; then IPC `fs:copyFile` to move from sidecar tmp to user choice. Show shadcn `<Progress>` (indeterminate) during ffmpeg call. Toast success with "Reveal in Finder/Explorer" action (Electron `shell.showItemInFolder`). On EXPORT_FAILED, show error with hint from envelope. RED Playwright tests: format selection toggles bitrate visibility, submit flow with mocked IPC, error rendering.
 
@@ -1516,7 +1516,7 @@ print('OK')
 
   **Commit**: YES. `feat(renderer): export dialog with format + bitrate`. Files: `apps/renderer/components/export/**`, tests. Pre-commit: `bun test apps/renderer/tests/export.*`.
 
-- [ ] W3.8. Lyrics workspace — transcribe from audio + manual editor
+- [x] W3.8. Lyrics workspace — transcribe from audio + manual editor
 
   **What to do**: Build `apps/renderer/app/lyrics/page.tsx` with two-panel layout (shadcn `<ResizablePanelGroup>`). Left: audio source picker — drag-drop zone (file/folder) OR select existing generation. On submit → POST `/lyrics/transcribe` (W2.4) with file_path, subscribe to SSE for progress, render timeline with detected segments + timestamps. Right: shadcn `<Textarea>` with line-numbered editor (CodeMirror-lite or simple textarea with overflow gutter), populated from transcription. Buttons: "Copy to clipboard", "Send to Generation Form" (Zustand → W3.4 lyrics field), "Save as .lrc" (Electron IPC saveAs). Magic UI `<Marquee>` showing example lyric snippets when empty. RED Playwright tests: drag-drop accepts WAV/MP3, transcription progress streams, send-to-form wires correctly, .lrc save format valid.
 
@@ -1552,7 +1552,7 @@ print('OK')
 
   **Commit**: YES. `feat(renderer): lyrics workspace with transcription`. Files: `apps/renderer/app/lyrics/**`, `components/lyrics/**`, tests. Pre-commit: `bun test apps/renderer/tests/lyrics.*`.
 
-- [ ] W3.9. Settings page — theme, keys, models dir, CPU fallback, about
+- [x] W3.9. Settings page — theme, keys, models dir, CPU fallback, about
 
   **What to do**: Build `apps/renderer/app/settings/page.tsx` with shadcn `<Tabs>`: General, API Keys, Storage, Advanced, About. **General**: `<Select>` theme (light/dark/system) → persists via `PUT /settings/theme` + applies via `data-theme` attr on `<html>`. **API Keys**: two `<Input type="password">` for Hugging Face token + OpenRouter key, each with "Save to system keychain" button → IPC `keytar:set` (W4.5), shows masked status badge (`••••set` or `not set`), "Remove" button → IPC `keytar:delete`. **Storage**: read-only display of models dir + free space + "Change…" button (IPC `dialog:openDirectory` + `PUT /settings/models_dir`, warns about re-download). **Advanced**: `<Switch>` for CPU fallback (`PUT /settings/cpu_fallback_enabled`), `<Switch>` placeholder for telemetry (always off + disabled with "telemetry disabled" note). **About**: app version, heartlib version, license, link to GitHub. RED Playwright tests: theme toggle updates DOM immediately, key save calls IPC + shows masked status, key never appears in DOM after save.
 
@@ -1587,7 +1587,7 @@ print('OK')
 
   **Commit**: YES. `feat(renderer): settings page with theme + keys + storage`. Files: `apps/renderer/app/settings/**`, tests. Pre-commit: `bun test apps/renderer/tests/settings.*`.
 
-- [ ] W4.1. Electron shell scaffold + electron-builder config + BrowserWindow setup
+- [x] W4.1. Electron shell scaffold + electron-builder config + BrowserWindow setup
 
   **What to do**: Initialize `apps/shell/` as TypeScript Electron app: `package.json` with `electron@latest`, `electron-builder`, `typescript`, `tsx` (dev runner). Create `src/main.ts` — single `BrowserWindow` (1440x900 default, min 1024x720, dark titleBarStyle: `hiddenInset` on macOS, frameless on Win/Linux with custom shadcn titlebar), `webPreferences: {contextIsolation: true, nodeIntegration: false, sandbox: true, preload: path.join(__dirname, 'preload.js')}`. Load `file://` to `apps/renderer/out/index.html` in production OR `http://localhost:3000` in dev. Add `app.whenReady()` → create window; `window-all-closed` → quit (except macOS). Wire `electron-builder.yml` skeleton with `appId: studio.audiomorph.app`, `productName: AudioMorph Studio`, targets defined as placeholders for W5 (mac dmg+zip, win nsis, linux AppImage+deb). Add `npm scripts`: `dev` (concurrently runs renderer + shell via tsx watch), `build:shell`, `build:all`, `dist:mac/win/linux`. RED test: shell boots, loads renderer URL, window dims match.
 
@@ -1615,7 +1615,7 @@ print('OK')
 
   **Commit**: YES. `feat(shell): Electron scaffold with hardened webPreferences`. Files: `apps/shell/**`, `electron-builder.yml`. Pre-commit: `cd apps/shell && bun run build:shell`.
 
-- [ ] W4.2. Sidecar lifecycle manager — spawn, port discovery, health check, graceful + force kill, zombie reaper
+- [x] W4.2. Sidecar lifecycle manager — spawn, port discovery, health check, graceful + force kill, zombie reaper
 
   **What to do**: Implement `apps/shell/src/sidecar/manager.ts` as singleton `SidecarManager` class. **Spawn**: Locate python-build-standalone runtime (per W1.6 layout) at `process.resourcesPath/python/<platform>/bin/python` (prod) or repo `.venv/bin/python` (dev). Spawn `python -m audiomorph.main --port 0 --token <generated 32-byte hex>` via `child_process.spawn` with `detached: false`, `stdio: ['ignore', 'pipe', 'pipe']`. Read stdout line-by-line; first line MUST be `{"event":"listening","port":N,"token":"..."}` JSON (W1.5 emits this on bind) — timeout 30s. **Port discovery**: capture port from JSON; expose via `getApiBaseUrl()` returning `http://127.0.0.1:${port}` and `getApiToken()`. **Health check**: poll `GET /healthz` every 5s in background; on 3 consecutive failures → emit `sidecar:unhealthy` event → attempt restart (max 3 in 5min, then surface fatal error to renderer). **Graceful shutdown**: on `app.before-quit` → POST `/internal/shutdown` (W1.5 endpoint) → wait 5s → if still alive, `SIGTERM` → wait 3s → `SIGKILL`. **Zombie reaper**: on Electron crash recovery boot, scan `<userData>/sidecar.pid` file — if pid alive AND cmdline matches `audiomorph.main`, send `SIGKILL` before respawn. Write own pid to `sidecar.pid` after spawn; delete on clean shutdown. **Logging**: stream sidecar stdout/stderr to `<userData>/logs/sidecar-<date>.log` (rotate at 10MB, keep 5). **Crash handling**: on unexpected exit (code !== 0 AND not during shutdown), emit `sidecar:crashed` with last 50 log lines for renderer toast. RED tests: spawn + handshake, port collision retry, graceful shutdown completes <8s, force-kill on hang, zombie cleanup on dirty restart, log rotation triggers.
 
@@ -1678,7 +1678,7 @@ print('OK')
 
   **Commit**: YES. `feat(shell): sidecar lifecycle manager with zombie reaper`. Files: `apps/shell/src/sidecar/**`, `apps/shell/tests/sidecar.*`. Pre-commit: `cd apps/shell && bun test sidecar.*`.
 
-- [ ] W4.3. IPC bridge — typed channels, request/response, SSE forwarding, error envelope passthrough
+- [x] W4.3. IPC bridge — typed channels, request/response, SSE forwarding, error envelope passthrough
 
   **What to do**: Implement `apps/shell/src/ipc/bridge.ts` exposing typed IPC handlers via `ipcMain.handle` for renderer↔main. **Channels**: `api:request` (generic HTTP proxy: `{method, path, body?, signal?}` → forwards to `getApiBaseUrl() + path` with `Authorization: Bearer <token>` header injected, returns `{status, body}` — keeps token OUT of renderer); `api:stream` (SSE: opens `EventSource`-like via `fetch` ReadableStream, forwards `data:` events to renderer via `webContents.send('api:stream:event', {streamId, event, data})`, supports cancel via `api:stream:cancel`); `dialog:saveAs` (wraps `dialog.showSaveDialog`), `dialog:openDirectory` (wraps `dialog.showOpenDialog` with `properties: ['openDirectory']`), `dialog:openFile` (multi-file picker for audio/lyrics); `fs:copyFile` (validates source is in sidecar tmp dir OR userData; rejects arbitrary paths), `fs:readFile` (size-limited 10MB, mime-checked); `shell:openExternal` (URL allowlist: huggingface.co, openrouter.ai, github.com only), `shell:showItemInFolder`. **Error envelope passthrough**: when sidecar returns 4xx/5xx with envelope `{error: {code, message, hint?}}`, forward verbatim — never wrap or transform. **Cancellation**: each `api:request` accepts `requestId`; renderer can call `api:cancel` with same id → `AbortController.abort()`. **Token security**: token NEVER serialized to renderer, NEVER logged. **Type contracts**: shared `packages/ipc-contracts/` with TS types imported by both shell and renderer. RED tests: each channel happy path + error path, SSE forwarding completes + cancels, token not leaked to renderer process, fs:copyFile rejects path traversal, shell:openExternal rejects non-allowlisted URLs.
 
@@ -1739,7 +1739,7 @@ print('OK')
 
   **Commit**: YES. `feat(shell): typed IPC bridge with security boundaries`. Files: `apps/shell/src/ipc/**`, `packages/ipc-contracts/**`, tests. Pre-commit: `cd apps/shell && bun test ipc.*`.
 
-- [ ] W4.4. Preload bridge — contextBridge.exposeInMainWorld + typed window.api
+- [x] W4.4. Preload bridge — contextBridge.exposeInMainWorld + typed window.api
 
   **What to do**: Implement `apps/shell/src/preload.ts` using `contextBridge.exposeInMainWorld('api', {...})` exposing typed wrappers around W4.3 IPC channels: `request(method, path, body?, opts?)`, `stream(path, body?, onEvent, signal)`, `dialog.saveAs(opts)`, `dialog.openDirectory()`, `dialog.openFile(opts)`, `fs.copyFile(src, dst)`, `shell.openExternal(url)`, `shell.showItemInFolder(path)`, `app.getVersion()`, `app.getPath('userData'|'downloads')`. Also expose `window.apiBaseUrl` (HTTP URL for direct fetch when needed — token-less endpoints only like `/healthz`). Generate TypeScript ambient declaration `apps/renderer/types/window.d.ts` so renderer has `window.api` typed. RED tests: contextBridge surface matches contract, no Node globals leak, all methods are functions.
 
@@ -1767,7 +1767,7 @@ print('OK')
 
   **Commit**: YES. `feat(shell): preload contextBridge with typed window.api`. Files: `apps/shell/src/preload.ts`, `apps/renderer/types/window.d.ts`, tests. Pre-commit: `cd apps/shell && bun test preload.*`.
 
-- [ ] W4.5. Key vault — keytar/safeStorage for HF token + OpenRouter key, IPC handlers
+- [x] W4.5. Key vault — keytar/safeStorage for HF token + OpenRouter key, IPC handlers
 
   **What to do**: Implement `apps/shell/src/security/keyvault.ts` as singleton `KeyVault` class wrapping OS-native credential storage. **Primary**: `keytar@latest` (libsecret on Linux, Keychain on macOS, Credential Vault on Windows) with service name `studio.audiomorph.app` and accounts `hf_token`, `openrouter_key`. **Fallback**: if keytar unavailable (rare Linux without libsecret), fall back to `safeStorage` (Electron's OS-encrypted local store) writing to `<userData>/secrets.enc` — log warning at first use. **IPC handlers** (registered in W4.3 bridge): `keytar:set({account, secret})` — validates `account ∈ {hf_token, openrouter_key}`, validates secret format per type (HF: `hf_` prefix + 32+ chars; OpenRouter: `sk-or-` prefix + 32+ chars), stores, returns `{ok: true}`; `keytar:get({account})` — **NEVER returns to renderer**, only used internally by IPC bridge when sidecar/external HTTP requires it; renderer can only call `keytar:isSet({account})` returning boolean; `keytar:delete({account})` — removes from vault. **Sidecar integration**: when shell needs to inject HF token into sidecar requests (e.g., model download via `huggingface_hub`), bridge fetches from KeyVault and passes via `Authorization` or `HF_TOKEN` env at sidecar spawn (NOT per-request to avoid log leak). On startup, if `hf_token` is set, pass via env to sidecar spawn (W4.2 reads from KeyVault before spawn). **Audit log**: every `set`/`delete` writes timestamp + account name (NEVER secret) to `<userData>/logs/keyvault-audit.log`. RED tests: roundtrip set/get/delete, format validation rejects bad keys, isSet returns correctly, get NEVER reachable from renderer (IPC contract enforces), fallback to safeStorage when keytar throws, audit log written.
 
@@ -1838,7 +1838,7 @@ print('OK')
 
   **Commit**: YES. `feat(shell): key vault with keytar primary + safeStorage fallback`. Files: `apps/shell/src/security/keyvault.ts`, `apps/shell/tests/keyvault.*`. Pre-commit: `cd apps/shell && bun test keyvault.*`.
 
-- [ ] W4.6. App lifecycle, menu, dock — single-instance lock, deep-link handler stub, native menu, dock icon
+- [x] W4.6. App lifecycle, menu, dock — single-instance lock, deep-link handler stub, native menu, dock icon
 
   **What to do**: In `apps/shell/src/main.ts`, add `app.requestSingleInstanceLock()` — if not primary, `app.quit()`. On `second-instance` event, focus existing window. Build native menu via `Menu.buildFromTemplate`: standard macOS menu (App/Edit/View/Window/Help) with custom items "Open Models Folder" (`shell.openPath(modelsDir)`), "View Logs" (open `<userData>/logs/`), "Check Hardware" (renderer route /diagnostics). Set dock icon (macOS) from `apps/shell/resources/icon.png` (512x512). Register `app.on('open-url')` for `audiomorph://` deep-link stub (no-op now, logs for future). Wire app menu Quit → triggers W4.2 graceful shutdown. RED test: single-instance lock prevents 2nd launch, menu has expected items, dock icon set.
 
@@ -1865,7 +1865,7 @@ print('OK')
 
   **Commit**: YES. `feat(shell): app lifecycle + menu + single-instance lock`. Files: `apps/shell/src/main.ts`, `apps/shell/resources/icon.png`, tests. Pre-commit: `cd apps/shell && bun test lifecycle.*`.
 
-- [ ] W4.7. Crash reporter (local-only) + auto-update DISABLED guard
+- [x] W4.7. Crash reporter (local-only) + auto-update DISABLED guard
 
   **What to do**: In `apps/shell/src/main.ts`, call `crashReporter.start({submitURL: '', uploadToServer: false, compress: false})` — captures crash dumps to `<userData>/Crashpad/` for local debugging only, NEVER uploads. Add lint rule + runtime assertion that `autoUpdater` is NOT imported (per user "no auto-update" constraint) — `apps/shell/.eslintrc.js` forbids `electron-updater` and `electron.autoUpdater`. Add startup self-check: `if ('autoUpdater' in app) { /* still don't call .checkForUpdates */ }`. Document in `apps/shell/README.md` the manual update process (re-download installer). RED tests: crash dump path created, lint catches autoUpdater import, no network call on boot (sniff via mocked net module).
 
@@ -1901,7 +1901,7 @@ print('OK')
 
   **Commit**: YES. `feat(shell): local crash reporter + auto-update lint guard`. Files: `apps/shell/src/main.ts`, `apps/shell/.eslintrc.js`, `apps/shell/README.md`, tests. Pre-commit: `cd apps/shell && bun run lint && bun test crash-reporter.*`.
 
-- [ ] W5.1. macOS installer — universal/arm64 build, codesign, notarize, staple, DMG + ZIP
+- [x] W5.1. macOS installer — universal/arm64 build, codesign, notarize, staple, DMG + ZIP
 
   **What to do**: Configure `electron-builder.yml` `mac` section: `target: [{target: 'dmg', arch: ['arm64']}, {target: 'zip', arch: ['arm64']}]`, `category: public.app-category.music`, `hardenedRuntime: true`, `gatekeeperAssess: false`, `entitlements: build/entitlements.mac.plist`, `entitlementsInherit: build/entitlements.mac.plist`, `notarize: true`. Write `build/entitlements.mac.plist` with: `com.apple.security.cs.allow-unsigned-executable-memory` (for PyTorch JIT), `com.apple.security.cs.allow-jit` (for ML inference), `com.apple.security.cs.disable-library-validation` (for bundled python dylibs), `com.apple.security.cs.allow-dyld-environment-variables` (for sidecar DYLD_LIBRARY_PATH). **Signing**: env vars `CSC_LINK` (Developer ID cert .p12 base64) + `CSC_KEY_PASSWORD`. **Notarization**: env vars `APPLE_ID`, `APPLE_APP_SPECIFIC_PASSWORD`, `APPLE_TEAM_ID`; electron-builder calls `notarytool submit --wait`. **Stapling**: post-notarize, `xcrun stapler staple` runs automatically via electron-builder. **Sidecar signing**: python-build-standalone binaries inside `Contents/Resources/python/` MUST be signed individually — add `afterPack` hook script `build/sign-python.js` that walks `python/` dir + runs `codesign --force --options runtime --entitlements entitlements.mac.plist --sign "$CSC_NAME"` on every executable and .dylib (find by Mach-O magic). Run before electron-builder's app-level sign. **Build script**: `scripts/build-mac.sh` — checks env vars present, runs `bun run build:all && electron-builder --mac --arm64`. **Verification**: post-build, run `spctl -a -vvv -t install AudioMorph\ Studio.app` (expect "accepted, source=Notarized Developer ID") + `codesign --verify --deep --strict AudioMorph\ Studio.app`. RED tests: entitlements file valid plist, sign-python hook finds all binaries, build script env-var guard rejects missing creds, dry-run electron-builder generates expected target list.
 
@@ -1955,7 +1955,7 @@ print('OK')
 
   **Commit**: YES. `feat(packaging): macOS arm64 signed + notarized DMG/ZIP`. Files: `electron-builder.yml`, `build/entitlements.mac.plist`, `build/sign-python.js`, `scripts/build-mac.sh`, tests. Pre-commit: `bun test packaging/mac.*`.
 
-- [ ] W5.2. Windows installer — NSIS x64 with CUDA detection prompt + code signing (optional)
+- [x] W5.2. Windows installer — NSIS x64 with CUDA detection prompt + code signing (optional)
 
   **What to do**: Configure `electron-builder.yml` `win` section: `target: [{target: 'nsis', arch: ['x64']}]`, `icon: build/icon.ico`, `publisherName: AudioMorph Studio`, `verifyUpdateCodeSignature: false` (no auto-update). NSIS config: `oneClick: false` (custom install dir), `allowToChangeInstallationDirectory: true`, `perMachine: false` (per-user to avoid UAC), `createDesktopShortcut: true`, `createStartMenuShortcut: true`, `installerIcon: build/installer.ico`, `uninstallerIcon: build/uninstaller.ico`, `include: build/installer.nsh` (custom script). Custom `installer.nsh` adds preinstall check: runs PowerShell snippet `Get-CimInstance Win32_VideoController | Where-Object {$_.Name -like '*NVIDIA*'}` — if empty, show MessageBox "NVIDIA GPU required. Install anyway?" (per W5.4 hardware gating: actually REFUSE if user picked "Refuse to install" path — see W5.4). **Signing (optional)**: if `WIN_CSC_LINK` + `WIN_CSC_KEY_PASSWORD` env set, electron-builder signs .exe with SignTool; else unsigned (SmartScreen warning expected — documented in README). **Build script**: `scripts/build-win.sh` (runs on macOS/Linux via wine OR on Windows runner) — `bun run build:all && electron-builder --win --x64`. RED tests: NSIS config valid, custom script runs PowerShell, builds .exe with expected size (>500MB with bundled python+models-empty).
 
@@ -1990,7 +1990,7 @@ print('OK')
 
   **Commit**: YES. `feat(packaging): Windows NSIS installer with GPU gate`. Files: `electron-builder.yml`, `build/installer.nsh`, `build/icon.ico`, `scripts/build-win.sh`, tests. Pre-commit: `bun test packaging/win.*`.
 
-- [ ] W5.3. Linux installer — AppImage + .deb x64 with CUDA detection script
+- [x] W5.3. Linux installer — AppImage + .deb x64 with CUDA detection script
 
   **What to do**: Configure `electron-builder.yml` `linux` section: `target: [{target: 'AppImage', arch: ['x64']}, {target: 'deb', arch: ['x64']}]`, `category: AudioVideo;Audio`, `synopsis: AI music generation studio`, `description: Local AI music generation powered by heartlib`, `desktop: {Name: 'AudioMorph Studio', Comment: 'AI music generation', Categories: 'AudioVideo;Audio;Music;'}`, `icon: build/icons/` (multi-res). For .deb: `depends: ['libnotify4', 'libsecret-1-0', 'libnss3', 'libxss1', 'libgtk-3-0', 'libatk-bridge2.0-0', 'libgbm1']` (Electron runtime + libsecret for W4.5 keytar). **Pre-install GPU check**: add `build/postinst.sh` (for .deb) + AppImage launcher wrapper script that runs `nvidia-smi` — if missing/fails, print red error "NVIDIA GPU required" and exit. AppImage: package via electron-builder default; ensure FUSE mention in README (modern distros auto-handle). **Build script**: `scripts/build-linux.sh` — `bun run build:all && electron-builder --linux --x64`. RED tests: desktop file valid (validate via `desktop-file-validate`), .deb deps resolvable on Ubuntu 24.04, postinst script syntax valid (`bash -n`).
 
@@ -2026,7 +2026,7 @@ print('OK')
 
   **Commit**: YES. `feat(packaging): Linux AppImage + .deb with GPU gate`. Files: `electron-builder.yml`, `build/postinst.sh`, `build/icons/**`, `scripts/build-linux.sh`, tests. Pre-commit: `bun test packaging/linux.*`.
 
-- [ ] W5.4. Hardware gating — installer-time + runtime GPU/RAM/disk detection with "Refuse to install" enforcement
+- [x] W5.4. Hardware gating — installer-time + runtime GPU/RAM/disk detection with "Refuse to install" enforcement
 
   **What to do**: Centralize hardware detection in `packages/hardware-gate/` (shared TS + native scripts). **Detection matrix**:
   - **macOS**: arm64 only (refuse Intel); detect via `sysctl -n hw.optional.arm64` == 1; RAM ≥ 16GB via `sysctl hw.memsize`; free disk ≥ 30GB on user volume.

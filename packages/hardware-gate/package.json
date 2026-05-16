@@ -1,0 +1,16 @@
+{
+  "name": "@audiomorph/hardware-gate",
+  "version": "2.0.0",
+  "private": true,
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "test": "vitest run --reporter=default --reporter=junit --outputFile=../../.test-results/hardware-gate.xml"
+  },
+  "devDependencies": {
+    "@types/node": "^20.19.0",
+    "typescript": "^5.7.2",
+    "vitest": "^2.1.8"
+  }
+}

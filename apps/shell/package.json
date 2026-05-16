@@ -1,0 +1,32 @@
+{
+  "name": "@audiomorph/shell",
+  "version": "2.0.0",
+  "private": true,
+  "description": "AudioMorph Studio Electron shell (main process)",
+  "main": "dist/main.js",
+  "scripts": {
+    "dev": "concurrently -k -n RENDERER,SHELL -c blue,magenta \"pnpm --filter renderer dev\" \"tsx watch src/main.ts\"",
+    "build:shell": "pnpm --filter @audiomorph/ipc-contracts build && pnpm --filter @audiomorph/hardware-gate build && tsc -p tsconfig.json",
+    "build:renderer": "pnpm --filter renderer build",
+    "build:all": "pnpm run build:renderer && pnpm run build:shell",
+    "start": "electron dist/main.js",
+    "dist:mac": "pnpm run build:all && electron-builder --mac --config electron-builder.yml",
+    "dist:win": "pnpm run build:all && electron-builder --win --config electron-builder.yml",
+    "dist:linux": "pnpm run build:all && electron-builder --linux --config electron-builder.yml",
+    "test": "vitest run --reporter=junit --outputFile=../../.test-results/shell.xml",
+    "typecheck": "tsc --noEmit -p tsconfig.json"
+  },
+  "dependencies": {
+    "@audiomorph/hardware-gate": "workspace:*",
+    "@audiomorph/ipc-contracts": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "^20.19.0",
+    "concurrently": "^9.1.0",
+    "electron": "^33.2.1",
+    "electron-builder": "^25.1.8",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.2",
+    "vitest": "^2.1.8"
+  }
+}

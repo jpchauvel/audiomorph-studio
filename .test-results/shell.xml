@@ -1,217 +1,231 @@
 <?xml version="1.0" encoding="UTF-8" ?>
-<testsuites name="vitest tests" tests="90" failures="0" errors="0" time="0.657">
-    <testsuite name="tests/main.test.ts" timestamp="2026-05-16T16:43:25.900Z" hostname="avernus.local" tests="6" failures="0" errors="0" skipped="0" time="0.047075041">
-        <testcase classname="tests/main.test.ts" name="Electron shell main process &gt; exports a hardened webPreferences contract" time="0.044265416">
+<testsuites name="vitest tests" tests="96" failures="0" errors="0" time="0.729">
+    <testsuite name="tests/main.test.ts" timestamp="2026-05-16T16:46:39.418Z" hostname="avernus.local" tests="6" failures="0" errors="0" skipped="0" time="0.084167542">
+        <testcase classname="tests/main.test.ts" name="Electron shell main process &gt; exports a hardened webPreferences contract" time="0.081289875">
         </testcase>
-        <testcase classname="tests/main.test.ts" name="Electron shell main process &gt; uses 1440x900 default and 1024x720 minimum window size" time="0.000181417">
+        <testcase classname="tests/main.test.ts" name="Electron shell main process &gt; uses 1440x900 default and 1024x720 minimum window size" time="0.000237583">
         </testcase>
-        <testcase classname="tests/main.test.ts" name="Electron shell main process &gt; buildWindowOptions wires the security contract and a preload script" time="0.000293167">
+        <testcase classname="tests/main.test.ts" name="Electron shell main process &gt; buildWindowOptions wires the security contract and a preload script" time="0.00030425">
         </testcase>
-        <testcase classname="tests/main.test.ts" name="Electron shell main process &gt; applies platform-specific titlebar styling" time="0.000098416">
+        <testcase classname="tests/main.test.ts" name="Electron shell main process &gt; applies platform-specific titlebar styling" time="0.000101375">
         </testcase>
-        <testcase classname="tests/main.test.ts" name="Electron shell main process &gt; createWindow boots and registers hardening handlers" time="0.001345083">
+        <testcase classname="tests/main.test.ts" name="Electron shell main process &gt; createWindow boots and registers hardening handlers" time="0.001363334">
         </testcase>
-        <testcase classname="tests/main.test.ts" name="Electron shell main process &gt; resolves a renderer entry path under apps/renderer/out" time="0.000152917">
-        </testcase>
-    </testsuite>
-    <testsuite name="tests/preload.test.ts" timestamp="2026-05-16T16:43:25.901Z" hostname="avernus.local" tests="9" failures="0" errors="0" skipped="0" time="0.030735208">
-        <testcase classname="tests/preload.test.ts" name="preload bridge &gt; exposes window.electronAPI via contextBridge.exposeInMainWorld" time="0.019909708">
-        </testcase>
-        <testcase classname="tests/preload.test.ts" name="preload bridge &gt; request() calls ipcRenderer.invoke(&apos;api:request&apos;, args)" time="0.001706333">
-        </testcase>
-        <testcase classname="tests/preload.test.ts" name="preload bridge &gt; stream() registers listeners for event/end/error channels" time="0.00124325">
-        </testcase>
-        <testcase classname="tests/preload.test.ts" name="preload bridge &gt; stream() cancel removes listeners and invokes api:stream:cancel" time="0.001240791">
-        </testcase>
-        <testcase classname="tests/preload.test.ts" name="preload bridge &gt; saveAs() calls ipcRenderer.invoke(&apos;dialog:saveAs&apos;, args)" time="0.00128875">
-        </testcase>
-        <testcase classname="tests/preload.test.ts" name="preload bridge &gt; openExternal() calls ipcRenderer.invoke(&apos;shell:openExternal&apos;, args)" time="0.001343292">
-        </testcase>
-        <testcase classname="tests/preload.test.ts" name="preload bridge &gt; getVersion() calls ipcRenderer.invoke(&apos;app:getVersion&apos;)" time="0.001247041">
-        </testcase>
-        <testcase classname="tests/preload.test.ts" name="preload bridge &gt; does not expose ipcRenderer directly on electronAPI" time="0.001030125">
-        </testcase>
-        <testcase classname="tests/preload.test.ts" name="preload bridge &gt; hardwareCheck() calls ipcRenderer.invoke(&apos;hardware:check&apos;)" time="0.000918583">
+        <testcase classname="tests/main.test.ts" name="Electron shell main process &gt; resolves a renderer entry path under apps/renderer/out" time="0.000141584">
         </testcase>
     </testsuite>
-    <testsuite name="tests/crash/crash-reporter.test.ts" timestamp="2026-05-16T16:43:25.903Z" hostname="avernus.local" tests="5" failures="0" errors="0" skipped="0" time="0.043911291">
-        <testcase classname="tests/crash/crash-reporter.test.ts" name="crash-reporter &gt; starts crashReporter with uploadToServer disabled" time="0.02205825">
+    <testsuite name="tests/preload.test.ts" timestamp="2026-05-16T16:46:39.419Z" hostname="avernus.local" tests="9" failures="0" errors="0" skipped="0" time="0.035523916">
+        <testcase classname="tests/preload.test.ts" name="preload bridge &gt; exposes window.electronAPI via contextBridge.exposeInMainWorld" time="0.019082834">
         </testcase>
-        <testcase classname="tests/crash/crash-reporter.test.ts" name="crash-reporter &gt; uncaught exception writes crash JSON file" time="0.008618042">
+        <testcase classname="tests/preload.test.ts" name="preload bridge &gt; request() calls ipcRenderer.invoke(&apos;api:request&apos;, args)" time="0.003029834">
         </testcase>
-        <testcase classname="tests/crash/crash-reporter.test.ts" name="crash-reporter &gt; sanitizes Bearer and X-Audiomorph-Token values" time="0.0068745">
+        <testcase classname="tests/preload.test.ts" name="preload bridge &gt; stream() registers listeners for event/end/error channels" time="0.003606667">
         </testcase>
-        <testcase classname="tests/crash/crash-reporter.test.ts" name="crash-reporter &gt; calls app.exit(1) after crash write" time="0.003245542">
+        <testcase classname="tests/preload.test.ts" name="preload bridge &gt; stream() cancel removes listeners and invokes api:stream:cancel" time="0.002198042">
         </testcase>
-        <testcase classname="tests/crash/crash-reporter.test.ts" name="crash-reporter &gt; getCrashLogDir resolves to userData/logs/crashes" time="0.002478167">
+        <testcase classname="tests/preload.test.ts" name="preload bridge &gt; saveAs() calls ipcRenderer.invoke(&apos;dialog:saveAs&apos;, args)" time="0.001105042">
         </testcase>
-    </testsuite>
-    <testsuite name="tests/hardware/hardware-check.test.ts" timestamp="2026-05-16T16:43:25.907Z" hostname="avernus.local" tests="3" failures="0" errors="0" skipped="0" time="0.009568333">
-        <testcase classname="tests/hardware/hardware-check.test.ts" name="hardware check enforcement and IPC &gt; enforceHardwareRequirements passes when detect() returns ok=true" time="0.005316041">
+        <testcase classname="tests/preload.test.ts" name="preload bridge &gt; openExternal() calls ipcRenderer.invoke(&apos;shell:openExternal&apos;, args)" time="0.00123625">
         </testcase>
-        <testcase classname="tests/hardware/hardware-check.test.ts" name="hardware check enforcement and IPC &gt; enforceHardwareRequirements shows dialog and exits with code 1 when detect fails" time="0.002595459">
+        <testcase classname="tests/preload.test.ts" name="preload bridge &gt; getVersion() calls ipcRenderer.invoke(&apos;app:getVersion&apos;)" time="0.001756375">
         </testcase>
-        <testcase classname="tests/hardware/hardware-check.test.ts" name="hardware check enforcement and IPC &gt; registerHardwareIpcHandler registers hardware:check and returns HardwareReport" time="0.001026416">
+        <testcase classname="tests/preload.test.ts" name="preload bridge &gt; does not expose ipcRenderer directly on electronAPI" time="0.001071625">
         </testcase>
-    </testsuite>
-    <testsuite name="tests/lifecycle/app-lifecycle.test.ts" timestamp="2026-05-16T16:43:25.907Z" hostname="avernus.local" tests="6" failures="0" errors="0" skipped="0" time="0.051101">
-        <testcase classname="tests/lifecycle/app-lifecycle.test.ts" name="setupAppLifecycle &gt; single-instance lock acquired proceeds normally" time="0.023438584">
-        </testcase>
-        <testcase classname="tests/lifecycle/app-lifecycle.test.ts" name="setupAppLifecycle &gt; single-instance lock failure quits immediately" time="0.015740833">
-        </testcase>
-        <testcase classname="tests/lifecycle/app-lifecycle.test.ts" name="setupAppLifecycle &gt; second-instance focuses and restores existing window" time="0.00227075">
-        </testcase>
-        <testcase classname="tests/lifecycle/app-lifecycle.test.ts" name="setupAppLifecycle &gt; window-all-closed on non-macOS quits app" time="0.002602792">
-        </testcase>
-        <testcase classname="tests/lifecycle/app-lifecycle.test.ts" name="setupAppLifecycle &gt; window-all-closed on macOS does not quit app" time="0.00315825">
-        </testcase>
-        <testcase classname="tests/lifecycle/app-lifecycle.test.ts" name="setupAppLifecycle &gt; deep-link URL logging is masked (no query params)" time="0.003235333">
+        <testcase classname="tests/preload.test.ts" name="preload bridge &gt; hardwareCheck() calls ipcRenderer.invoke(&apos;hardware:check&apos;)" time="0.001457375">
         </testcase>
     </testsuite>
-    <testsuite name="tests/ipc/bridge.test.ts" timestamp="2026-05-16T16:43:25.912Z" hostname="avernus.local" tests="8" failures="0" errors="0" skipped="0" time="0.180108083">
-        <testcase classname="tests/ipc/bridge.test.ts" name="IPC bridge &gt; api:request proxies with Authorization token and returns status/body" time="0.038506875">
+    <testsuite name="tests/crash/crash-reporter.test.ts" timestamp="2026-05-16T16:46:39.421Z" hostname="avernus.local" tests="5" failures="0" errors="0" skipped="0" time="0.028160167">
+        <testcase classname="tests/crash/crash-reporter.test.ts" name="crash-reporter &gt; starts crashReporter with uploadToServer disabled" time="0.010617041">
         </testcase>
-        <testcase classname="tests/ipc/bridge.test.ts" name="IPC bridge &gt; api:cancel aborts in-flight api:request" time="0.012963416">
+        <testcase classname="tests/crash/crash-reporter.test.ts" name="crash-reporter &gt; uncaught exception writes crash JSON file" time="0.0095125">
         </testcase>
-        <testcase classname="tests/ipc/bridge.test.ts" name="IPC bridge &gt; api:stream forwards SSE messages to renderer via webContents.send" time="0.058072916">
+        <testcase classname="tests/crash/crash-reporter.test.ts" name="crash-reporter &gt; sanitizes Bearer and X-Audiomorph-Token values" time="0.003936833">
         </testcase>
-        <testcase classname="tests/ipc/bridge.test.ts" name="IPC bridge &gt; api:stream:cancel aborts active stream" time="0.015734917">
+        <testcase classname="tests/crash/crash-reporter.test.ts" name="crash-reporter &gt; calls app.exit(1) after crash write" time="0.002342042">
         </testcase>
-        <testcase classname="tests/ipc/bridge.test.ts" name="IPC bridge &gt; fs:copyFile rejects path traversal outside allowlist" time="0.02189425">
-        </testcase>
-        <testcase classname="tests/ipc/bridge.test.ts" name="IPC bridge &gt; shell:openExternal enforces allowlist" time="0.004776917">
-        </testcase>
-        <testcase classname="tests/ipc/bridge.test.ts" name="IPC bridge &gt; api:request forwards error envelope response verbatim" time="0.011932084">
-        </testcase>
-        <testcase classname="tests/ipc/bridge.test.ts" name="IPC bridge &gt; renderer response values never include sidecar token" time="0.015520625">
+        <testcase classname="tests/crash/crash-reporter.test.ts" name="crash-reporter &gt; getCrashLogDir resolves to userData/logs/crashes" time="0.001134459">
         </testcase>
     </testsuite>
-    <testsuite name="tests/ipc/vault-handlers.test.ts" timestamp="2026-05-16T16:43:25.913Z" hostname="avernus.local" tests="5" failures="0" errors="0" skipped="0" time="0.041188667">
-        <testcase classname="tests/ipc/vault-handlers.test.ts" name="vault IPC handlers &gt; vault:get returns { present } and never secret value" time="0.025596333">
+    <testsuite name="tests/hardware/hardware-check.test.ts" timestamp="2026-05-16T16:46:39.422Z" hostname="avernus.local" tests="3" failures="0" errors="0" skipped="0" time="0.027540833">
+        <testcase classname="tests/hardware/hardware-check.test.ts" name="hardware check enforcement and IPC &gt; enforceHardwareRequirements passes when detect() returns ok=true" time="0.022133916">
         </testcase>
-        <testcase classname="tests/ipc/vault-handlers.test.ts" name="vault IPC handlers &gt; vault:set calls vault.set and returns ok" time="0.003876708">
+        <testcase classname="tests/hardware/hardware-check.test.ts" name="hardware check enforcement and IPC &gt; enforceHardwareRequirements shows dialog and exits with code 1 when detect fails" time="0.002423959">
         </testcase>
-        <testcase classname="tests/ipc/vault-handlers.test.ts" name="vault IPC handlers &gt; vault:delete calls vault.delete" time="0.003089958">
-        </testcase>
-        <testcase classname="tests/ipc/vault-handlers.test.ts" name="vault IPC handlers &gt; vault:has calls vault.has and returns present" time="0.004507292">
-        </testcase>
-        <testcase classname="tests/ipc/vault-handlers.test.ts" name="vault IPC handlers &gt; getSecretForSidecar returns decrypted value but IPC responses do not" time="0.003490833">
+        <testcase classname="tests/hardware/hardware-check.test.ts" name="hardware check enforcement and IPC &gt; registerHardwareIpcHandler registers hardware:check and returns HardwareReport" time="0.001769875">
         </testcase>
     </testsuite>
-    <testsuite name="tests/menu/menu-builder.test.ts" timestamp="2026-05-16T16:43:25.914Z" hostname="avernus.local" tests="4" failures="0" errors="0" skipped="0" time="0.026628125">
-        <testcase classname="tests/menu/menu-builder.test.ts" name="buildMenu &gt; macOS includes native app menu" time="0.020530375">
+    <testsuite name="tests/lifecycle/app-lifecycle.test.ts" timestamp="2026-05-16T16:46:39.423Z" hostname="avernus.local" tests="6" failures="0" errors="0" skipped="0" time="0.040289291">
+        <testcase classname="tests/lifecycle/app-lifecycle.test.ts" name="setupAppLifecycle &gt; single-instance lock acquired proceeds normally" time="0.022455667">
         </testcase>
-        <testcase classname="tests/menu/menu-builder.test.ts" name="buildMenu &gt; win/linux includes File &gt; Quit" time="0.001485833">
+        <testcase classname="tests/lifecycle/app-lifecycle.test.ts" name="setupAppLifecycle &gt; single-instance lock failure quits immediately" time="0.004621375">
         </testcase>
-        <testcase classname="tests/menu/menu-builder.test.ts" name="buildMenu &gt; DevTools menu item exists only in dev mode" time="0.001361708">
+        <testcase classname="tests/lifecycle/app-lifecycle.test.ts" name="setupAppLifecycle &gt; second-instance focuses and restores existing window" time="0.002561584">
         </testcase>
-        <testcase classname="tests/menu/menu-builder.test.ts" name="buildMenu &gt; sets application menu with built menu" time="0.002675792">
+        <testcase classname="tests/lifecycle/app-lifecycle.test.ts" name="setupAppLifecycle &gt; window-all-closed on non-macOS quits app" time="0.002889667">
         </testcase>
-    </testsuite>
-    <testsuite name="tests/packaging/linux.test.ts" timestamp="2026-05-16T16:43:25.915Z" hostname="avernus.local" tests="10" failures="0" errors="0" skipped="0" time="0.023500958">
-        <testcase classname="tests/packaging/linux.test.ts" name="linux packaging &gt; electron-builder.yml linux section has required fields" time="0.001257125">
+        <testcase classname="tests/lifecycle/app-lifecycle.test.ts" name="setupAppLifecycle &gt; window-all-closed on macOS does not quit app" time="0.003046917">
         </testcase>
-        <testcase classname="tests/packaging/linux.test.ts" name="linux packaging &gt; electron-builder.yml linux desktop entry has required keys" time="0.000390917">
-        </testcase>
-        <testcase classname="tests/packaging/linux.test.ts" name="linux packaging &gt; electron-builder.yml deb section lists all required runtime deps" time="0.000527209">
-        </testcase>
-        <testcase classname="tests/packaging/linux.test.ts" name="linux packaging &gt; electron-builder.yml deb section wires postinst.sh afterInstall hook" time="0.000142">
-        </testcase>
-        <testcase classname="tests/packaging/linux.test.ts" name="linux packaging &gt; postinst.sh exists, has bash shebang, and uses strict mode" time="0.000219333">
-        </testcase>
-        <testcase classname="tests/packaging/linux.test.ts" name="linux packaging &gt; postinst.sh contains nvidia-smi check with all fallback paths" time="0.000132292">
-        </testcase>
-        <testcase classname="tests/packaging/linux.test.ts" name="linux packaging &gt; postinst.sh prints red error and exits 1 when nvidia-smi missing" time="0.000118208">
-        </testcase>
-        <testcase classname="tests/packaging/linux.test.ts" name="linux packaging &gt; postinst.sh has valid bash syntax" time="0.010281667">
-        </testcase>
-        <testcase classname="tests/packaging/linux.test.ts" name="linux packaging &gt; build-linux.sh exists, is executable, and has valid bash syntax" time="0.009490083">
-        </testcase>
-        <testcase classname="tests/packaging/linux.test.ts" name="linux packaging &gt; build-linux.sh runs bun build:all and electron-builder --linux --x64" time="0.000199917">
+        <testcase classname="tests/lifecycle/app-lifecycle.test.ts" name="setupAppLifecycle &gt; deep-link URL logging is masked (no query params)" time="0.004074375">
         </testcase>
     </testsuite>
-    <testsuite name="tests/packaging/mac.test.ts" timestamp="2026-05-16T16:43:25.915Z" hostname="avernus.local" tests="5" failures="0" errors="0" skipped="0" time="0.012800417">
-        <testcase classname="tests/packaging/mac.test.ts" name="mac packaging &gt; entitlements plist is valid XML and contains all required keys" time="0.000871584">
+    <testsuite name="tests/ipc/bridge.test.ts" timestamp="2026-05-16T16:46:39.425Z" hostname="avernus.local" tests="8" failures="0" errors="0" skipped="0" time="0.161119291">
+        <testcase classname="tests/ipc/bridge.test.ts" name="IPC bridge &gt; api:request proxies with Authorization token and returns status/body" time="0.039086125">
         </testcase>
-        <testcase classname="tests/packaging/mac.test.ts" name="mac packaging &gt; sign-python afterPack hook exports a function" time="0.010936042">
+        <testcase classname="tests/ipc/bridge.test.ts" name="IPC bridge &gt; api:cancel aborts in-flight api:request" time="0.008146125">
         </testcase>
-        <testcase classname="tests/packaging/mac.test.ts" name="mac packaging &gt; build script contains required env guards" time="0.000211625">
+        <testcase classname="tests/ipc/bridge.test.ts" name="IPC bridge &gt; api:stream forwards SSE messages to renderer via webContents.send" time="0.059040958">
         </testcase>
-        <testcase classname="tests/packaging/mac.test.ts" name="mac packaging &gt; env guard logic fails fast with descriptive missing variable" time="0.000110709">
+        <testcase classname="tests/ipc/bridge.test.ts" name="IPC bridge &gt; api:stream:cancel aborts active stream" time="0.011387417">
         </testcase>
-        <testcase classname="tests/packaging/mac.test.ts" name="mac packaging &gt; env guard logic passes when all required variables are set" time="0.000087">
+        <testcase classname="tests/ipc/bridge.test.ts" name="IPC bridge &gt; fs:copyFile rejects path traversal outside allowlist" time="0.014867958">
         </testcase>
-    </testsuite>
-    <testsuite name="tests/packaging/win.test.ts" timestamp="2026-05-16T16:43:25.916Z" hostname="avernus.local" tests="6" failures="0" errors="0" skipped="0" time="0.015696917">
-        <testcase classname="tests/packaging/win.test.ts" name="win packaging &gt; electron-builder.yml win section has required fields" time="0.001079792">
+        <testcase classname="tests/ipc/bridge.test.ts" name="IPC bridge &gt; shell:openExternal enforces allowlist" time="0.011002541">
         </testcase>
-        <testcase classname="tests/packaging/win.test.ts" name="win packaging &gt; electron-builder.yml nsis section has required fields" time="0.000637167">
+        <testcase classname="tests/ipc/bridge.test.ts" name="IPC bridge &gt; api:request forwards error envelope response verbatim" time="0.009912667">
         </testcase>
-        <testcase classname="tests/packaging/win.test.ts" name="win packaging &gt; installer.nsh contains NVIDIA check via Get-CimInstance (not wmic)" time="0.00025575">
-        </testcase>
-        <testcase classname="tests/packaging/win.test.ts" name="win packaging &gt; installer.nsh uses customInit macro and PowerShell exec" time="0.000153084">
-        </testcase>
-        <testcase classname="tests/packaging/win.test.ts" name="win packaging &gt; build-win.sh exists, is executable, and has valid bash syntax" time="0.012589">
-        </testcase>
-        <testcase classname="tests/packaging/win.test.ts" name="win packaging &gt; build-win.sh runs electron-builder --win --x64 and does not require WIN_CSC vars" time="0.000303208">
+        <testcase classname="tests/ipc/bridge.test.ts" name="IPC bridge &gt; renderer response values never include sidecar token" time="0.006951708">
         </testcase>
     </testsuite>
-    <testsuite name="tests/updater/no-updater.test.ts" timestamp="2026-05-16T16:43:25.917Z" hostname="avernus.local" tests="5" failures="0" errors="0" skipped="0" time="0.01969675">
-        <testcase classname="tests/updater/no-updater.test.ts" name="no-updater guard &gt; sets autoDownload to false" time="0.011348041">
+    <testsuite name="tests/ipc/vault-handlers.test.ts" timestamp="2026-05-16T16:46:39.431Z" hostname="avernus.local" tests="5" failures="0" errors="0" skipped="0" time="0.061170458">
+        <testcase classname="tests/ipc/vault-handlers.test.ts" name="vault IPC handlers &gt; vault:get returns { present } and never secret value" time="0.025019375">
         </testcase>
-        <testcase classname="tests/updater/no-updater.test.ts" name="no-updater guard &gt; sets autoInstallOnAppQuit to false" time="0.001011959">
+        <testcase classname="tests/ipc/vault-handlers.test.ts" name="vault IPC handlers &gt; vault:set calls vault.set and returns ok" time="0.007377583">
         </testcase>
-        <testcase classname="tests/updater/no-updater.test.ts" name="no-updater guard &gt; checkForUpdates becomes a no-op" time="0.003489458">
+        <testcase classname="tests/ipc/vault-handlers.test.ts" name="vault IPC handlers &gt; vault:delete calls vault.delete" time="0.005018042">
         </testcase>
-        <testcase classname="tests/updater/no-updater.test.ts" name="no-updater guard &gt; checkForUpdatesAndNotify becomes a no-op" time="0.001118958">
+        <testcase classname="tests/ipc/vault-handlers.test.ts" name="vault IPC handlers &gt; vault:has calls vault.has and returns present" time="0.011718083">
         </testcase>
-        <testcase classname="tests/updater/no-updater.test.ts" name="no-updater guard &gt; registers update-available listener that does not download" time="0.002088709">
+        <testcase classname="tests/ipc/vault-handlers.test.ts" name="vault IPC handlers &gt; getSecretForSidecar returns decrypted value but IPC responses do not" time="0.0112045">
+        </testcase>
+    </testsuite>
+    <testsuite name="tests/menu/menu-builder.test.ts" timestamp="2026-05-16T16:46:39.432Z" hostname="avernus.local" tests="4" failures="0" errors="0" skipped="0" time="0.033955417">
+        <testcase classname="tests/menu/menu-builder.test.ts" name="buildMenu &gt; macOS includes native app menu" time="0.024205417">
+        </testcase>
+        <testcase classname="tests/menu/menu-builder.test.ts" name="buildMenu &gt; win/linux includes File &gt; Quit" time="0.004482792">
+        </testcase>
+        <testcase classname="tests/menu/menu-builder.test.ts" name="buildMenu &gt; DevTools menu item exists only in dev mode" time="0.001617083">
+        </testcase>
+        <testcase classname="tests/menu/menu-builder.test.ts" name="buildMenu &gt; sets application menu with built menu" time="0.003064625">
+        </testcase>
+    </testsuite>
+    <testsuite name="tests/packaging/linux.test.ts" timestamp="2026-05-16T16:46:39.433Z" hostname="avernus.local" tests="10" failures="0" errors="0" skipped="0" time="0.028589833">
+        <testcase classname="tests/packaging/linux.test.ts" name="linux packaging &gt; electron-builder.yml linux section has required fields" time="0.001149458">
+        </testcase>
+        <testcase classname="tests/packaging/linux.test.ts" name="linux packaging &gt; electron-builder.yml linux desktop entry has required keys" time="0.000382042">
+        </testcase>
+        <testcase classname="tests/packaging/linux.test.ts" name="linux packaging &gt; electron-builder.yml deb section lists all required runtime deps" time="0.000542709">
+        </testcase>
+        <testcase classname="tests/packaging/linux.test.ts" name="linux packaging &gt; electron-builder.yml deb section wires postinst.sh afterInstall hook" time="0.000156792">
+        </testcase>
+        <testcase classname="tests/packaging/linux.test.ts" name="linux packaging &gt; postinst.sh exists, has bash shebang, and uses strict mode" time="0.000219542">
+        </testcase>
+        <testcase classname="tests/packaging/linux.test.ts" name="linux packaging &gt; postinst.sh contains nvidia-smi check with all fallback paths" time="0.000126208">
+        </testcase>
+        <testcase classname="tests/packaging/linux.test.ts" name="linux packaging &gt; postinst.sh prints red error and exits 1 when nvidia-smi missing" time="0.000264166">
+        </testcase>
+        <testcase classname="tests/packaging/linux.test.ts" name="linux packaging &gt; postinst.sh has valid bash syntax" time="0.010461834">
+        </testcase>
+        <testcase classname="tests/packaging/linux.test.ts" name="linux packaging &gt; build-linux.sh exists, is executable, and has valid bash syntax" time="0.014378917">
+        </testcase>
+        <testcase classname="tests/packaging/linux.test.ts" name="linux packaging &gt; build-linux.sh runs bun build:all and electron-builder --linux --x64" time="0.000224417">
+        </testcase>
+    </testsuite>
+    <testsuite name="tests/packaging/mac.test.ts" timestamp="2026-05-16T16:46:39.435Z" hostname="avernus.local" tests="5" failures="0" errors="0" skipped="0" time="0.014622209">
+        <testcase classname="tests/packaging/mac.test.ts" name="mac packaging &gt; entitlements plist is valid XML and contains all required keys" time="0.000931833">
+        </testcase>
+        <testcase classname="tests/packaging/mac.test.ts" name="mac packaging &gt; sign-python afterPack hook exports a function" time="0.012683666">
+        </testcase>
+        <testcase classname="tests/packaging/mac.test.ts" name="mac packaging &gt; build script contains required env guards" time="0.000212667">
+        </testcase>
+        <testcase classname="tests/packaging/mac.test.ts" name="mac packaging &gt; env guard logic fails fast with descriptive missing variable" time="0.000109334">
+        </testcase>
+        <testcase classname="tests/packaging/mac.test.ts" name="mac packaging &gt; env guard logic passes when all required variables are set" time="0.000084292">
+        </testcase>
+    </testsuite>
+    <testsuite name="tests/packaging/win.test.ts" timestamp="2026-05-16T16:46:39.437Z" hostname="avernus.local" tests="6" failures="0" errors="0" skipped="0" time="0.020634125">
+        <testcase classname="tests/packaging/win.test.ts" name="win packaging &gt; electron-builder.yml win section has required fields" time="0.001099583">
+        </testcase>
+        <testcase classname="tests/packaging/win.test.ts" name="win packaging &gt; electron-builder.yml nsis section has required fields" time="0.0010905">
+        </testcase>
+        <testcase classname="tests/packaging/win.test.ts" name="win packaging &gt; installer.nsh contains NVIDIA check via Get-CimInstance (not wmic)" time="0.000275667">
+        </testcase>
+        <testcase classname="tests/packaging/win.test.ts" name="win packaging &gt; installer.nsh uses customInit macro and PowerShell exec" time="0.000169416">
+        </testcase>
+        <testcase classname="tests/packaging/win.test.ts" name="win packaging &gt; build-win.sh exists, is executable, and has valid bash syntax" time="0.01631">
+        </testcase>
+        <testcase classname="tests/packaging/win.test.ts" name="win packaging &gt; build-win.sh runs electron-builder --win --x64 and does not require WIN_CSC vars" time="0.000897041">
+        </testcase>
+    </testsuite>
+    <testsuite name="tests/release/stamp-version.test.ts" timestamp="2026-05-16T16:46:39.440Z" hostname="avernus.local" tests="6" failures="0" errors="0" skipped="0" time="0.170446333">
+        <testcase classname="tests/release/stamp-version.test.ts" name="stamp-version &gt; reads version from root package.json when no argument provided" time="0.001174167">
+        </testcase>
+        <testcase classname="tests/release/stamp-version.test.ts" name="stamp-version &gt; stamps version to all workspace package.json files" time="0.031466042">
+        </testcase>
+        <testcase classname="tests/release/stamp-version.test.ts" name="stamp-version &gt; stamps version to apps/sidecar/pyproject.toml" time="0.031732417">
+        </testcase>
+        <testcase classname="tests/release/stamp-version.test.ts" name="stamp-version &gt; creates apps/renderer/src/version.ts with correct export" time="0.029099958">
+        </testcase>
+        <testcase classname="tests/release/stamp-version.test.ts" name="stamp-version &gt; creates apps/shell/src/version.ts with correct export" time="0.031082875">
+        </testcase>
+        <testcase classname="tests/release/stamp-version.test.ts" name="stamp-version &gt; propagates version across all workspaces when stamping" time="0.045225833">
+        </testcase>
+    </testsuite>
+    <testsuite name="tests/sidecar/manager.test.ts" timestamp="2026-05-16T16:46:39.442Z" hostname="avernus.local" tests="7" failures="0" errors="0" skipped="0" time="0.06018475">
+        <testcase classname="tests/sidecar/manager.test.ts" name="SidecarManager &gt; spawn + handshake happy path emits ready and exposes API base URL" time="0.03610225">
+        </testcase>
+        <testcase classname="tests/sidecar/manager.test.ts" name="SidecarManager &gt; handshake timeout rejects when no stdout arrives" time="0.006507084">
+        </testcase>
+        <testcase classname="tests/sidecar/manager.test.ts" name="SidecarManager &gt; graceful shutdown deletes pid file when process exits on SIGTERM" time="0.005233709">
+        </testcase>
+        <testcase classname="tests/sidecar/manager.test.ts" name="SidecarManager &gt; force kills sidecar when process hangs after SIGTERM" time="0.002390417">
+        </testcase>
+        <testcase classname="tests/sidecar/manager.test.ts" name="SidecarManager &gt; zombie reaper SIGKILLs existing audiomorph.main pid before spawn" time="0.002361667">
+        </testcase>
+        <testcase classname="tests/sidecar/manager.test.ts" name="SidecarManager &gt; restart loop guard emits fatal after crash loop and prevents further restart" time="0.002850916">
+        </testcase>
+        <testcase classname="tests/sidecar/manager.test.ts" name="SidecarManager &gt; never logs raw token in sidecar output" time="0.003866083">
+        </testcase>
+    </testsuite>
+    <testsuite name="tests/updater/no-updater.test.ts" timestamp="2026-05-16T16:46:39.443Z" hostname="avernus.local" tests="5" failures="0" errors="0" skipped="0" time="0.022860083">
+        <testcase classname="tests/updater/no-updater.test.ts" name="no-updater guard &gt; sets autoDownload to false" time="0.011760083">
+        </testcase>
+        <testcase classname="tests/updater/no-updater.test.ts" name="no-updater guard &gt; sets autoInstallOnAppQuit to false" time="0.0017375">
+        </testcase>
+        <testcase classname="tests/updater/no-updater.test.ts" name="no-updater guard &gt; checkForUpdates becomes a no-op" time="0.0025685">
+        </testcase>
+        <testcase classname="tests/updater/no-updater.test.ts" name="no-updater guard &gt; checkForUpdatesAndNotify becomes a no-op" time="0.001271042">
+        </testcase>
+        <testcase classname="tests/updater/no-updater.test.ts" name="no-updater guard &gt; registers update-available listener that does not download" time="0.004886167">
             <system-err>
 Auto-update is disabled in AudioMorph Studio
 
             </system-err>
         </testcase>
     </testsuite>
-    <testsuite name="tests/sidecar/manager.test.ts" timestamp="2026-05-16T16:43:25.918Z" hostname="avernus.local" tests="7" failures="0" errors="0" skipped="0" time="0.056562667">
-        <testcase classname="tests/sidecar/manager.test.ts" name="SidecarManager &gt; spawn + handshake happy path emits ready and exposes API base URL" time="0.030919291">
+    <testsuite name="tests/vault/audit.test.ts" timestamp="2026-05-16T16:46:39.443Z" hostname="avernus.local" tests="3" failures="0" errors="0" skipped="0" time="0.030790625">
+        <testcase classname="tests/vault/audit.test.ts" name="AuditLog &gt; append writes JSON line to log file" time="0.022445833">
         </testcase>
-        <testcase classname="tests/sidecar/manager.test.ts" name="SidecarManager &gt; handshake timeout rejects when no stdout arrives" time="0.006582917">
+        <testcase classname="tests/vault/audit.test.ts" name="AuditLog &gt; never logs secret value content" time="0.002635083">
         </testcase>
-        <testcase classname="tests/sidecar/manager.test.ts" name="SidecarManager &gt; graceful shutdown deletes pid file when process exits on SIGTERM" time="0.006963208">
-        </testcase>
-        <testcase classname="tests/sidecar/manager.test.ts" name="SidecarManager &gt; force kills sidecar when process hangs after SIGTERM" time="0.0034465">
-        </testcase>
-        <testcase classname="tests/sidecar/manager.test.ts" name="SidecarManager &gt; zombie reaper SIGKILLs existing audiomorph.main pid before spawn" time="0.002509375">
-        </testcase>
-        <testcase classname="tests/sidecar/manager.test.ts" name="SidecarManager &gt; restart loop guard emits fatal after crash loop and prevents further restart" time="0.003421">
-        </testcase>
-        <testcase classname="tests/sidecar/manager.test.ts" name="SidecarManager &gt; never logs raw token in sidecar output" time="0.002067709">
+        <testcase classname="tests/vault/audit.test.ts" name="AuditLog &gt; multiple appends produce multiple lines" time="0.005111833">
         </testcase>
     </testsuite>
-    <testsuite name="tests/vault/audit.test.ts" timestamp="2026-05-16T16:43:25.919Z" hostname="avernus.local" tests="3" failures="0" errors="0" skipped="0" time="0.0131295">
-        <testcase classname="tests/vault/audit.test.ts" name="AuditLog &gt; append writes JSON line to log file" time="0.00630025">
+    <testsuite name="tests/vault/vault.test.ts" timestamp="2026-05-16T16:46:39.444Z" hostname="avernus.local" tests="8" failures="0" errors="0" skipped="0" time="0.059819333">
+        <testcase classname="tests/vault/vault.test.ts" name="KeyVault &gt; set encrypts and writes vault file" time="0.019746167">
         </testcase>
-        <testcase classname="tests/vault/audit.test.ts" name="AuditLog &gt; never logs secret value content" time="0.003092792">
+        <testcase classname="tests/vault/vault.test.ts" name="KeyVault &gt; get decrypts and returns value" time="0.006290584">
         </testcase>
-        <testcase classname="tests/vault/audit.test.ts" name="AuditLog &gt; multiple appends produce multiple lines" time="0.00309375">
+        <testcase classname="tests/vault/vault.test.ts" name="KeyVault &gt; get returns null for missing key" time="0.00480925">
         </testcase>
-    </testsuite>
-    <testsuite name="tests/vault/vault.test.ts" timestamp="2026-05-16T16:43:25.919Z" hostname="avernus.local" tests="8" failures="0" errors="0" skipped="0" time="0.0755025">
-        <testcase classname="tests/vault/vault.test.ts" name="KeyVault &gt; set encrypts and writes vault file" time="0.032262833">
+        <testcase classname="tests/vault/vault.test.ts" name="KeyVault &gt; delete removes key from vault" time="0.006281541">
         </testcase>
-        <testcase classname="tests/vault/vault.test.ts" name="KeyVault &gt; get decrypts and returns value" time="0.005413417">
+        <testcase classname="tests/vault/vault.test.ts" name="KeyVault &gt; has returns true/false without decrypting" time="0.006264708">
         </testcase>
-        <testcase classname="tests/vault/vault.test.ts" name="KeyVault &gt; get returns null for missing key" time="0.004376333">
+        <testcase classname="tests/vault/vault.test.ts" name="KeyVault &gt; clear empties vault" time="0.005334834">
         </testcase>
-        <testcase classname="tests/vault/vault.test.ts" name="KeyVault &gt; delete removes key from vault" time="0.0122265">
+        <testcase classname="tests/vault/vault.test.ts" name="KeyVault &gt; atomic write uses vault.tmp renamed to vault.enc" time="0.004612375">
         </testcase>
-        <testcase classname="tests/vault/vault.test.ts" name="KeyVault &gt; has returns true/false without decrypting" time="0.005681208">
-        </testcase>
-        <testcase classname="tests/vault/vault.test.ts" name="KeyVault &gt; clear empties vault" time="0.004072167">
-        </testcase>
-        <testcase classname="tests/vault/vault.test.ts" name="KeyVault &gt; atomic write uses vault.tmp renamed to vault.enc" time="0.003680625">
-        </testcase>
-        <testcase classname="tests/vault/vault.test.ts" name="KeyVault &gt; safeStorage unavailable falls back to base64 only without throw" time="0.007171042">
+        <testcase classname="tests/vault/vault.test.ts" name="KeyVault &gt; safeStorage unavailable falls back to base64 only without throw" time="0.005799959">
         </testcase>
     </testsuite>
 </testsuites>

@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import Link from 'next/link';
 import { useAppStore } from '@/lib/stores/app';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
@@ -229,6 +230,21 @@ export default function SettingsPage() {
           <p className="text-muted-foreground">
             Created with ♥ by heartlib.
           </p>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Diagnostics</CardTitle>
+          <CardDescription>Inspect local hardware compatibility and requirements.</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Link
+            href="/diagnostics"
+            className="inline-flex items-center rounded-md border border-border bg-surface-2 px-3 py-2 text-sm font-medium text-text hover:bg-surface-3"
+          >
+            Open hardware diagnostics
+          </Link>
         </CardContent>
       </Card>
     </div>

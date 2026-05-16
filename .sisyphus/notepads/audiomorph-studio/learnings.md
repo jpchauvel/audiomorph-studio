@@ -274,3 +274,23 @@
 - libsecret-1-0 is mandatory in deb `depends` for keytar (vault) to function on Linux.
 - libgbm1 + libatk-bridge2.0-0 + libgtk-3-0 + libnss3 + libxss1 + libnotify4 cover Electron's Chromium runtime needs.
 - 90/90 shell tests now green (was 80; +10 linux tests). Vitest config unchanged.
+
+## [2026-05-16] W5.5 — Release checklist + version stamping + SHA256 manifests + GitHub Actions matrix
+
+- **Task:** Create release infrastructure: GHA matrix workflow, version stamping script, release checklist, and Vitest tests
+- **Status:** ✅ Complete
+- **Key Deliverables:**
+  - `.github/workflows/release.yml`: GHA matrix for 3 platforms (macos-14, windows-latest, ubuntu-24.04); each job checks out with `submodules: recursive`, sets up Bun + Python 3.12, runs `bun install && bun run build:all`, executes platform-specific build script; release job aggregates artifacts, generates SHA256SUMS.txt via `shasum -a 256`, creates GitHub Release as DRAFT (requires manual publish)
+  - `scripts/stamp-version.ts`: reads root `package.json` version; propagates to all workspace `package.json` files (apps/shell, apps/renderer, packages/*); propagates to `apps/sidecar/pyproject.toml`; writes `apps/renderer/src/version.ts` and `apps/shell/src/version.ts` with `export const VERSION = "x.y.z"`; creates directories if missing
+  - `RELEASE_CHECKLIST.md`: documents manual steps (bump version, regenerate icons if needed, smoke test on all 3 OS, push tag, monitor GHA, verify checksums, publish release notes)
+  - `apps/shell/tests/release/stamp-version.test.ts`: 6 Vitest tests validating stamp-version writes all files correctly; tests verify ≥6 workspace matches
+- **Test Results:** 96/96 shell tests passing (was 90, now 96 with 6 new release tests); JUnit output at `.test-results/shell.xml`
+- **Key Implementation Notes:**
+  - GHA release job uses `draft: true` — NEVER auto-publishes; requires manual GitHub UI click
+  - Checkout step MUST use `submodules: recursive` (heartlib required)
+  - SHA256 manifest generated via `shasum -a 256` (not md5, not sha1)
+  - stamp-version.ts uses `mkdirSync(..., { recursive: true })` to create src/ directories if missing
+  - Tests follow existing pattern from `tests/packaging/mac.test.ts` exactly
+  - No existing tests broken; all 90 original tests still pass
+- **Commit:** `feat(release): GHA matrix + version stamp + SHA256 manifests`
+- **Evidence:** `.sisyphus/evidence/task-W5.5-stamp.txt`

@@ -4,6 +4,8 @@
   "packageManager": "pnpm@9.15.0",
   "workspaces": [
     "apps/desktop",
+    "apps/shell",
+    "apps/renderer",
     "apps/web",
     "packages/*"
   ],
@@ -13,6 +15,13 @@
     "typecheck": "tsc --noEmit -p tsconfig.base.json",
     "test:ts": "vitest run --reporter=junit --outputFile=.test-results/vitest.xml",
     "test:py": "cd apps/sidecar && python3 -m pytest",
-    "test": "pnpm test:ts && pnpm test:py"
-  }
+    "test": "pnpm test:ts && pnpm test:py",
+    "dev": "pnpm --filter @audiomorph/shell dev",
+    "build:all": "pnpm --filter @audiomorph/shell build:all",
+    "build:shell": "pnpm --filter @audiomorph/shell build:shell",
+    "dist:mac": "pnpm --filter @audiomorph/shell dist:mac",
+    "dist:win": "pnpm --filter @audiomorph/shell dist:win",
+    "dist:linux": "pnpm --filter @audiomorph/shell dist:linux"
+  },
+  "version": "2.0.0"
 }
