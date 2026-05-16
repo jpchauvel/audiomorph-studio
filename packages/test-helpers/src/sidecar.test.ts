@@ -2,13 +2,9 @@ import { describe, it, expect } from 'vitest';
 import { mkdtempSync, writeFileSync, chmodSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import * as http from 'node:http';
+import * as _http from 'node:http';
 
-import {
-  spawnSidecar,
-  SidecarHandshakeTimeout,
-  SidecarHandshakeError,
-} from './sidecar.js';
+import { spawnSidecar, SidecarHandshakeTimeout, SidecarHandshakeError } from './sidecar.js';
 import { TEST_TOKEN } from './test-mode.js';
 
 function makeMockSidecarScript(body: string): { bin: string; args: string[] } {
@@ -73,7 +69,7 @@ while True:
           AUDIOMORPH_TEST_SPAWN_BIN: mock.bin,
           AUDIOMORPH_TEST_SPAWN_CMD: JSON.stringify(mock.args),
         },
-      })
+      }),
     ).rejects.toBeInstanceOf(SidecarHandshakeTimeout);
     const elapsed = Date.now() - start;
     expect(elapsed).toBeGreaterThanOrEqual(400);
@@ -100,7 +96,7 @@ while True:
           AUDIOMORPH_TEST_SPAWN_BIN: mock.bin,
           AUDIOMORPH_TEST_SPAWN_CMD: JSON.stringify(mock.args),
         },
-      })
+      }),
     ).rejects.toBeInstanceOf(SidecarHandshakeError);
 
     await new Promise((r) => setTimeout(r, 500));

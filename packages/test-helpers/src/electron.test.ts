@@ -122,11 +122,7 @@ describe('launchElectronApp', () => {
       await new Promise<void>((resolve) => server.close(() => resolve()));
     });
     const capture: { lastOpts?: Parameters<ElectronLauncher['launch']>[0] } = {};
-    const launcher = makeFakeLauncher(
-      async () => ({ port, token: 'tkn' }),
-      closeSpy,
-      capture,
-    );
+    const launcher = makeFakeLauncher(async () => ({ port, token: 'tkn' }), closeSpy, capture);
 
     const handle = await launchElectronApp(
       { electronBin, shellMain, extraEnv: { FOO: 'bar' } },
@@ -150,21 +146,18 @@ describe('launchElectronApp', () => {
       async () => ({ port: 'not-a-number', token: 'tkn' }),
       closeSpy,
     );
-    await expect(
-      launchElectronApp({ electronBin, shellMain }, launcher),
-    ).rejects.toThrow(/Invalid sidecar port/);
+    await expect(launchElectronApp({ electronBin, shellMain }, launcher)).rejects.toThrow(
+      /Invalid sidecar port/,
+    );
     expect(closeSpy).toHaveBeenCalled();
   });
 
   it('closes app and throws on missing token', async () => {
     const closeSpy = vi.fn(async () => {});
-    const launcher = makeFakeLauncher(
-      async () => ({ port: 1234, token: '' }),
-      closeSpy,
+    const launcher = makeFakeLauncher(async () => ({ port: 1234, token: '' }), closeSpy);
+    await expect(launchElectronApp({ electronBin, shellMain }, launcher)).rejects.toThrow(
+      /Invalid sidecar token/,
     );
-    await expect(
-      launchElectronApp({ electronBin, shellMain }, launcher),
-    ).rejects.toThrow(/Invalid sidecar token/);
     expect(closeSpy).toHaveBeenCalled();
   });
 
@@ -173,9 +166,9 @@ describe('launchElectronApp', () => {
     const launcher = makeFakeLauncher(async () => {
       throw new Error('handler not registered');
     }, closeSpy);
-    await expect(
-      launchElectronApp({ electronBin, shellMain }, launcher),
-    ).rejects.toThrow(/handler not registered/);
+    await expect(launchElectronApp({ electronBin, shellMain }, launcher)).rejects.toThrow(
+      /handler not registered/,
+    );
     expect(closeSpy).toHaveBeenCalled();
   });
 
@@ -188,10 +181,7 @@ describe('launchElectronApp', () => {
     const port = (server.address() as { port: number }).port;
 
     const closeSpy = vi.fn(async () => {});
-    const launcher = makeFakeLauncher(
-      async () => ({ port, token: 'tkn' }),
-      closeSpy,
-    );
+    const launcher = makeFakeLauncher(async () => ({ port, token: 'tkn' }), closeSpy);
 
     const handle = await launchElectronApp(
       { electronBin, shellMain, cleanupTimeoutMs: 300 },

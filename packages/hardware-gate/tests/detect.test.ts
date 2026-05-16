@@ -25,21 +25,19 @@ function setArch(arch: NodeJS.Architecture): void {
 }
 
 function withExecMap(map: Record<string, { stdout?: string; error?: Error }>): void {
-  mocks.execFile.mockImplementation(
-    (file: string, args: string[], callback: ExecCallback) => {
-      const key = `${file}|${args.join(' ')}`;
-      const res = map[key];
-      if (!res) {
-        callback(new Error(`unexpected command ${key}`), '', '');
-        return;
-      }
-      if (res.error) {
-        callback(res.error, '', '');
-        return;
-      }
-      callback(null, res.stdout ?? '', '');
-    },
-  );
+  mocks.execFile.mockImplementation((file: string, args: string[], callback: ExecCallback) => {
+    const key = `${file}|${args.join(' ')}`;
+    const res = map[key];
+    if (!res) {
+      callback(new Error(`unexpected command ${key}`), '', '');
+      return;
+    }
+    if (res.error) {
+      callback(res.error, '', '');
+      return;
+    }
+    callback(null, res.stdout ?? '', '');
+  });
 }
 
 describe('hardware detect()', () => {
@@ -54,7 +52,10 @@ describe('hardware detect()', () => {
     withExecMap({
       'sysctl|-n hw.optional.arm64': { stdout: '1\n' },
       'sysctl|-n hw.memsize': { stdout: String(32 * 1024 ** 3) },
-      'df|-k /': { stdout: 'Filesystem 1024-blocks Used Available Capacity iused ifree %iused Mounted on\n/dev/disk3s1 100 20 104857600 1% 0 0 0% /\n' },
+      'df|-k /': {
+        stdout:
+          'Filesystem 1024-blocks Used Available Capacity iused ifree %iused Mounted on\n/dev/disk3s1 100 20 104857600 1% 0 0 0% /\n',
+      },
       'system_profiler|SPDisplaysDataType -json': {
         stdout: JSON.stringify({
           SPDisplaysDataType: [{ sppci_model: 'Apple M3', spdisplays_vram: '8 GB' }],
@@ -78,7 +79,10 @@ describe('hardware detect()', () => {
     withExecMap({
       'sysctl|-n hw.optional.arm64': { stdout: '0\n' },
       'sysctl|-n hw.memsize': { stdout: String(32 * 1024 ** 3) },
-      'df|-k /': { stdout: 'Filesystem 1024-blocks Used Available Capacity iused ifree %iused Mounted on\n/dev/disk3s1 100 20 104857600 1% 0 0 0% /\n' },
+      'df|-k /': {
+        stdout:
+          'Filesystem 1024-blocks Used Available Capacity iused ifree %iused Mounted on\n/dev/disk3s1 100 20 104857600 1% 0 0 0% /\n',
+      },
       'system_profiler|SPDisplaysDataType -json': {
         stdout: JSON.stringify({
           SPDisplaysDataType: [{ sppci_model: 'AMD', spdisplays_vram: '8 GB' }],
@@ -99,7 +103,10 @@ describe('hardware detect()', () => {
     withExecMap({
       'sysctl|-n hw.optional.arm64': { stdout: '1\n' },
       'sysctl|-n hw.memsize': { stdout: String(8 * 1024 ** 3) },
-      'df|-k /': { stdout: 'Filesystem 1024-blocks Used Available Capacity iused ifree %iused Mounted on\n/dev/disk3s1 100 20 104857600 1% 0 0 0% /\n' },
+      'df|-k /': {
+        stdout:
+          'Filesystem 1024-blocks Used Available Capacity iused ifree %iused Mounted on\n/dev/disk3s1 100 20 104857600 1% 0 0 0% /\n',
+      },
       'system_profiler|SPDisplaysDataType -json': {
         stdout: JSON.stringify({
           SPDisplaysDataType: [{ sppci_model: 'Apple M3', spdisplays_vram: '12 GB' }],
@@ -119,7 +126,10 @@ describe('hardware detect()', () => {
     setArch('x64');
     mocks.readFile.mockResolvedValue('MemTotal:       33554432 kB\n');
     withExecMap({
-      'df|-k /': { stdout: 'Filesystem 1024-blocks Used Available Capacity Mounted on\n/dev/root 1 1 52428800 10% /\n' },
+      'df|-k /': {
+        stdout:
+          'Filesystem 1024-blocks Used Available Capacity Mounted on\n/dev/root 1 1 52428800 10% /\n',
+      },
       'nvidia-smi|': { stdout: 'NVIDIA-SMI 555.55\n' },
       'nvidia-smi|--query-gpu=name,memory.total --format=csv,noheader': {
         stdout: 'NVIDIA RTX 4070, 8192 MiB\n',
@@ -138,7 +148,10 @@ describe('hardware detect()', () => {
     setArch('x64');
     mocks.readFile.mockResolvedValue('MemTotal:       33554432 kB\n');
     withExecMap({
-      'df|-k /': { stdout: 'Filesystem 1024-blocks Used Available Capacity Mounted on\n/dev/root 1 1 52428800 10% /\n' },
+      'df|-k /': {
+        stdout:
+          'Filesystem 1024-blocks Used Available Capacity Mounted on\n/dev/root 1 1 52428800 10% /\n',
+      },
       'nvidia-smi|': { error: new Error('missing') },
       '/usr/bin/nvidia-smi|': { error: new Error('missing') },
       '/usr/local/bin/nvidia-smi|': { error: new Error('missing') },
@@ -155,15 +168,17 @@ describe('hardware detect()', () => {
     setPlatform('win32');
     setArch('x64');
     withExecMap({
-      'powershell|-NoProfile -Command Get-CimInstance Win32_ComputerSystem | Select-Object -ExpandProperty TotalPhysicalMemory': {
-        stdout: String(32 * 1024 ** 3),
-      },
+      'powershell|-NoProfile -Command Get-CimInstance Win32_ComputerSystem | Select-Object -ExpandProperty TotalPhysicalMemory':
+        {
+          stdout: String(32 * 1024 ** 3),
+        },
       'powershell|-NoProfile -Command Get-PSDrive C | Select-Object -ExpandProperty Free': {
         stdout: String(120 * 1024 ** 3),
       },
-      "powershell|-NoProfile -Command Get-CimInstance Win32_VideoController | Where-Object {$_.Name -like '*NVIDIA*'} | Select-Object Name,AdapterRAM | ConvertTo-Json": {
-        stdout: JSON.stringify({ Name: 'NVIDIA GeForce', AdapterRAM: 6 * 1024 ** 3 }),
-      },
+      "powershell|-NoProfile -Command Get-CimInstance Win32_VideoController | Where-Object {$_.Name -like '*NVIDIA*'} | Select-Object Name,AdapterRAM | ConvertTo-Json":
+        {
+          stdout: JSON.stringify({ Name: 'NVIDIA GeForce', AdapterRAM: 6 * 1024 ** 3 }),
+        },
       'nvidia-smi|': { stdout: 'NVIDIA-SMI 555.55\n' },
     });
 
@@ -179,7 +194,10 @@ describe('hardware detect()', () => {
     setArch('x64');
 
     withExecMap({
-      'df|-k /': { stdout: 'Filesystem 1024-blocks Used Available Capacity Mounted on\n/dev/root 1 1 52428800 10% /\n' },
+      'df|-k /': {
+        stdout:
+          'Filesystem 1024-blocks Used Available Capacity Mounted on\n/dev/root 1 1 52428800 10% /\n',
+      },
       'nvidia-smi|': { stdout: 'NVIDIA-SMI 555.55\n' },
       'nvidia-smi|--query-gpu=name,memory.total --format=csv,noheader': {
         stdout: 'NVIDIA RTX 4070, 8192 MiB\n',
@@ -202,7 +220,10 @@ describe('hardware detect()', () => {
     setArch('x64');
     mocks.readFile.mockResolvedValue('MemTotal:       33554432 kB\n');
     withExecMap({
-      'df|-k /': { stdout: 'Filesystem 1024-blocks Used Available Capacity Mounted on\n/dev/root 1 1 52428800 10% /\n' },
+      'df|-k /': {
+        stdout:
+          'Filesystem 1024-blocks Used Available Capacity Mounted on\n/dev/root 1 1 52428800 10% /\n',
+      },
       'nvidia-smi|': { error: new Error('missing from PATH') },
       '/usr/bin/nvidia-smi|': { stdout: 'NVIDIA-SMI 555.55\n' },
       '/usr/bin/nvidia-smi|--query-gpu=name,memory.total --format=csv,noheader': {

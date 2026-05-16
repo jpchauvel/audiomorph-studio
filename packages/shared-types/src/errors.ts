@@ -12,7 +12,7 @@ export const ErrorCode = {
   INTERNAL_ERROR: 'INTERNAL_ERROR',
 } as const;
 
-export type ErrorCode = typeof ErrorCode[keyof typeof ErrorCode];
+export type ErrorCode = (typeof ErrorCode)[keyof typeof ErrorCode];
 
 export interface ApiError {
   code: ErrorCode;

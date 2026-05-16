@@ -82,7 +82,7 @@ describe('hf-cache', () => {
 
       expect(manifest['facebook/musicgen-small']).toBeDefined();
       expect(manifest['facebook/musicgen-small'].revision).toBe(
-        '4c8334b02c6ec4e8664a91979669a501ec497792'
+        '4c8334b02c6ec4e8664a91979669a501ec497792',
       );
 
       delete process.env.AUDIOMORPH_MANIFEST_PATH;
@@ -129,7 +129,10 @@ describe('hf-cache', () => {
     it('constructs correct cache path', () => {
       process.env.HF_HOME = tmpDir;
 
-      const path = getCachedModelPath('facebook/musicgen-small', '4c8334b02c6ec4e8664a91979669a501ec497792');
+      const path = getCachedModelPath(
+        'facebook/musicgen-small',
+        '4c8334b02c6ec4e8664a91979669a501ec497792',
+      );
 
       expect(path).toContain('models--facebook--musicgen-small');
       expect(path).toContain('snapshots');
@@ -183,7 +186,7 @@ describe('hf-cache', () => {
       // Create the cache directory structure
       const cachePath = getCachedModelPath(
         'facebook/musicgen-small',
-        '4c8334b02c6ec4e8664a91979669a501ec497792'
+        '4c8334b02c6ec4e8664a91979669a501ec497792',
       );
       mkdirSync(cachePath, { recursive: true });
 

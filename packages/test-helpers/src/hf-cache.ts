@@ -30,28 +30,33 @@ export function getCacheKey(manifest: Manifest): string {
  * Load manifest from file (supports AUDIOMORPH_MANIFEST_PATH env var)
  */
 export function loadManifest(): Manifest {
-  const manifestPath = process.env.AUDIOMORPH_MANIFEST_PATH || 
+  const manifestPath =
+    process.env.AUDIOMORPH_MANIFEST_PATH ||
     resolve(join(homedir(), '..', 'apps', 'sidecar', 'scripts', 'required-models.json'));
-  
+
   const content = readFileSync(manifestPath, 'utf-8');
   const entries = JSON.parse(content) as ManifestEntry[];
-  
+
   // Validate schema
   for (const entry of entries) {
     if (!entry.id || !entry.revision || entry.size_mb === undefined) {
-      throw new Error(`Invalid manifest entry: missing required fields in ${JSON.stringify(entry)}`);
+      throw new Error(
+        `Invalid manifest entry: missing required fields in ${JSON.stringify(entry)}`,
+      );
     }
     if (entry.revision.length !== 40) {
-      throw new Error(`Invalid revision SHA for ${entry.id}: expected 40 chars, got ${entry.revision.length}`);
+      throw new Error(
+        `Invalid revision SHA for ${entry.id}: expected 40 chars, got ${entry.revision.length}`,
+      );
     }
   }
-  
+
   // Convert array to object keyed by id
   const manifest: Manifest = {};
   for (const entry of entries) {
     manifest[entry.id] = entry;
   }
-  
+
   return manifest;
 }
 
@@ -61,11 +66,11 @@ export function loadManifest(): Manifest {
 export function getCachedModelPath(id: string, revision: string): string {
   const hfHome = process.env.HF_HOME || join(homedir(), '.cache', 'huggingface');
   const [org, name] = id.split('/');
-  
+
   if (!org || !name) {
     throw new Error(`Invalid model ID: ${id}`);
   }
-  
+
   return join(hfHome, 'hub', `models--${org}--${name}`, 'snapshots', revision);
 }
 
@@ -74,10 +79,10 @@ export function getCachedModelPath(id: string, revision: string): string {
  */
 export function verifyModelManifest(manifest: Manifest): VerifyResult {
   const missing: string[] = [];
-  
+
   for (const [id, entry] of Object.entries(manifest)) {
     const cachePath = getCachedModelPath(id, entry.revision);
-    
+
     try {
       const stat = statSync(cachePath);
       if (!stat.isDirectory()) {
@@ -87,11 +92,11 @@ export function verifyModelManifest(manifest: Manifest): VerifyResult {
       missing.push(id);
     }
   }
-  
+
   if (missing.length === 0) {
     return { ok: true };
   }
-  
+
   return {
     ok: false,
     missing,

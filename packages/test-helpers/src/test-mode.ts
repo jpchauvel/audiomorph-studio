@@ -19,9 +19,7 @@ export function isTestMode(): boolean {
  */
 export function assertTestMode(): void {
   if (!isTestMode()) {
-    throw new Error(
-      `Test mode not enabled. Set ${TEST_MODE_ENV}=1 to enable.`
-    );
+    throw new Error(`Test mode not enabled. Set ${TEST_MODE_ENV}=1 to enable.`);
   }
 }
 

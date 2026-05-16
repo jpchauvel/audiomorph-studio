@@ -7,20 +7,20 @@ import type { ApiError } from './errors';
  * Job status enumeration for generation tasks
  */
 export enum JobStatus {
-  queued = "queued",
-  running = "running",
-  completed = "completed",
-  failed = "failed",
-  cancelled = "cancelled",
+  queued = 'queued',
+  running = 'running',
+  completed = 'completed',
+  failed = 'failed',
+  cancelled = 'cancelled',
 }
 
 /**
  * Supported audio export formats
  */
 export enum ExportFormat {
-  wav = "wav",
-  mp3 = "mp3",
-  flac = "flac",
+  wav = 'wav',
+  mp3 = 'mp3',
+  flac = 'flac',
 }
 
 /**
@@ -90,7 +90,7 @@ export interface ModelInfo {
   id: string;
   name: string;
   size_gb: number;
-  state: "missing" | "partial" | "verified" | "corrupted";
+  state: 'missing' | 'partial' | 'verified' | 'corrupted';
   bytes_done?: number;
   bytes_total?: number;
 }
@@ -113,5 +113,5 @@ export interface AppSettings {
   hf_token_set: boolean;
   openrouter_key_set: boolean;
   cpu_fallback: boolean;
-  theme: "dark";
+  theme: 'dark';
 }

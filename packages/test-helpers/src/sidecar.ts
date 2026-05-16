@@ -81,9 +81,7 @@ function resolvePythonPath(): string {
  * On timeout or invalid handshake, the child is forcibly killed before
  * the returned promise rejects.
  */
-export async function spawnSidecar(
-  opts: SpawnSidecarOptions = {}
-): Promise<SidecarHandle> {
+export async function spawnSidecar(opts: SpawnSidecarOptions = {}): Promise<SidecarHandle> {
   const timeoutMs = opts.timeoutMs ?? DEFAULT_TIMEOUT_MS;
   const repoRoot = resolveRepoRoot();
   const cwd = opts.cwd ?? path.join(repoRoot, 'apps', 'sidecar');
@@ -109,9 +107,7 @@ export async function spawnSidecar(
       }
       args = parsed as string[];
     } catch (e) {
-      throw new SidecarHandshakeError(
-        `Invalid AUDIOMORPH_TEST_SPAWN_CMD: ${(e as Error).message}`
-      );
+      throw new SidecarHandshakeError(`Invalid AUDIOMORPH_TEST_SPAWN_CMD: ${(e as Error).message}`);
     }
   } else {
     bin = resolvePythonPath();
@@ -144,12 +140,12 @@ export async function spawnSidecar(
 
     if (payload.event !== 'listening') {
       throw new SidecarHandshakeError(
-        `Handshake event must be "listening", got "${payload.event}"`
+        `Handshake event must be "listening", got "${payload.event}"`,
       );
     }
     if (typeof payload.port !== 'number' || !Number.isFinite(payload.port)) {
       throw new SidecarHandshakeError(
-        `Handshake port must be a finite number, got ${String(payload.port)}`
+        `Handshake port must be a finite number, got ${String(payload.port)}`,
       );
     }
     if (typeof payload.token !== 'string' || payload.token.length === 0) {
@@ -157,7 +153,7 @@ export async function spawnSidecar(
     }
     if (payload.token !== expectedToken) {
       throw new SidecarHandshakeError(
-        `Handshake token mismatch (expected match, got different value)`
+        `Handshake token mismatch (expected match, got different value)`,
       );
     }
 
@@ -177,7 +173,7 @@ export async function spawnSidecar(
 function readHandshake(
   proc: ChildProcess,
   timeoutMs: number,
-  noHandshake: boolean
+  noHandshake: boolean,
 ): Promise<HandshakePayload> {
   return new Promise<HandshakePayload>((resolve, reject) => {
     const stdout = proc.stdout;
@@ -215,15 +211,11 @@ function readHandshake(
       try {
         parsed = JSON.parse(line);
       } catch {
-        settle(() =>
-          reject(new SidecarHandshakeError('Handshake line is not valid JSON'))
-        );
+        settle(() => reject(new SidecarHandshakeError('Handshake line is not valid JSON')));
         return;
       }
       if (typeof parsed !== 'object' || parsed === null) {
-        settle(() =>
-          reject(new SidecarHandshakeError('Handshake payload must be object'))
-        );
+        settle(() => reject(new SidecarHandshakeError('Handshake payload must be object')));
         return;
       }
       settle(() => resolve(parsed as HandshakePayload));
@@ -231,21 +223,13 @@ function readHandshake(
 
     proc.once('error', (err) => {
       settle(() =>
-        reject(
-          new SidecarHandshakeError(
-            `Sidecar process error: ${(err as Error).message}`
-          )
-        )
+        reject(new SidecarHandshakeError(`Sidecar process error: ${(err as Error).message}`)),
       );
     });
 
     proc.once('exit', (code) => {
       settle(() =>
-        reject(
-          new SidecarHandshakeError(
-            `Sidecar exited before handshake (code=${String(code)})`
-          )
-        )
+        reject(new SidecarHandshakeError(`Sidecar exited before handshake (code=${String(code)})`)),
       );
     });
   });
@@ -304,7 +288,7 @@ function waitForExit(proc: ChildProcess, timeoutMs: number): Promise<boolean> {
 export async function waitForSidecarReady(
   baseUrl: string,
   token: string,
-  timeoutMs = 10_000
+  timeoutMs = 10_000,
 ): Promise<void> {
   const deadline = Date.now() + timeoutMs;
   const intervalMs = 200;
@@ -340,7 +324,7 @@ function probeHealth(baseUrl: string, token: string): Promise<boolean> {
         res.resume();
         const status = res.statusCode ?? 0;
         resolve(status >= 200 && status < 300);
-      }
+      },
     );
     req.on('timeout', () => {
       req.destroy();

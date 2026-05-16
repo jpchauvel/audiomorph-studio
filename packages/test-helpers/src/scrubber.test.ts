@@ -73,8 +73,11 @@ describe('scrubber', () => {
 
     it('should be idempotent', () => {
       const text = 'X-Audiomorph-Token: secret123';
-      const result1 = scrubSecrets(text);
-      const scrubbed = text.replace(/X-Audiomorph-Token: secret123/g, '[REDACTED-AUDIOMORPH_TOKEN]');
+      const _result1 = scrubSecrets(text);
+      const scrubbed = text.replace(
+        /X-Audiomorph-Token: secret123/g,
+        '[REDACTED-AUDIOMORPH_TOKEN]',
+      );
       const result2 = scrubSecrets(scrubbed);
       expect(result2.replacements).toBe(0);
     });
@@ -134,7 +137,7 @@ describe('scrubber', () => {
         X-Audiomorph-Token: token1
         sk-or-v1-token2
         hf_token3
-      `
+      `,
       );
       const result = scrubFile(filePath);
       expect(result.replacements).toBe(3);
@@ -222,7 +225,14 @@ describe('scrub-test-output.mjs (CI integration — positive control)', () => {
     fs.writeFileSync(file, `header\nleaked: ${plantedToken}\nfooter`);
 
     const { execFileSync } = await import('node:child_process');
-    const scriptPath = path.resolve(__dirname, '..', '..', '..', 'scripts', 'scrub-test-output.mjs');
+    const scriptPath = path.resolve(
+      __dirname,
+      '..',
+      '..',
+      '..',
+      'scripts',
+      'scrub-test-output.mjs',
+    );
 
     // Symlink temp file into .test-results so the script's hardcoded scan dirs see it.
     const repoRoot = path.resolve(__dirname, '..', '..', '..');

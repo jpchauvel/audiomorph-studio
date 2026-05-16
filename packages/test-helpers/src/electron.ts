@@ -21,7 +21,7 @@ import { getTestEnv, TEST_TOKEN } from './test-mode.js';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-const SIDECAR_INFO_CHANNEL = '__audiomorph_test:get-sidecar-info';
+const _SIDECAR_INFO_CHANNEL = '__audiomorph_test:get-sidecar-info';
 const DEFAULT_LAUNCH_TIMEOUT_MS = 30_000;
 const SIDECAR_CLEANUP_TIMEOUT_MS = 10_000;
 const SIDECAR_POLL_INTERVAL_MS = 200;
@@ -91,9 +91,7 @@ export function resolveRepoRoot(startDir: string = __dirname): string {
     if (parent === dir) break;
     dir = parent;
   }
-  throw new ElectronLaunchError(
-    `Could not locate pnpm-workspace.yaml from ${startDir}`,
-  );
+  throw new ElectronLaunchError(`Could not locate pnpm-workspace.yaml from ${startDir}`);
 }
 
 /**
@@ -132,9 +130,7 @@ export function resolveElectronBin(repoRoot: string = resolveRepoRoot()): string
       return candidate;
     }
   }
-  throw new ElectronLaunchError(
-    `Electron binary not found. Searched: ${candidates.join(', ')}`,
-  );
+  throw new ElectronLaunchError(`Electron binary not found. Searched: ${candidates.join(', ')}`);
 }
 
 /**
@@ -154,9 +150,7 @@ export function resolveShellMain(repoRoot: string = resolveRepoRoot()): string {
       return candidate;
     }
   }
-  throw new ElectronLaunchError(
-    `Shell main.js not found. Searched: ${candidates.join(', ')}`,
-  );
+  throw new ElectronLaunchError(`Shell main.js not found. Searched: ${candidates.join(', ')}`);
 }
 
 async function loadDefaultLauncher(): Promise<ElectronLauncher> {
@@ -184,10 +178,7 @@ async function loadDefaultLauncher(): Promise<ElectronLauncher> {
   return playwright._electron;
 }
 
-async function pollSidecarUnreachable(
-  port: number,
-  timeoutMs: number,
-): Promise<boolean> {
+async function pollSidecarUnreachable(port: number, timeoutMs: number): Promise<boolean> {
   const http = await import('node:http');
   const deadline = Date.now() + timeoutMs;
   while (Date.now() < deadline) {
@@ -250,7 +241,11 @@ export async function launchElectronApp(
   try {
     firstWindow = await app.firstWindow();
     sidecarInfo = await app.evaluate<SidecarInfo>(async (electron) => {
-      const ipcMain = (electron as unknown as { ipcMain: { listeners: (ch: string) => Array<(...a: unknown[]) => unknown> } }).ipcMain;
+      const ipcMain = (
+        electron as unknown as {
+          ipcMain: { listeners: (ch: string) => Array<(...a: unknown[]) => unknown> };
+        }
+      ).ipcMain;
       const listeners = ipcMain.listeners('__audiomorph_test:get-sidecar-info');
       if (listeners.length === 0) {
         throw new Error('test-mode IPC handler not registered (AUDIOMORPH_TEST_MODE=1 required)');

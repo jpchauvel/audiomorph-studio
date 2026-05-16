@@ -80,7 +80,7 @@ export function scrubFile(filePath: string): ScrubResult {
 
 export async function scrubDirectory(
   dir: string,
-  extensions: string[] = ['.ts', '.js', '.py', '.json', '.txt', '.md', '.log']
+  extensions: string[] = ['.ts', '.js', '.py', '.json', '.txt', '.md', '.log'],
 ): Promise<DirectoryScrubResult> {
   let filesProcessed = 0;
   let replacements = 0;

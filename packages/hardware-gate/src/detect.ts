@@ -1,6 +1,6 @@
-import { execFile } from "node:child_process";
-import { readFile } from "node:fs/promises";
-import type { ExecFileException } from "node:child_process";
+import { execFile } from 'node:child_process';
+import { readFile } from 'node:fs/promises';
+import type { ExecFileException } from 'node:child_process';
 
 export interface HardwareFailure {
   requirement: string;
@@ -25,10 +25,10 @@ const RAM_MIN_GB = 16;
 const VRAM_MIN_GB = 8;
 const DISK_MIN_GB = 30;
 
-const LINUX_NVIDIA_SMI_FALLBACKS = ["/usr/bin/nvidia-smi", "/usr/local/bin/nvidia-smi"];
+const LINUX_NVIDIA_SMI_FALLBACKS = ['/usr/bin/nvidia-smi', '/usr/local/bin/nvidia-smi'];
 const WINDOWS_NVIDIA_SMI_FALLBACKS = [
-  "C:\\Program Files\\NVIDIA Corporation\\NVSMI\\nvidia-smi.exe",
-  "C:\\Windows\\System32\\nvidia-smi.exe",
+  'C:\\Program Files\\NVIDIA Corporation\\NVSMI\\nvidia-smi.exe',
+  'C:\\Windows\\System32\\nvidia-smi.exe',
 ];
 
 function roundGb(value: number): number {
@@ -36,11 +36,11 @@ function roundGb(value: number): number {
 }
 
 function bytesToGb(bytes: number): number {
-  return bytes / (1024 ** 3);
+  return bytes / 1024 ** 3;
 }
 
 function kbToGb(kb: number): number {
-  return kb / (1024 ** 2);
+  return kb / 1024 ** 2;
 }
 
 function parseDfAvailableKb(stdout: string): number | null {
@@ -52,9 +52,9 @@ function parseDfAvailableKb(stdout: string): number | null {
     return null;
   }
 
-  const dataLine = lines[lines.length - 1] ?? "";
+  const dataLine = lines[lines.length - 1] ?? '';
   const cols = dataLine.split(/\s+/);
-  const available = Number.parseFloat(cols[3] ?? "");
+  const available = Number.parseFloat(cols[3] ?? '');
   return Number.isFinite(available) ? available : null;
 }
 
@@ -62,19 +62,21 @@ function parseMacVramGb(raw: string | undefined): number | null {
   if (!raw) return null;
   const match = raw.match(/([0-9]+(?:\.[0-9]+)?)\s*GB/i);
   if (!match) return null;
-  const gb = Number.parseFloat(match[1] ?? "");
+  const gb = Number.parseFloat(match[1] ?? '');
   return Number.isFinite(gb) ? gb : null;
 }
 
 function parseMiBToGb(raw: string): number | null {
   const match = raw.match(/([0-9]+(?:\.[0-9]+)?)/);
   if (!match) return null;
-  const mib = Number.parseFloat(match[1] ?? "");
+  const mib = Number.parseFloat(match[1] ?? '');
   if (!Number.isFinite(mib)) return null;
   return mib / 1024;
 }
 
-function parseWindowsGpuJson(json: string): Array<{ name: string; adapterRamBytes: number | null }> {
+function parseWindowsGpuJson(
+  json: string,
+): Array<{ name: string; adapterRamBytes: number | null }> {
   const trimmed = json.trim();
   if (!trimmed) return [];
 
@@ -89,14 +91,14 @@ function parseWindowsGpuJson(json: string): Array<{ name: string; adapterRamByte
   const out: Array<{ name: string; adapterRamBytes: number | null }> = [];
 
   for (const row of rows) {
-    if (!row || typeof row !== "object") continue;
+    if (!row || typeof row !== 'object') continue;
     const entry = row as Record<string, unknown>;
-    const name = typeof entry.Name === "string" ? entry.Name : "";
+    const name = typeof entry.Name === 'string' ? entry.Name : '';
     const adapterRaw = entry.AdapterRAM;
     const adapterRam =
-      typeof adapterRaw === "number"
+      typeof adapterRaw === 'number'
         ? adapterRaw
-        : typeof adapterRaw === "string"
+        : typeof adapterRaw === 'string'
           ? Number.parseFloat(adapterRaw)
           : NaN;
 
@@ -116,7 +118,7 @@ function execFileText(file: string, args: string[]): Promise<string> {
         reject(error);
         return;
       }
-      resolve(String(stdout ?? ""));
+      resolve(String(stdout ?? ''));
     });
   });
 }
@@ -132,9 +134,9 @@ async function commandExists(file: string): Promise<boolean> {
 
 async function resolveNvidiaSmiPath(platform: NodeJS.Platform): Promise<string | null> {
   const candidates =
-    platform === "win32"
-      ? ["nvidia-smi", ...WINDOWS_NVIDIA_SMI_FALLBACKS]
-      : ["nvidia-smi", ...LINUX_NVIDIA_SMI_FALLBACKS];
+    platform === 'win32'
+      ? ['nvidia-smi', ...WINDOWS_NVIDIA_SMI_FALLBACKS]
+      : ['nvidia-smi', ...LINUX_NVIDIA_SMI_FALLBACKS];
 
   for (const candidate of candidates) {
     if (await commandExists(candidate)) {
@@ -152,7 +154,7 @@ export async function detect(): Promise<HardwareReport> {
   let diskGbMeasured = 0;
   let vramGbMeasured: number | null = null;
 
-  const details: HardwareReport["details"] = {
+  const details: HardwareReport['details'] = {
     os: process.platform,
     arch: process.arch,
     gpu: null,
@@ -161,27 +163,28 @@ export async function detect(): Promise<HardwareReport> {
     disk_gb: 0,
   };
 
-  if (process.platform === "darwin") {
+  if (process.platform === 'darwin') {
     try {
-      const arm64 = (await execFileText("sysctl", ["-n", "hw.optional.arm64"]))
-        .trim();
-      if (arm64 !== "1") {
+      const arm64 = (await execFileText('sysctl', ['-n', 'hw.optional.arm64'])).trim();
+      if (arm64 !== '1') {
         failures.push({
-          requirement: "arm64",
-          actual: "x86_64",
-          message: "Apple Silicon (arm64) is required on macOS.",
+          requirement: 'arm64',
+          actual: 'x86_64',
+          message: 'Apple Silicon (arm64) is required on macOS.',
         });
       }
     } catch {
       failures.push({
-        requirement: "arm64",
-        actual: "unknown",
-        message: "Could not verify Apple Silicon architecture.",
+        requirement: 'arm64',
+        actual: 'unknown',
+        message: 'Could not verify Apple Silicon architecture.',
       });
     }
 
     try {
-      const memBytes = Number.parseFloat((await execFileText("sysctl", ["-n", "hw.memsize"])).trim());
+      const memBytes = Number.parseFloat(
+        (await execFileText('sysctl', ['-n', 'hw.memsize'])).trim(),
+      );
       if (Number.isFinite(memBytes)) {
         ramGbMeasured = bytesToGb(memBytes);
         details.ram_gb = roundGb(ramGbMeasured);
@@ -193,14 +196,14 @@ export async function detect(): Promise<HardwareReport> {
 
     if (ramGbMeasured < RAM_MIN_GB) {
       failures.push({
-        requirement: "ram",
+        requirement: 'ram',
         actual: `${roundGb(ramGbMeasured).toFixed(1)} GB`,
         message: `At least ${RAM_MIN_GB.toFixed(1)} GB RAM is required.`,
       });
     }
 
     try {
-      const dfOutput = await execFileText("df", ["-k", "/"]);
+      const dfOutput = await execFileText('df', ['-k', '/']);
       const availableKb = parseDfAvailableKb(dfOutput);
       if (availableKb !== null) {
         diskGbMeasured = kbToGb(availableKb);
@@ -213,21 +216,21 @@ export async function detect(): Promise<HardwareReport> {
 
     if (diskGbMeasured < DISK_MIN_GB) {
       failures.push({
-        requirement: "disk",
+        requirement: 'disk',
         actual: `${roundGb(diskGbMeasured).toFixed(1)} GB`,
         message: `At least ${DISK_MIN_GB.toFixed(1)} GB free disk is required.`,
       });
     }
 
     try {
-      const raw = await execFileText("system_profiler", ["SPDisplaysDataType", "-json"]);
+      const raw = await execFileText('system_profiler', ['SPDisplaysDataType', '-json']);
       const parsed = JSON.parse(raw) as Record<string, unknown>;
       const displays = parsed.SPDisplaysDataType;
       if (Array.isArray(displays) && displays.length > 0) {
         const first = displays[0] as Record<string, unknown>;
-        details.gpu = typeof first.sppci_model === "string" ? first.sppci_model : null;
+        details.gpu = typeof first.sppci_model === 'string' ? first.sppci_model : null;
         const vram = parseMacVramGb(
-          typeof first.spdisplays_vram === "string" ? first.spdisplays_vram : undefined,
+          typeof first.spdisplays_vram === 'string' ? first.spdisplays_vram : undefined,
         );
         if (vram !== null) {
           vramGbMeasured = vram;
@@ -242,26 +245,26 @@ export async function detect(): Promise<HardwareReport> {
 
     if ((vramGbMeasured ?? 0) < VRAM_MIN_GB) {
       failures.push({
-        requirement: "vram",
-        actual: vramGbMeasured === null ? "unknown" : `${roundGb(vramGbMeasured).toFixed(1)} GB`,
+        requirement: 'vram',
+        actual: vramGbMeasured === null ? 'unknown' : `${roundGb(vramGbMeasured).toFixed(1)} GB`,
         message: `At least ${VRAM_MIN_GB.toFixed(1)} GB VRAM is required.`,
       });
     }
   }
 
-  if (process.platform === "linux") {
-    if (process.arch !== "x64") {
+  if (process.platform === 'linux') {
+    if (process.arch !== 'x64') {
       failures.push({
-        requirement: "arch",
+        requirement: 'arch',
         actual: process.arch,
-        message: "x64 architecture is required on Linux.",
+        message: 'x64 architecture is required on Linux.',
       });
     }
 
     try {
-      const meminfo = await readFile("/proc/meminfo", "utf8");
+      const meminfo = await readFile('/proc/meminfo', 'utf8');
       const match = meminfo.match(/^MemTotal:\s+([0-9]+)\s+kB$/m);
-      const memKb = match ? Number.parseFloat(match[1] ?? "") : NaN;
+      const memKb = match ? Number.parseFloat(match[1] ?? '') : NaN;
       if (Number.isFinite(memKb)) {
         ramGbMeasured = kbToGb(memKb);
         details.ram_gb = roundGb(ramGbMeasured);
@@ -273,14 +276,14 @@ export async function detect(): Promise<HardwareReport> {
 
     if (ramGbMeasured < RAM_MIN_GB) {
       failures.push({
-        requirement: "ram",
+        requirement: 'ram',
         actual: `${roundGb(ramGbMeasured).toFixed(1)} GB`,
         message: `At least ${RAM_MIN_GB.toFixed(1)} GB RAM is required.`,
       });
     }
 
     try {
-      const dfOutput = await execFileText("df", ["-k", "/"]);
+      const dfOutput = await execFileText('df', ['-k', '/']);
       const availableKb = parseDfAvailableKb(dfOutput);
       if (availableKb !== null) {
         diskGbMeasured = kbToGb(availableKb);
@@ -293,39 +296,39 @@ export async function detect(): Promise<HardwareReport> {
 
     if (diskGbMeasured < DISK_MIN_GB) {
       failures.push({
-        requirement: "disk",
+        requirement: 'disk',
         actual: `${roundGb(diskGbMeasured).toFixed(1)} GB`,
         message: `At least ${DISK_MIN_GB.toFixed(1)} GB free disk is required.`,
       });
     }
 
-    const nvidiaSmi = await resolveNvidiaSmiPath("linux");
+    const nvidiaSmi = await resolveNvidiaSmiPath('linux');
     if (!nvidiaSmi) {
       failures.push({
-        requirement: "nvidia_gpu",
-        actual: "not_detected",
-        message: "An NVIDIA GPU is required on Linux.",
+        requirement: 'nvidia_gpu',
+        actual: 'not_detected',
+        message: 'An NVIDIA GPU is required on Linux.',
       });
       failures.push({
-        requirement: "cuda",
-        actual: "nvidia-smi not found",
-        message: "CUDA runtime check failed: nvidia-smi is unavailable.",
+        requirement: 'cuda',
+        actual: 'nvidia-smi not found',
+        message: 'CUDA runtime check failed: nvidia-smi is unavailable.',
       });
     } else {
       try {
         await execFileText(nvidiaSmi, []);
       } catch {
         failures.push({
-          requirement: "cuda",
-          actual: "nvidia-smi failed",
-          message: "CUDA runtime check failed: nvidia-smi returned non-zero exit code.",
+          requirement: 'cuda',
+          actual: 'nvidia-smi failed',
+          message: 'CUDA runtime check failed: nvidia-smi returned non-zero exit code.',
         });
       }
 
       try {
         const csv = await execFileText(nvidiaSmi, [
-          "--query-gpu=name,memory.total",
-          "--format=csv,noheader",
+          '--query-gpu=name,memory.total',
+          '--format=csv,noheader',
         ]);
         const rows = csv
           .split(/\r?\n/)
@@ -334,19 +337,19 @@ export async function detect(): Promise<HardwareReport> {
 
         if (rows.length === 0) {
           failures.push({
-            requirement: "nvidia_gpu",
-            actual: "not_detected",
-            message: "An NVIDIA GPU is required on Linux.",
+            requirement: 'nvidia_gpu',
+            actual: 'not_detected',
+            message: 'An NVIDIA GPU is required on Linux.',
           });
         } else {
           let maxGb = 0;
           let maxName: string | null = null;
           for (const row of rows) {
-            const [namePart, memPart] = row.split(",", 2).map((piece) => piece.trim());
+            const [namePart, memPart] = row.split(',', 2).map((piece) => piece.trim());
             const gb = memPart ? parseMiBToGb(memPart) : null;
             if (gb !== null && gb > maxGb) {
               maxGb = gb;
-              maxName = namePart || "NVIDIA GPU";
+              maxName = namePart || 'NVIDIA GPU';
             }
           }
 
@@ -356,45 +359,45 @@ export async function detect(): Promise<HardwareReport> {
 
           if (!details.gpu) {
             failures.push({
-              requirement: "nvidia_gpu",
-              actual: "not_detected",
-              message: "An NVIDIA GPU is required on Linux.",
+              requirement: 'nvidia_gpu',
+              actual: 'not_detected',
+              message: 'An NVIDIA GPU is required on Linux.',
             });
           }
 
           if ((vramGbMeasured ?? 0) < VRAM_MIN_GB) {
             failures.push({
-              requirement: "vram",
+              requirement: 'vram',
               actual:
-                vramGbMeasured === null ? "unknown" : `${roundGb(vramGbMeasured).toFixed(1)} GB`,
+                vramGbMeasured === null ? 'unknown' : `${roundGb(vramGbMeasured).toFixed(1)} GB`,
               message: `At least ${VRAM_MIN_GB.toFixed(1)} GB VRAM is required.`,
             });
           }
         }
       } catch {
         failures.push({
-          requirement: "nvidia_gpu",
-          actual: "query_failed",
-          message: "Failed to query NVIDIA GPU details via nvidia-smi.",
+          requirement: 'nvidia_gpu',
+          actual: 'query_failed',
+          message: 'Failed to query NVIDIA GPU details via nvidia-smi.',
         });
       }
     }
   }
 
-  if (process.platform === "win32") {
-    if (process.arch !== "x64") {
+  if (process.platform === 'win32') {
+    if (process.arch !== 'x64') {
       failures.push({
-        requirement: "arch",
+        requirement: 'arch',
         actual: process.arch,
-        message: "x64 architecture is required on Windows.",
+        message: 'x64 architecture is required on Windows.',
       });
     }
 
     try {
-      const ramRaw = await execFileText("powershell", [
-        "-NoProfile",
-        "-Command",
-        "Get-CimInstance Win32_ComputerSystem | Select-Object -ExpandProperty TotalPhysicalMemory",
+      const ramRaw = await execFileText('powershell', [
+        '-NoProfile',
+        '-Command',
+        'Get-CimInstance Win32_ComputerSystem | Select-Object -ExpandProperty TotalPhysicalMemory',
       ]);
       const bytes = Number.parseFloat(ramRaw.trim());
       if (Number.isFinite(bytes)) {
@@ -408,17 +411,17 @@ export async function detect(): Promise<HardwareReport> {
 
     if (ramGbMeasured < RAM_MIN_GB) {
       failures.push({
-        requirement: "ram",
+        requirement: 'ram',
         actual: `${roundGb(ramGbMeasured).toFixed(1)} GB`,
         message: `At least ${RAM_MIN_GB.toFixed(1)} GB RAM is required.`,
       });
     }
 
     try {
-      const diskRaw = await execFileText("powershell", [
-        "-NoProfile",
-        "-Command",
-        "Get-PSDrive C | Select-Object -ExpandProperty Free",
+      const diskRaw = await execFileText('powershell', [
+        '-NoProfile',
+        '-Command',
+        'Get-PSDrive C | Select-Object -ExpandProperty Free',
       ]);
       const bytes = Number.parseFloat(diskRaw.trim());
       if (Number.isFinite(bytes)) {
@@ -432,24 +435,24 @@ export async function detect(): Promise<HardwareReport> {
 
     if (diskGbMeasured < DISK_MIN_GB) {
       failures.push({
-        requirement: "disk",
+        requirement: 'disk',
         actual: `${roundGb(diskGbMeasured).toFixed(1)} GB`,
         message: `At least ${DISK_MIN_GB.toFixed(1)} GB free disk is required.`,
       });
     }
 
     try {
-      const gpuJson = await execFileText("powershell", [
-        "-NoProfile",
-        "-Command",
+      const gpuJson = await execFileText('powershell', [
+        '-NoProfile',
+        '-Command',
         "Get-CimInstance Win32_VideoController | Where-Object {$_.Name -like '*NVIDIA*'} | Select-Object Name,AdapterRAM | ConvertTo-Json",
       ]);
       const gpus = parseWindowsGpuJson(gpuJson);
       if (gpus.length === 0) {
         failures.push({
-          requirement: "nvidia_gpu",
-          actual: "not_detected",
-          message: "An NVIDIA GPU is required on Windows.",
+          requirement: 'nvidia_gpu',
+          actual: 'not_detected',
+          message: 'An NVIDIA GPU is required on Windows.',
         });
       } else {
         const strongest = gpus
@@ -465,35 +468,35 @@ export async function detect(): Promise<HardwareReport> {
 
         if ((vramGbMeasured ?? 0) < VRAM_MIN_GB) {
           failures.push({
-            requirement: "vram",
-            actual: vramGbMeasured === null ? "unknown" : `${vramGbMeasured.toFixed(1)} GB`,
+            requirement: 'vram',
+            actual: vramGbMeasured === null ? 'unknown' : `${vramGbMeasured.toFixed(1)} GB`,
             message: `At least ${VRAM_MIN_GB.toFixed(1)} GB VRAM is required.`,
           });
         }
       }
     } catch {
       failures.push({
-        requirement: "nvidia_gpu",
-        actual: "query_failed",
-        message: "Failed to query NVIDIA GPU details via PowerShell.",
+        requirement: 'nvidia_gpu',
+        actual: 'query_failed',
+        message: 'Failed to query NVIDIA GPU details via PowerShell.',
       });
     }
 
-    const nvidiaSmi = await resolveNvidiaSmiPath("win32");
+    const nvidiaSmi = await resolveNvidiaSmiPath('win32');
     if (!nvidiaSmi) {
       failures.push({
-        requirement: "cuda",
-        actual: "nvidia-smi not found",
-        message: "CUDA runtime check failed: nvidia-smi is unavailable.",
+        requirement: 'cuda',
+        actual: 'nvidia-smi not found',
+        message: 'CUDA runtime check failed: nvidia-smi is unavailable.',
       });
     } else {
       try {
         await execFileText(nvidiaSmi, []);
       } catch {
         failures.push({
-          requirement: "cuda",
-          actual: "nvidia-smi failed",
-          message: "CUDA runtime check failed: nvidia-smi returned non-zero exit code.",
+          requirement: 'cuda',
+          actual: 'nvidia-smi failed',
+          message: 'CUDA runtime check failed: nvidia-smi returned non-zero exit code.',
         });
       }
     }

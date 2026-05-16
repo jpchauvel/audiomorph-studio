@@ -4,13 +4,10 @@
  * Reads from packages/shared-types/src/index.ts and writes to apps/sidecar/src/audiomorph/schemas.py
  */
 
-import * as fs from "fs";
-import * as path from "path";
+import * as fs from 'fs';
+import * as path from 'path';
 
-const PYTHON_OUTPUT = path.join(
-  __dirname,
-  "../../../apps/sidecar/src/audiomorph/schemas.py"
-);
+const PYTHON_OUTPUT = path.join(__dirname, '../../../apps/sidecar/src/audiomorph/schemas.py');
 
 const pythonCode = `"""
 Auto-generated Pydantic v2 models from TypeScript type contracts.
@@ -133,5 +130,5 @@ if (!fs.existsSync(outputDir)) {
 }
 
 // Write the generated Python file
-fs.writeFileSync(PYTHON_OUTPUT, pythonCode, "utf-8");
+fs.writeFileSync(PYTHON_OUTPUT, pythonCode, 'utf-8');
 console.log(`✓ Generated Python schemas: ${PYTHON_OUTPUT}`);

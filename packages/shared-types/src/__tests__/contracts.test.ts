@@ -1,18 +1,14 @@
-import { describe, it, expect } from "vitest";
-import {
-  GenerationRequest,
-  JobStatus,
-  ExportFormat,
-} from "../index";
+import { describe, it, expect } from 'vitest';
+import { GenerationRequest, JobStatus, ExportFormat } from '../index';
 
-describe("Type Contracts", () => {
-  it("GenerationRequest has all 5 required fields", () => {
+describe('Type Contracts', () => {
+  it('GenerationRequest has all 5 required fields', () => {
     const req: GenerationRequest = {
-      prompt: "upbeat electronic",
-      lyrics: "hello world",
+      prompt: 'upbeat electronic',
+      lyrics: 'hello world',
       duration_seconds: 30,
       seed: 42,
-      model_id: "heartmula-3b",
+      model_id: 'heartmula-3b',
     };
 
     expect(req.prompt).toBeDefined();
@@ -22,21 +18,21 @@ describe("Type Contracts", () => {
     expect(req.model_id).toBeDefined();
   });
 
-  it("JobStatus has exactly 5 values", () => {
+  it('JobStatus has exactly 5 values', () => {
     const values = Object.values(JobStatus);
     expect(values).toHaveLength(5);
-    expect(values).toContain("queued");
-    expect(values).toContain("running");
-    expect(values).toContain("completed");
-    expect(values).toContain("failed");
-    expect(values).toContain("cancelled");
+    expect(values).toContain('queued');
+    expect(values).toContain('running');
+    expect(values).toContain('completed');
+    expect(values).toContain('failed');
+    expect(values).toContain('cancelled');
   });
 
-  it("ExportFormat has exactly 3 values", () => {
+  it('ExportFormat has exactly 3 values', () => {
     const values = Object.values(ExportFormat);
     expect(values).toHaveLength(3);
-    expect(values).toContain("wav");
-    expect(values).toContain("mp3");
-    expect(values).toContain("flac");
+    expect(values).toContain('wav');
+    expect(values).toContain('mp3');
+    expect(values).toContain('flac');
   });
 });

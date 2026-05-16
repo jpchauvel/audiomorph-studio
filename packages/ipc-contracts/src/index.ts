@@ -103,7 +103,7 @@ export interface FsCopyFileOutput {
 
 export interface FsReadFileInput {
   filePath: string;
-  encoding?: "utf8" | "base64";
+  encoding?: 'utf8' | 'base64';
 }
 
 export interface FsReadFileOutput {
@@ -130,7 +130,7 @@ export interface AppGetVersionOutput {
   version: string;
 }
 
-export type AppPathName = "userData" | "downloads";
+export type AppPathName = 'userData' | 'downloads';
 
 export interface AppGetPathInput {
   name: AppPathName;
@@ -140,7 +140,7 @@ export interface AppGetPathOutput {
   path: string;
 }
 
-export type VaultKey = "hf_token" | "openrouter_key";
+export type VaultKey = 'hf_token' | 'openrouter_key';
 
 export interface VaultSetInput {
   key: VaultKey;
@@ -179,7 +179,7 @@ export type ApiRequestArgs = ApiRequestInput;
 export type ApiResponse = ApiRequestOutput;
 export type ApiStreamArgs = ApiStreamInput;
 export type StreamEvent = ApiStreamEventPayload;
-export type StreamError = ApiStreamErrorPayload["error"];
+export type StreamError = ApiStreamErrorPayload['error'];
 
 export type DialogSaveAsArgs = DialogSaveAsInput;
 export type DialogSaveAsResult = DialogSaveAsOutput;
@@ -224,75 +224,75 @@ export interface ElectronAPI {
 }
 
 export type IpcInvokeMap = {
-  "api:request": {
+  'api:request': {
     in: ApiRequestInput;
     out: ApiRequestOutput;
   };
-  "api:cancel": {
+  'api:cancel': {
     in: ApiCancelInput;
     out: { ok: true };
   };
-  "api:stream": {
+  'api:stream': {
     in: ApiStreamInput;
     out: { ok: true };
   };
-  "api:stream:cancel": {
+  'api:stream:cancel': {
     in: ApiStreamCancelInput;
     out: { ok: true };
   };
-  "dialog:saveAs": {
+  'dialog:saveAs': {
     in: DialogSaveAsInput;
     out: DialogSaveAsOutput;
   };
-  "dialog:openDirectory": {
+  'dialog:openDirectory': {
     in: DialogOpenDirectoryInput;
     out: DialogOpenDirectoryOutput;
   };
-  "dialog:openFile": {
+  'dialog:openFile': {
     in: DialogOpenFileInput;
     out: DialogOpenFileOutput;
   };
-  "fs:copyFile": {
+  'fs:copyFile': {
     in: FsCopyFileInput;
     out: FsCopyFileOutput;
   };
-  "fs:readFile": {
+  'fs:readFile': {
     in: FsReadFileInput;
     out: FsReadFileOutput;
   };
-  "shell:openExternal": {
+  'shell:openExternal': {
     in: ShellOpenExternalInput;
     out: ShellOpenExternalOutput;
   };
-  "shell:showItemInFolder": {
+  'shell:showItemInFolder': {
     in: ShellShowItemInFolderInput;
     out: ShellShowItemInFolderOutput;
   };
-  "app:getVersion": {
+  'app:getVersion': {
     in: undefined;
     out: AppGetVersionOutput;
   };
-  "app:getPath": {
+  'app:getPath': {
     in: AppGetPathInput;
     out: AppGetPathOutput;
   };
-  "hardware:check": {
+  'hardware:check': {
     in: undefined;
     out: HardwareReport;
   };
-  "vault:set": {
+  'vault:set': {
     in: VaultSetInput;
     out: VaultSetOutput;
   };
-  "vault:get": {
+  'vault:get': {
     in: VaultGetInput;
     out: VaultGetOutput;
   };
-  "vault:delete": {
+  'vault:delete': {
     in: VaultDeleteInput;
     out: VaultDeleteOutput;
   };
-  "vault:has": {
+  'vault:has': {
     in: VaultHasInput;
     out: VaultHasOutput;
   };
