@@ -116,3 +116,15 @@
 - For startup hooks, prefer FastAPI `lifespan` async context manager over deprecated `@app.on_event("startup")`.
 - SQLModel table classes auto-register on `SQLModel.metadata` at import time — import `db.models` from `db.session` to ensure `create_all` sees them.
 - Test concurrent WAL behavior with two `threading.Thread`s doing interleaved write/read in separate `session_scope` blocks; absence of `SQLITE_BUSY` exceptions = WAL working.
+
+## W2.6 — Export endpoint (ffmpeg)
+- ffmpeg subprocess: ALWAYS pass cmd as list to `asyncio.create_subprocess_exec(*cmd, ...)` — never `shell=True`.
+- Wrap subprocess creation in try/except `FileNotFoundError` → maps to `ApiError(EXPORT_FAILED)` with install hint. The `FileNotFoundError` fires at `create_subprocess_exec` call, not at communicate().
+- Use `asyncio.wait_for(proc.communicate(), timeout=...)`; on `asyncio.TimeoutError` call `proc.kill()` (swallow `ProcessLookupError`) before raising retriable=True.
+- Format codec mapping lives in service, not router: wav→pcm_s16le, mp3→libmp3lame + `-b:a {N}k`, flac→flac. Default mp3 bitrate=192k.
+- Router validates: format ∈ {wav,mp3,flac}; bitrate_kbps only allowed for mp3; bitrate range 64–320.
+- Path resolution: NEVER trust user paths. Always look up source via `repo.get_generation_by_job_id(session, job_id)` inside `session_scope()`.
+- Output path convention: `<jobs_dir>/<job_id>/export.<format>`.
+- Tests pattern: monkeypatch `ffmpeg_service.asyncio.create_subprocess_exec` with a fake `_FakeProc` that writes the output file in `communicate()`. For router tests, also monkeypatch `routers.export.session_scope` and `routers.export.get_jobs_dir` to point at tmp.
+- pytest-asyncio is in STRICT mode but existing tests use `asyncio.run(...)` rather than `@pytest.mark.asyncio` — matched that pattern.
+- ExportRequest schema in `schemas.py` uses `job_id` (not `generation_id`). Router uses a local `_ExportBody` pydantic model to avoid coupling response shape to shared contract.
