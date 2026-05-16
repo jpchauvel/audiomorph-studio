@@ -39,6 +39,13 @@ win:
         - x64
 linux:
   category: AudioVideo
+  synopsis: AI music generation studio
+  description: Local AI music generation powered by heartlib
+  icon: build/icons/
+  desktop:
+    Name: AudioMorph Studio
+    Comment: AI music generation
+    Categories: AudioVideo;Audio;Music;
   target:
     - target: AppImage
       arch:
@@ -46,6 +53,16 @@ linux:
     - target: deb
       arch:
         - x64
+deb:
+  depends:
+    - libnotify4
+    - libsecret-1-0
+    - libnss3
+    - libxss1
+    - libgtk-3-0
+    - libatk-bridge2.0-0
+    - libgbm1
+  afterInstall: build/postinst.sh
 nsis:
   oneClick: false
   allowToChangeInstallationDirectory: true

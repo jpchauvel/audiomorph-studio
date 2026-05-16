@@ -262,3 +262,15 @@
 - electron-builder picks up `WIN_CSC_LINK` + `WIN_CSC_KEY_PASSWORD` env vars automatically — no script logic needed
 - Vitest yml assertions via regex `toMatch(/^\s{2}key:\s*value\s*$/m)` work when no yaml parser is installed
 - Tests negating a word (e.g. `not.toMatch(/\bwmic\b/i)`) must avoid mentioning that word even in comments of the file under test
+
+## [2026-05-16] W5.3 — Linux installer
+
+- electron-builder Linux .deb section is a top-level `deb:` key (sibling of `linux:`), not nested under `linux:`. Same pattern as `nsis:` being sibling of `win:`.
+- `afterInstall: build/postinst.sh` wires a post-install hook; electron-builder copies the script into the .deb DEBIAN/postinst slot. Must be executable on disk.
+- `desktop:` block under `linux:` accepts key-value map (Name/Comment/Categories) — electron-builder generates the .desktop file.
+- `icon: build/icons/` (with trailing slash) tells electron-builder to use a directory of PNGs (e.g. 16x16.png ... 512x512.png) rather than a single .ico/.icns.
+- AppImage does NOT support post-install hooks; the postinst.sh GPU gate runs ONLY for .deb. AppImage relies on the runtime hardware gate (W5.4) for GPU enforcement.
+- ANSI red `\033[0;31m` works in printf within bash hooks; dpkg shows hook stderr to the user during `apt install`.
+- libsecret-1-0 is mandatory in deb `depends` for keytar (vault) to function on Linux.
+- libgbm1 + libatk-bridge2.0-0 + libgtk-3-0 + libnss3 + libxss1 + libnotify4 cover Electron's Chromium runtime needs.
+- 90/90 shell tests now green (was 80; +10 linux tests). Vitest config unchanged.
