@@ -127,7 +127,7 @@ def create_app(auth_token: str = "") -> FastAPI:
 
     @root_router.get("/healthz")
     async def healthz() -> dict[str, Any]:  # pyright: ignore[reportUnusedFunction]
-        return {
+        health_data: dict[str, Any] = {
             "ok": True,
             "pid": os.getpid(),
             "version": "0.1.0",
@@ -135,6 +135,12 @@ def create_app(auth_token: str = "") -> FastAPI:
             "models_dir": str(get_models_dir()),
             "python_version": platform.python_version(),
         }
+        
+        # AUDIOMORPH_TEST_MODE hook
+        if os.environ.get("AUDIOMORPH_TEST_MODE") == "1":
+            health_data["test_mode"] = True
+        
+        return health_data
 
     app.include_router(root_router)
     app.include_router(models_router)

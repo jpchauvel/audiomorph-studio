@@ -63,6 +63,11 @@ export function setupAppLifecycle(getMainWindow: () => BrowserWindow | null): vo
 
   app.setAsDefaultProtocolClient(APP_PROTOCOL);
 
+  // AUDIOMORPH_TEST_MODE hook
+  if (process.env.AUDIOMORPH_TEST_MODE === "1") {
+    console.info("[lifecycle] test mode enabled");
+  }
+
   app.on("before-quit", () => {
     isQuitting = true;
   });

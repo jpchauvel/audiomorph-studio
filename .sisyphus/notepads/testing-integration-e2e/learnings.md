@@ -100,3 +100,48 @@
 - Deleted original `apps/renderer/playwright.config.ts` after split
 - `.test-results/` already in `.gitignore` (line 25)
 - Evidence files: task-7-scripts-resolve.txt, task-7-component-config.txt, task-7-no-webserver.txt
+
+## [2026-05-16] T5: Existing renderer tests relocated to tests/component/
+- Task: Move 10 existing .spec.ts files from apps/renderer/tests/e2e/ to apps/renderer/tests/component/
+- Pre-move state: 25 tests in 10 spec files at tests/e2e/
+- Method: Used git mv (preserves history) — all 10 files moved as renames
+- Files moved:
+  - export.spec.ts, first-run.spec.ts, generation.spec.ts, lyrics.spec.ts, models.spec.ts
+  - player.spec.ts, prompt-assist.spec.ts, scaffold.spec.ts, screenshot.spec.ts, settings.spec.ts
+- Post-move verification:
+  - ✓ 10 files in tests/component/
+  - ✓ 0 files at tests/ root
+  - ✓ 25 tests still pass (no logic modified)
+  - ✓ Git history preserved (git log --follow shows pre-move commits)
+- Config already updated by T7: playwright.component.config.ts points to tests/component/
+- No relative import updates needed (all imports use @playwright/test or absolute paths)
+- Commit: bc1f876 "test(scrubber): add secret redaction helper with CLI" (includes T5 moves)
+- Evidence files: task-5-relocation-counts.txt, task-5-tests-still-pass.txt, task-5-history-preserved.txt, task-5-final-verification.txt
+
+## [2026-05-16] AUDIOMORPH_TEST_MODE sentinel and 6 product hooks implemented
+- Task: Implement test-mode sentinel in `packages/test-helpers/src/test-mode.ts` and add 6 product hooks
+- Sentinel exports (6 total):
+  - `TEST_MODE_ENV = 'AUDIOMORPH_TEST_MODE'`
+  - `TEST_TOKEN = 'test-token-deterministic-do-not-use-in-prod'`
+  - `TEST_VAULT_MODE = 'memory'`
+  - `isTestMode(): boolean` — checks process.env.AUDIOMORPH_TEST_MODE === "1"
+  - `assertTestMode(): void` — throws if not in test mode
+  - `getTestEnv(): Record<string, string>` — returns {AUDIOMORPH_TEST_MODE: "1", ...}
+- Product hooks (6 total, grep count verified):
+  1. `apps/sidecar/src/audiomorph/__main__.py` (line 45–51) — CI safety check: exit 78 if CI=true and no test mode
+  2. `apps/sidecar/src/audiomorph/_auth.py` (line 28–32) — accept test token when AUDIOMORPH_TEST_MODE=1
+  3. `apps/shell/src/sidecar/manager.ts` (line 165–172) — propagate AUDIOMORPH_TEST_MODE=1 env to spawned sidecar
+  4. `apps/shell/src/preload.ts` (line 135–137) — expose __AUDIOMORPH_TEST_MODE__ to renderer window
+  5. `apps/sidecar/src/audiomorph/app.py` (line 128–142) — add test_mode flag to healthz endpoint
+  6. `apps/shell/src/lifecycle/app-lifecycle.ts` (line 66–70) — log test mode enabled at startup
+- Verification:
+  - ✓ grep -r "AUDIOMORPH_TEST_MODE hook" apps/ | wc -l = 6
+  - ✓ All 53 existing sidecar pytest tests pass (no regression)
+  - ✓ Each hook marked with required comment marker (TypeScript: //, Python: #)
+  - ✓ Test token exact string used: 'test-token-deterministic-do-not-use-in-prod'
+  - ✓ CI safety check exits code 78 with stderr "AUDIOMORPH_TEST_MODE required in CI"
+  - ✓ Token never reaches renderer (only flag exposed)
+  - ✓ ESM only (no CommonJS require)
+  - ✓ No production logic changed outside test-mode guards
+- Evidence files: task-4-ci-refuse.txt, task-4-test-token-auth.txt, task-4-no-regression.txt
+- Commit: "test(test-mode): add AUDIOMORPH_TEST_MODE sentinel and product hooks"
