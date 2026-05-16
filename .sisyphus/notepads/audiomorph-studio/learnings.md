@@ -128,3 +128,24 @@
 - Tests pattern: monkeypatch `ffmpeg_service.asyncio.create_subprocess_exec` with a fake `_FakeProc` that writes the output file in `communicate()`. For router tests, also monkeypatch `routers.export.session_scope` and `routers.export.get_jobs_dir` to point at tmp.
 - pytest-asyncio is in STRICT mode but existing tests use `asyncio.run(...)` rather than `@pytest.mark.asyncio` — matched that pattern.
 - ExportRequest schema in `schemas.py` uses `job_id` (not `generation_id`). Router uses a local `_ExportBody` pydantic model to avoid coupling response shape to shared contract.
+
+## W2.7: OpenRouter BYOK relay (2026-05-16)
+
+- **BYOK pattern**: key arrives per-request via `X-OpenRouter-Key` header — never persisted, never logged. Read with `request.headers.get("X-OpenRouter-Key", "").strip()`, validate non-empty, forward as `Authorization: Bearer <key>` to upstream.
+- **httpx + respx**: `respx` mocks `httpx.AsyncClient` requests. Use `@respx.mock` decorator + `respx.post(URL).mock(return_value=...)` or `side_effect=[...]` for sequential responses (retry tests).
+- **respx not in installed deps yet**: it's listed in `pyproject.toml` dev/optional but `pip install respx` needed manually in dev env. Same with `pytest-asyncio` already installed.
+- **Manual retry loop** for 5xx (no tenacity dep): `for attempt in range(_MAX_RETRIES + 1)` with exponential backoff `_RETRY_BACKOFF_BASE * (2 ** attempt)`. Close response between retries via `await response.aclose()` to free conn.
+- **Streaming relay**: build request with `client.build_request` then `client.send(req, stream=True)` returning `StreamingResponse(response.aiter_bytes(), media_type=...)`. Close client + response in the generator's `finally`.
+- **Log-safe pattern**: only log `model`, `stream`, `message_count`, status codes — NEVER the key, NEVER the message bodies. Tests assert key marker absent from `capsys` stdout/stderr.
+- **App registration**: import router in `app.py`, add `app.include_router(openrouter_router)`. Router itself declares its own `prefix="/openrouter"`.
+- **Test pattern**: use `TestClient(create_app(auth_token="test-token"))` + send both `X-Audiomorph-Token` (auth) and `X-OpenRouter-Key` (BYOK) headers.
+
+## W2.8 — Settings + first-run state machine
+
+- Settings keys are strict-typed via `ALL_KEYS = _STR_KEYS | _BOOL_KEYS | _ENUM_KEYS`. Unknown keys → `ApiError(VALIDATION_ERROR)`.
+- Values stored as strings in SQLite via `repo.set_setting`; booleans coerced via `"true"`/`"false"` round-trip on read.
+- `models_dir` requires absolute path (PurePosix OR PureWindows). Existence is NOT checked — user may pre-set.
+- Secrets (HF token, OpenRouter key) are NEVER stored — only boolean `*_present` reflective flags.
+- First-run state machine in `services/first_run.py`: ordered steps `pick_models_dir`, `download_models`, `first_run_completed`. `completed=True` iff `missing_steps==[]`.
+- Settings router uses NO prefix (`APIRouter(tags=["settings"])`) so it can host both `/settings*` and `/first-run/status` routes.
+- Test DB isolation pattern: `monkeypatch.setattr(settings_router, "session_scope", lambda: session_scope(str(db_path)))` — same pattern used by `test_export_service.py`.
