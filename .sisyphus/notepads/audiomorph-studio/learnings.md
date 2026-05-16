@@ -97,3 +97,13 @@
 - OOM recovery pattern: detect `torch.cuda.OutOfMemoryError` (plus generic runtime "out of memory"), run `torch.cuda.empty_cache()` + `gc.collect()`, retry exactly once at half duration, then return `OUT_OF_MEMORY` with actionable hint.
 - Progress contract uses SSE-friendly payload `{step,total_steps,eta_s,phase}` across phases `loading|generating|encoding|finalizing`, and jobs router forwards these as SSE `progress` events with terminal `done/error` events.
 - Jobs output path is centralized via new `get_jobs_dir()` in `paths.py`, ensuring all generation artifacts remain scoped to `<app_data>/jobs/<job_id>/`.
+
+## W2.4: Lyrics Transcription Endpoint (heartlib)
+
+- **Pattern reuse**: Mirrored `generation/engine.py` structure for `lyrics/engine.py` — separate `asyncio.Lock()`, per-job `asyncio.Event` cancel map, lazy torch/heartlib import inside methods, cached `_pipe`.
+- **Concurrency reject contract**: `ApiError(code="VALIDATION_ERROR", retriable=True)` when lock held → maps to HTTP 422 via `ERROR_HTTP_STATUS`. Spec mentioned "429 behavior" semantically but the project's error-code→status map dictates 422.
+- **`LyricsSegment.start/end`** typed as `int` (milliseconds) — multiplied float seconds by 1000 when normalizing heartlib `chunks[].timestamp`.
+- **SSE pattern**: Reused fallback `EventSourceResponse` shim from `routers/jobs.py` for environments without `sse_starlette`.
+- **Pyright pragma**: Routers wrapping engines with `Any`-typed heartlib results need `reportUnknownMemberType=false, reportUnknownArgumentType=false` (matches `routers/models.py` pattern).
+- **Sparse-file test trick**: `seek(MAX+1) + write(b"\x00")` creates >50MB file for validation tests without consuming disk — keep the comment explaining the trick.
+- **Device policy**: MPS → CUDA → CPU fallback; `AUDIOMORPH_REQUIRE_GPU=1` env triggers `GPU_UNAVAILABLE` error when no accelerator available.
