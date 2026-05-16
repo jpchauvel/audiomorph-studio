@@ -23,6 +23,7 @@ from .routers.export import router as export_router
 from .routers.jobs import router as jobs_router
 from .routers.lyrics import router as lyrics_router
 from .routers.models import router as models_router
+from .routers.openrouter import router as openrouter_router
 from .routers.settings import router as settings_router
 
 def _gpu_info() -> dict[str, Any]:
@@ -141,5 +142,6 @@ def create_app(auth_token: str = "") -> FastAPI:
     app.include_router(lyrics_router)
     app.include_router(export_router)
     app.include_router(settings_router)
+    app.include_router(openrouter_router)
 
     return app
