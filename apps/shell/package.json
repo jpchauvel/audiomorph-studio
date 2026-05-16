@@ -19,6 +19,7 @@
     "dist:win": "pnpm run build:all && electron-builder --win --config electron-builder.yml",
     "dist:linux": "pnpm run build:all && electron-builder --linux --config electron-builder.yml",
     "test": "vitest run --reporter=junit --outputFile=../../.test-results/shell.xml",
+    "test:e2e": "playwright test --config=playwright.e2e.config.ts",
     "typecheck": "tsc --noEmit -p tsconfig.json"
   },
   "dependencies": {
@@ -26,6 +27,8 @@
     "@audiomorph/ipc-contracts": "workspace:*"
   },
   "devDependencies": {
+    "@audiomorph/test-helpers": "workspace:^",
+    "@playwright/test": "^1.60.0",
     "@types/node": "^20.19.0",
     "concurrently": "^9.1.0",
     "electron": "^33.2.1",
