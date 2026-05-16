@@ -36,7 +36,8 @@
     "test:hf:warm": "node packages/test-helpers/scripts/warm-hf-cache.mjs",
     "test:hf:verify": "node packages/test-helpers/scripts/verify-hf-cache.mjs",
     "ci:hf:key": "node scripts/ci-hf-cache-key.mjs",
-    "ci:hf:verify": "node scripts/ci-hf-cache-verify.mjs"
+    "ci:hf:verify": "node scripts/ci-hf-cache-verify.mjs",
+    "smoke:engines": "node scripts/smoke-real-engines.mjs"
   },
   "version": "2.0.0"
 }
