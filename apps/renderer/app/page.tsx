@@ -130,6 +130,8 @@ export default function StudioPage() {
 
   return (
     <div className="min-h-screen flex flex-col bg-[var(--color-surface)] text-[var(--color-text)]">
+      {/* AUDIOMORPH_TEST_MODE hook */}
+      <span hidden data-testid="route-ready" />
       <header className="px-8 py-6 border-b border-[var(--color-border)]">
         <h1 className="text-2xl font-bold text-[var(--color-text)]">AudioMorph Studio</h1>
       </header>

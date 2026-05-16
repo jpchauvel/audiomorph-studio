@@ -123,6 +123,8 @@ export default function FirstRunPage() {
       style={{ background: 'var(--color-surface)' }}
       data-testid="first-run-wizard"
     >
+      {/* AUDIOMORPH_TEST_MODE hook */}
+      <span hidden data-testid="route-ready" />
       <div className="flex gap-3 mb-10" aria-label="Setup progress">
         {[1, 2, 3, 4].map((s) => (
           <div

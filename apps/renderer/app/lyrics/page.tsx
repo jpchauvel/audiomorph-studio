@@ -91,6 +91,8 @@ export default function LyricsPage() {
 
   return (
     <div className="max-w-2xl mx-auto p-8 flex flex-col gap-6" data-testid="lyrics-workspace">
+      {/* AUDIOMORPH_TEST_MODE hook */}
+      <span hidden data-testid="route-ready" />
       <h1 className="text-2xl font-bold" style={{ color: 'var(--color-text)' }}>Lyrics Workspace</h1>
 
       <input 

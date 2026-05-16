@@ -283,3 +283,29 @@
 - Pyenv local: Python 3.14.0 runs the suite despite `pyproject.toml`
   declaring `requires-python = ">=3.12,<3.13"` — pytest invocation works
   because the constraint is a metadata hint, not a runtime gate.
+
+## T12 — Visual regression suite
+
+- `node:fs` does **not** export `globSync` in this runtime (Node 22 ESM). Use
+  static route lists in spec files or `fast-glob` if dynamic discovery needed.
+  Auto-discovery sounded elegant but adding a route to a 6-entry ROUTES const
+  is a trivial maintenance cost.
+- Sentinel pattern `<span hidden data-testid="route-ready" />` placed as first
+  child of each page wrapper avoids colliding with existing testids
+  (`lyrics-workspace`, `first-run-wizard`). Always-rendered so no async wait
+  on data fetches — eliminates flake without `waitForTimeout`.
+- `data-theme` attribute on `<html>` is set via `page.evaluate` per-test. Note
+  current `globals.css` only defines dark tokens — `light` snapshots are
+  identical to `dark` snapshots in practice. The matrix still locks in current
+  behavior so when light-mode tokens land, the diff will be obvious.
+- Per-platform baselines via `snapshotPathTemplate: '{testDir}/__snapshots__/
+  {platform}/{testFilePath}/{arg}{ext}'`. macOS-only baselines committed;
+  linux/win32 generated on those runners in CI.
+- OKLCH-flip regression proof: changing `--color-primary` from
+  `oklch(65% 0.22 250)` to `oklch(80% 0.22 30)` triggered 4/12 failures
+  (lyrics + first-run, both themes). Confirms `maxDiffPixelRatio: 0.01`
+  catches realistic color regressions.
+- Playwright `webServer` with `bun x serve@latest out -l 3000` correctly
+  serves Next.js static export — but requires fresh `pnpm --filter renderer
+  build` after any source change. Regression detection workflow: edit → build
+  → test → revert → build → test.

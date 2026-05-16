@@ -135,6 +135,8 @@ export default function DiagnosticsPage() {
 
   return (
     <div className="container mx-auto max-w-4xl space-y-6 p-8">
+      {/* AUDIOMORPH_TEST_MODE hook */}
+      <span hidden data-testid="route-ready" />
       <div className="flex items-center justify-between">
         <h1 className="text-3xl font-bold tracking-tight">Hardware Diagnostics</h1>
         <Link
