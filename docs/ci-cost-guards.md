@@ -4,14 +4,14 @@ Reference for understanding, monitoring, and controlling GitHub Actions spend.
 
 ## Estimated Monthly Cost
 
-| Workflow | Trigger | OS | Minutes/run | Multiplier | Runs/month (est.) | Cost/month (est.) |
-|---|---|---|---|---|---|---|
-| test-pr | PR push | Linux | ~12 | 1× | ~80 | ~16 min |
-| test-main | main push | Linux | ~25 | 1× | ~20 | ~8 min |
-| test-nightly | schedule | Linux | ~30 | 1× | ~30 | ~15 min |
-| test-nightly | schedule | macOS | ~30 | 10× | ~30 | ~150 min |
-| test-nightly | schedule | Windows | ~30 | 2× | ~30 | ~30 min |
-| update-visual-baselines | manual | all 3 | ~40 | varies | ~2 | ~10 min |
+| Workflow                | Trigger   | OS      | Minutes/run | Multiplier | Runs/month (est.) | Cost/month (est.) |
+| ----------------------- | --------- | ------- | ----------- | ---------- | ----------------- | ----------------- |
+| test-pr                 | PR push   | Linux   | ~12         | 1×         | ~80               | ~16 min           |
+| test-main               | main push | Linux   | ~25         | 1×         | ~20               | ~8 min            |
+| test-nightly            | schedule  | Linux   | ~30         | 1×         | ~30               | ~15 min           |
+| test-nightly            | schedule  | macOS   | ~30         | 10×        | ~30               | ~150 min          |
+| test-nightly            | schedule  | Windows | ~30         | 2×         | ~30               | ~30 min           |
+| update-visual-baselines | manual    | all 3   | ~40         | varies     | ~2                | ~10 min           |
 
 > GitHub Actions free tier: 2,000 min/month (public repos: unlimited).
 > macOS runners cost 10× Linux; Windows 2× Linux.
@@ -20,12 +20,12 @@ Reference for understanding, monitoring, and controlling GitHub Actions spend.
 
 Each workflow has a `concurrency` group to prevent redundant runs:
 
-| Workflow | Group key | cancel-in-progress |
-|---|---|---|
-| test-pr | `pr-${{ github.ref }}` | `true` — cancels superseded PR runs |
-| test-main | `main-${{ github.sha }}` | `false` — never cancel a main run mid-flight |
-| test-nightly | `nightly-${{ github.run_id }}` | `false` — each nightly is independent |
-| update-visual-baselines | `visual-update-${{ branch }}` | `false` — never cancel a baseline commit |
+| Workflow                | Group key                      | cancel-in-progress                           |
+| ----------------------- | ------------------------------ | -------------------------------------------- |
+| test-pr                 | `pr-${{ github.ref }}`         | `true` — cancels superseded PR runs          |
+| test-main               | `main-${{ github.sha }}`       | `false` — never cancel a main run mid-flight |
+| test-nightly            | `nightly-${{ github.run_id }}` | `false` — each nightly is independent        |
+| update-visual-baselines | `visual-update-${{ branch }}`  | `false` — never cancel a baseline commit     |
 
 **Why cancel-in-progress: false on main/nightly?**
 Cancelling a mid-flight run loses test artifacts and JUnit XML reports that CI depends on.

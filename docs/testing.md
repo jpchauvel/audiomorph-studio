@@ -4,14 +4,14 @@ AudioMorph Studio uses a six-layer test pyramid: **component** tests for rendere
 
 ## Test layers
 
-| Layer | Command | Runtime budget | CI tier |
-| --- | --- | --- | --- |
-| Component (renderer in isolation) | `pnpm test:component` | < 30 s | every push |
-| Renderer integration (mocked IPC) | `pnpm test:integration` | < 60 s | every push |
-| Sidecar integration (Python) | `pnpm test:sidecar-integration` | < 90 s | every push |
-| Visual regression (Playwright snapshots) | `pnpm test:visual` | < 90 s | every push |
-| Electron E2E (real shell + sidecar + engines) | `pnpm test:e2e` | < 5 min | nightly + release |
-| CI pipeline (full matrix) | GitHub Actions | < 15 min | per PR + release |
+| Layer                                         | Command                         | Runtime budget | CI tier           |
+| --------------------------------------------- | ------------------------------- | -------------- | ----------------- |
+| Component (renderer in isolation)             | `pnpm test:component`           | < 30 s         | every push        |
+| Renderer integration (mocked IPC)             | `pnpm test:integration`         | < 60 s         | every push        |
+| Sidecar integration (Python)                  | `pnpm test:sidecar-integration` | < 90 s         | every push        |
+| Visual regression (Playwright snapshots)      | `pnpm test:visual`              | < 90 s         | every push        |
+| Electron E2E (real shell + sidecar + engines) | `pnpm test:e2e`                 | < 5 min        | nightly + release |
+| CI pipeline (full matrix)                     | GitHub Actions                  | < 15 min       | per PR + release  |
 
 ## First-time setup
 

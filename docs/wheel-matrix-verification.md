@@ -1,8 +1,8 @@
 # Python 3.14 Wheel Matrix Verification
 
-**Date**: 2026-05-16  
-**Target**: heartlib dependencies  
-**Python Version**: 3.14 (cp314)  
+**Date**: 2026-05-16
+**Target**: heartlib dependencies
+**Python Version**: 3.14 (cp314)
 **Target Platforms**: macOS Apple Silicon (arm64), Windows x64 (amd64), Linux x64 (x86_64)
 
 ## Summary
@@ -13,22 +13,22 @@ This document verifies the availability of Python 3.14 (cp314) wheels on PyPI fo
 
 ## Wheel Matrix
 
-| Package | Required Version | macOS arm64 | Windows x64 | Linux x64 | Status | Fallback Plan |
-|---------|------------------|-------------|-------------|-----------|--------|---------------|
-| torch | 2.4-2.11 | ✅ 10 wheels | ✅ 10 wheels | ✅ 12 wheels | **READY** | N/A |
-| torchcodec | 0.10.0 | ✅ 6 wheels | ✅ 6 wheels | ✅ 6 wheels | **READY** | N/A |
-| torchaudio | 2.4-2.11 | ✅ 8 wheels | ✅ 8 wheels | ✅ 8 wheels | **READY** | N/A |
-| torchvision | 0.19-0.26 | ✅ 10 wheels | ✅ 10 wheels | ✅ 10 wheels | **READY** | N/A |
-| numpy | 2.2.0 | ✅ 44 wheels | ✅ 22 wheels | ✅ 22 wheels | **READY** | N/A |
-| torchtune | 0.4.0 | ❌ 0 wheels | ❌ 0 wheels | ❌ 0 wheels | **BLOCKER** | Source build or pin to Python 3.12 |
-| torchao | 0.9.0 | ❌ 0 wheels | ❌ 0 wheels | ❌ 0 wheels | **BLOCKER** | Source build or pin to Python 3.12 |
-| bitsandbytes | 0.49.0 | ❌ 0 wheels | ❌ 0 wheels | ❌ 0 wheels | **BLOCKER** | Source build or pin to Python 3.12 |
-| transformers | 4.57.0 | ❌ 0 wheels | ❌ 0 wheels | ❌ 0 wheels | **BLOCKER** | Source build or pin to Python 3.12 |
-| accelerate | 1.12.0 | ❌ 0 wheels | ❌ 0 wheels | ❌ 0 wheels | **BLOCKER** | Source build or pin to Python 3.12 |
-| huggingface_hub | (latest) | ❌ 0 wheels | ❌ 0 wheels | ❌ 0 wheels | **BLOCKER** | Source build or pin to Python 3.12 |
-| soundfile | (latest) | ❌ 0 wheels | ❌ 0 wheels | ❌ 0 wheels | **BLOCKER** | Source build or pin to Python 3.12 |
-| modelscope | 1.33.0 | ❌ 0 wheels | ❌ 0 wheels | ❌ 0 wheels | **BLOCKER** | Source build or pin to Python 3.12 |
-| vector-quantize-pytorch | 1.27.15 | ❌ 0 wheels | ❌ 0 wheels | ❌ 0 wheels | **BLOCKER** | Source build or pin to Python 3.12 |
+| Package                 | Required Version | macOS arm64  | Windows x64  | Linux x64    | Status      | Fallback Plan                      |
+| ----------------------- | ---------------- | ------------ | ------------ | ------------ | ----------- | ---------------------------------- |
+| torch                   | 2.4-2.11         | ✅ 10 wheels | ✅ 10 wheels | ✅ 12 wheels | **READY**   | N/A                                |
+| torchcodec              | 0.10.0           | ✅ 6 wheels  | ✅ 6 wheels  | ✅ 6 wheels  | **READY**   | N/A                                |
+| torchaudio              | 2.4-2.11         | ✅ 8 wheels  | ✅ 8 wheels  | ✅ 8 wheels  | **READY**   | N/A                                |
+| torchvision             | 0.19-0.26        | ✅ 10 wheels | ✅ 10 wheels | ✅ 10 wheels | **READY**   | N/A                                |
+| numpy                   | 2.2.0            | ✅ 44 wheels | ✅ 22 wheels | ✅ 22 wheels | **READY**   | N/A                                |
+| torchtune               | 0.4.0            | ❌ 0 wheels  | ❌ 0 wheels  | ❌ 0 wheels  | **BLOCKER** | Source build or pin to Python 3.12 |
+| torchao                 | 0.9.0            | ❌ 0 wheels  | ❌ 0 wheels  | ❌ 0 wheels  | **BLOCKER** | Source build or pin to Python 3.12 |
+| bitsandbytes            | 0.49.0           | ❌ 0 wheels  | ❌ 0 wheels  | ❌ 0 wheels  | **BLOCKER** | Source build or pin to Python 3.12 |
+| transformers            | 4.57.0           | ❌ 0 wheels  | ❌ 0 wheels  | ❌ 0 wheels  | **BLOCKER** | Source build or pin to Python 3.12 |
+| accelerate              | 1.12.0           | ❌ 0 wheels  | ❌ 0 wheels  | ❌ 0 wheels  | **BLOCKER** | Source build or pin to Python 3.12 |
+| huggingface_hub         | (latest)         | ❌ 0 wheels  | ❌ 0 wheels  | ❌ 0 wheels  | **BLOCKER** | Source build or pin to Python 3.12 |
+| soundfile               | (latest)         | ❌ 0 wheels  | ❌ 0 wheels  | ❌ 0 wheels  | **BLOCKER** | Source build or pin to Python 3.12 |
+| modelscope              | 1.33.0           | ❌ 0 wheels  | ❌ 0 wheels  | ❌ 0 wheels  | **BLOCKER** | Source build or pin to Python 3.12 |
+| vector-quantize-pytorch | 1.27.15          | ❌ 0 wheels  | ❌ 0 wheels  | ❌ 0 wheels  | **BLOCKER** | Source build or pin to Python 3.12 |
 
 ---
 
@@ -127,6 +127,7 @@ These packages have **NO cp314 wheels** on PyPI and require fallback strategies:
 **DO NOT use Python 3.14 for heartlib in production yet.**
 
 **Recommended approach:**
+
 1. Keep Python 3.12 as the primary target for heartlib
 2. Monitor PyPI for cp314 wheel releases from blocker packages
 3. Once 7+ of the 9 blocker packages have cp314 wheels, re-evaluate
@@ -134,6 +135,7 @@ These packages have **NO cp314 wheels** on PyPI and require fallback strategies:
 ### Phase 1 Strategy (Future)
 
 When blocker packages release cp314 wheels:
+
 1. Update `heartlib/pyproject.toml` to allow Python 3.14
 2. Test with `pip install --dry-run` on all 3 platforms
 3. Run full integration tests before production deployment
@@ -143,12 +145,14 @@ When blocker packages release cp314 wheels:
 If Python 3.14 must be used immediately:
 
 **Option A: Source Build (Risky)**
+
 - Install packages from source: `pip install --no-binary :all: <package>`
 - Requires build tools (gcc, CUDA, etc.) on all platforms
 - Slow installation, potential compilation failures
 - **Not recommended for production**
 
 **Option B: Pin to Python 3.12 (Recommended)**
+
 - Update `heartlib/pyproject.toml`: `requires-python = ">=3.10,<3.14"`
 - Ensures all dependencies have pre-built wheels
 - Fastest, most reliable deployment
@@ -159,16 +163,19 @@ If Python 3.14 must be used immediately:
 ## Verification Methodology
 
 ### Data Collection
+
 - **Source**: PyPI JSON API (`https://pypi.org/pypi/<package>/json`)
 - **Date**: 2026-05-16
 - **Method**: Automated wheel detection for cp314 tag + platform-specific suffixes
 
 ### Platform Mapping
+
 - **macOS Apple Silicon**: `macosx_*_arm64`
 - **Windows x64**: `win_amd64`
 - **Linux x64**: `manylinux*_x86_64`
 
 ### Wheel Tag Format
+
 - **cp314**: CPython 3.14 (free-threaded)
 - **cp314t**: CPython 3.14 (free-threaded variant)
 
@@ -192,6 +199,6 @@ If Python 3.14 must be used immediately:
 
 ---
 
-**Document Status**: ✅ COMPLETE  
-**Last Updated**: 2026-05-16  
+**Document Status**: ✅ COMPLETE
+**Last Updated**: 2026-05-16
 **Verification**: All 14 packages checked; 5 READY, 9 BLOCKER

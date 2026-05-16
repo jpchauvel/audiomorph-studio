@@ -18,6 +18,7 @@ This document outlines the manual steps required to release AudioMorph Studio.
 Before pushing the release tag, perform smoke tests on all three target platforms:
 
 ### macOS (Apple Silicon)
+
 - [ ] Build locally: `pnpm run dist:mac` (requires signing secrets)
 - [ ] Launch the .dmg installer
 - [ ] Verify app launches and loads the renderer
@@ -25,6 +26,7 @@ Before pushing the release tag, perform smoke tests on all three target platform
 - [ ] Verify sidecar process starts and logs appear in `~/Library/Application Support/AudioMorph Studio/logs/`
 
 ### Windows (x64)
+
 - [ ] Build locally: `pnpm run dist:win`
 - [ ] Run the .exe installer
 - [ ] Verify app launches and loads the renderer
@@ -32,6 +34,7 @@ Before pushing the release tag, perform smoke tests on all three target platform
 - [ ] Verify sidecar process starts and logs appear in `%APPDATA%\AudioMorph Studio\logs\`
 
 ### Linux (x64)
+
 - [ ] Build locally: `pnpm run dist:linux`
 - [ ] Install .deb: `sudo dpkg -i dist/audiomorph-studio-*.deb`
 - [ ] Launch app from applications menu or `audiomorph-studio` CLI
@@ -65,6 +68,7 @@ Before pushing the release tag, perform smoke tests on all three target platform
 ## Rollback
 
 If issues are discovered after release:
+
 - [ ] Delete the GitHub Release (if not yet published)
 - [ ] Delete the git tag: `git tag -d v0.2.0 && git push origin :refs/tags/v0.2.0`
 - [ ] Revert version commit: `git revert <commit-hash>`

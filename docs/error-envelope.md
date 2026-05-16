@@ -24,29 +24,31 @@ interface ApiError {
 
 ## Error Code Catalog
 
-| Error Code | HTTP Status | Description | Retriable |
-|---|---|---|---|
-| VALIDATION_ERROR | 422 | Input validation failed (malformed request, missing fields, invalid types) | No |
-| MODEL_NOT_FOUND | 404 | Requested model not found in registry or cache | No |
-| GPU_UNAVAILABLE | 503 | GPU resources unavailable (no CUDA devices, out of VRAM) | Yes |
-| OUT_OF_MEMORY | 503 | System ran out of memory during processing | Yes |
-| SIDECAR_DOWN | 503 | Python sidecar process is unavailable or crashed | Yes |
-| JOB_NOT_FOUND | 404 | Job ID does not exist or has expired | No |
-| CANCELLED | 409 | Operation was cancelled by user or system | No |
-| EXPORT_FAILED | 500 | Audio export/encoding failed (codec error, file I/O) | No |
-| DOWNLOAD_FAILED | 500 | Model or asset download failed (network, storage) | No |
-| KEY_VAULT_ERROR | 500 | Secure key storage operation failed | No |
-| INTERNAL_ERROR | 500 | Unexpected server error (unhandled exception) | No |
+| Error Code       | HTTP Status | Description                                                                | Retriable |
+| ---------------- | ----------- | -------------------------------------------------------------------------- | --------- |
+| VALIDATION_ERROR | 422         | Input validation failed (malformed request, missing fields, invalid types) | No        |
+| MODEL_NOT_FOUND  | 404         | Requested model not found in registry or cache                             | No        |
+| GPU_UNAVAILABLE  | 503         | GPU resources unavailable (no CUDA devices, out of VRAM)                   | Yes       |
+| OUT_OF_MEMORY    | 503         | System ran out of memory during processing                                 | Yes       |
+| SIDECAR_DOWN     | 503         | Python sidecar process is unavailable or crashed                           | Yes       |
+| JOB_NOT_FOUND    | 404         | Job ID does not exist or has expired                                       | No        |
+| CANCELLED        | 409         | Operation was cancelled by user or system                                  | No        |
+| EXPORT_FAILED    | 500         | Audio export/encoding failed (codec error, file I/O)                       | No        |
+| DOWNLOAD_FAILED  | 500         | Model or asset download failed (network, storage)                          | No        |
+| KEY_VAULT_ERROR  | 500         | Secure key storage operation failed                                        | No        |
+| INTERNAL_ERROR   | 500         | Unexpected server error (unhandled exception)                              | No        |
 
 ## Usage Guidelines
 
 ### Server-Side
+
 - Never include stack traces in the `message` field
 - Place stack traces and sensitive context in `details` (server-side only)
 - Set `retriable: true` only for transient failures (503, timeouts)
 - Provide actionable `hint` for user-facing errors
 
 ### Client-Side
+
 - Check `retriable` flag before implementing retry logic
 - Display `message` to users
 - Log `code` for analytics and debugging
@@ -55,6 +57,7 @@ interface ApiError {
 ## Example Responses
 
 ### Validation Error
+
 ```json
 {
   "code": "VALIDATION_ERROR",
@@ -69,6 +72,7 @@ interface ApiError {
 ```
 
 ### Transient Service Error
+
 ```json
 {
   "code": "GPU_UNAVAILABLE",
@@ -79,6 +83,7 @@ interface ApiError {
 ```
 
 ### Not Found
+
 ```json
 {
   "code": "MODEL_NOT_FOUND",

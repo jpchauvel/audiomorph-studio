@@ -27,14 +27,14 @@ The sidecar binds and listens before Uvicorn starts accepting requests:
 Handshake payload schema:
 
 ```json
-{"port": 42837, "token": "<hex>", "pid": 12345}
+{ "port": 42837, "token": "<hex>", "pid": 12345 }
 ```
 
 - `port`: resolved listening port
 - `token`: exact shared secret expected in request header
 - `pid`: sidecar process id
 
-The handshake is emitted *before* server startup, so the host can reliably discover endpoint details without parsing logs.
+The handshake is emitted _before_ server startup, so the host can reliably discover endpoint details without parsing logs.
 
 ## Authentication
 
@@ -51,7 +51,7 @@ Exempt paths:
 Unauthorized response payload:
 
 ```json
-{"code":"KEY_VAULT_ERROR","message":"Unauthorized","retriable":false}
+{ "code": "KEY_VAULT_ERROR", "message": "Unauthorized", "retriable": false }
 ```
 
 HTTP status: `401`.
