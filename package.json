@@ -34,7 +34,9 @@
     "test:full": "pnpm test:mid && pnpm test:e2e",
     "test:e2e:headed": "PWDEBUG=1 pnpm exec playwright test --config=apps/shell/playwright.e2e.config.ts --headed",
     "test:hf:warm": "node packages/test-helpers/scripts/warm-hf-cache.mjs",
-    "test:hf:verify": "node packages/test-helpers/scripts/verify-hf-cache.mjs"
+    "test:hf:verify": "node packages/test-helpers/scripts/verify-hf-cache.mjs",
+    "ci:hf:key": "node scripts/ci-hf-cache-key.mjs",
+    "ci:hf:verify": "node scripts/ci-hf-cache-verify.mjs"
   },
   "version": "2.0.0"
 }
