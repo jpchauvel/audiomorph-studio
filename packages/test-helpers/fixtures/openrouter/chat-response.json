@@ -1,0 +1,20 @@
+{
+  "id": "gen-1234567890abcdef",
+  "object": "text_completion",
+  "created": 1704067200,
+  "model": "openai/gpt-3.5-turbo",
+  "choices": [
+    {
+      "message": {
+        "role": "assistant",
+        "content": "This is a test response from the OpenRouter API. It demonstrates the expected response structure for chat completions."
+      },
+      "finish_reason": "stop"
+    }
+  ],
+  "usage": {
+    "prompt_tokens": 42,
+    "completion_tokens": 28,
+    "total_tokens": 70
+  }
+}

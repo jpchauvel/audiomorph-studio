@@ -46,3 +46,20 @@
 - All functions use ESM imports (no CommonJS)
 - 9 vitest unit tests pass (determinism, schema validation, missing detection, path construction)
 - Evidence files created in `.sisyphus/evidence/task-2-*.txt`
+
+## [2026-05-16] Secret scrubber helper implemented
+- Implemented `packages/test-helpers/src/scrubber.ts` with 5 secret pattern matchers:
+  - `X-Audiomorph-Token: \S+` (AUDIOMORPH_TOKEN)
+  - `Authorization: Bearer \S+` (BEARER_TOKEN)
+  - `sk-or-[a-zA-Z0-9-]+` (OPENROUTER_KEY)
+  - `hf_[a-zA-Z0-9]+` (HUGGINGFACE_TOKEN)
+  - `Bearer [A-Za-z0-9._-]{20,}` (GENERIC_BEARER)
+- Exports: `SECRET_PATTERNS`, `scrubSecrets(text)`, `scrubFile(path)`, `scrubDirectory(dir)`
+- `scrubSecrets(text)`: Returns {replacements: number}, replaces with [REDACTED-<pattern-name>]
+- `scrubFile(path)`: Atomic writes via temp file + fs.rename, returns {replacements: number}
+- `scrubDirectory(dir)`: Recursive, skips node_modules and hidden dirs, returns {filesProcessed, replacements}
+- Created `packages/test-helpers/bin/scrubber-cli.js` with #!/usr/bin/env node shebang (executable)
+- Updated `package.json` with `"bin": { "scrubber-cli": "./bin/scrubber-cli.js" }`
+- 22 vitest unit tests pass (all patterns, idempotency, atomic writes, directory recursion)
+- Evidence files: task-3-scrub-planted-secrets.txt, task-3-idempotent.txt, task-3-clean-unchanged.txt
+- Commit: "test(scrubber): add secret redaction helper with CLI"

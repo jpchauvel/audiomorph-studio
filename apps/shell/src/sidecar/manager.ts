@@ -162,12 +162,19 @@ export class SidecarManager extends EventEmitter {
   private async spawnAndHandshake(): Promise<void> {
     const pythonPath = this.resolvePythonPath();
     const launchToken = this.tokenGenerator();
+    
+    // AUDIOMORPH_TEST_MODE hook
+    const env = process.env.AUDIOMORPH_TEST_MODE === "1" 
+      ? { ...process.env, AUDIOMORPH_TEST_MODE: "1" }
+      : process.env;
+    
     const proc = spawn(
       pythonPath,
       ["-m", "audiomorph.main", "--port", "0", "--token", launchToken],
       {
         detached: false,
         stdio: ["ignore", "pipe", "pipe"],
+        env,
       },
     );
 

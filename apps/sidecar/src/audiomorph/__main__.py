@@ -42,6 +42,13 @@ def write_handshake(*, fd: int | None, path: str | None, payload: dict[str, int 
 def main() -> int:
     args = parse_args()
 
+    # AUDIOMORPH_TEST_MODE hook
+    if os.environ.get("CI") == "true" and os.environ.get("AUDIOMORPH_TEST_MODE") != "1":
+        import sys
+        sys.stderr.write("AUDIOMORPH_TEST_MODE required in CI\n")
+        sys.stderr.flush()
+        return 78
+
     if args.host != "127.0.0.1":
         raise ValueError("Only loopback host 127.0.0.1 is allowed")
 

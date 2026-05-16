@@ -29,6 +29,9 @@
       "types": "./dist/fixtures.d.ts"
     }
   },
+  "bin": {
+    "scrubber-cli": "./bin/scrubber-cli.js"
+  },
   "scripts": {
     "build": "tsc",
     "typecheck": "tsc --noEmit",

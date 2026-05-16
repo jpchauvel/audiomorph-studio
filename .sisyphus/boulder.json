@@ -18,6 +18,15 @@
       "agent": "Sisyphus-Junior",
       "category": "quick",
       "updated_at": "2026-05-16T19:11:26.615Z"
+    },
+    "todo:2": {
+      "task_key": "todo:2",
+      "task_label": "2",
+      "task_title": "**HF model manifest + cache helper**",
+      "session_id": "ses_1cdcbb7ceffe15l907obKgs32W",
+      "agent": "Sisyphus-Junior",
+      "category": "quick",
+      "updated_at": "2026-05-16T19:15:17.970Z"
     }
   }
 }
