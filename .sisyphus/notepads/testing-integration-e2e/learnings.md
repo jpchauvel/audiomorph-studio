@@ -210,3 +210,36 @@
 - The fake-launcher pattern (`makeFakeLauncher`) lets us unit-test the
   full happy-path and error paths of `launchElectronApp` without ever
   spawning Electron. Real Electron boot is deferred to T14 e2e.
+
+## T10 — Renderer integration journey specs
+
+- Six journey specs at `apps/renderer/tests/integration/journey-*.spec.ts`
+  share `_setup.ts` which exports `createSidecarFixture()` — a Playwright
+  fixture extension providing `sidecar`, `staticServer`, and `apiBase`.
+- Static server: prefer `bunx --bun serve`, fall back to `npx --yes serve`.
+  Bind to port 0 and parse stdout for `http://127.0.0.1:<port>`; never
+  hard-code 3000.
+- `_setup.ts` injects `window.__AUDIOMORPH_API_BASE__` and
+  `window.__AUDIOMORPH_TOKEN__` via `page.addInitScript()` so the renderer
+  bundle (which expects these globals) can reach the spawned sidecar.
+- Test-helpers is ESM-only and lives outside the renderer's CJS context.
+  Solution: nested `apps/renderer/tests/integration/package.json` with
+  `"type": "module"`, plus NodeNext-style `./_setup.js` import extension.
+  Without this, Playwright's CJS transform collides with test-helpers'
+  ESM-only `"type": "module"` and throws `ReferenceError: exports is not
+  defined in ES module scope` at the first `import`.
+- `__dirname` not available in ESM specs; reconstruct via
+  `path.dirname(fileURLToPath(import.meta.url))`.
+- Skip-gate pattern: both `RENDERER_BUILD_PRESENT` (out/index.html exists)
+  and `SIDECAR_RUNTIME_PRESENT` (.venv/bin/python exists) are checked at
+  spec top via `test.skip(...)`. Suite is green-skipped when either is
+  absent, matching CI environments without Python.
+- Lyrics spec boots a local `http.createServer` returning the static
+  OpenRouter fixture; the sidecar would receive the stub URL via
+  `AUDIOMORPH_OPENROUTER_BASE_URL` `extraEnv`, but the wiring of that env
+  through to the sidecar's OpenRouter client is the sidecar's job — the
+  test only guarantees the stub is reachable and the lyrics route loads.
+- Token leak assertion: `expect(await page.content()).not.toContain(TEST_TOKEN)`
+  catches any accidental rendering of the auth token into the DOM.
+- Auth header convention enforced: only `X-Audiomorph-Token`, never
+  `Authorization: Bearer` (see journey-settings.spec.ts authProbe).
