@@ -92,6 +92,16 @@ export function buildWindowOptions(): Electron.BrowserWindowConstructorOptions {
 async function createWindow(): Promise<BrowserWindow> {
   const win = new BrowserWindow(buildWindowOptions());
   mainWindow = win;
+  let didShowWindow = false;
+
+  const showWindow = (): void => {
+    if (didShowWindow || win.isDestroyed()) {
+      return;
+    }
+    didShowWindow = true;
+    win.show();
+    win.focus();
+  };
 
   win.on('closed', () => {
     if (mainWindow === win) {
@@ -117,15 +127,40 @@ async function createWindow(): Promise<BrowserWindow> {
     }
   });
 
-  // Register show listener BEFORE loadURL/loadFile so we don't miss
-  // ready-to-show firing during page load (the event is one-shot and
-  // attaching after `await load*` is a race we always lose in dev).
-  win.once('ready-to-show', () => win.show());
+  win.once('ready-to-show', showWindow);
+  win.webContents.once('did-finish-load', showWindow);
+  win.webContents.once('did-fail-load', () => {
+    showWindow();
+  });
 
-  if (isDev) {
-    await win.loadURL('http://localhost:3000');
-  } else {
-    await win.loadFile(resolveRendererEntry());
+  const showFallbackTimer = setTimeout(
+    () => {
+      showWindow();
+    },
+    isDev ? 15000 : 5000,
+  );
+
+  win.once('closed', () => {
+    clearTimeout(showFallbackTimer);
+  });
+
+  try {
+    if (isDev) {
+      await win.loadURL('http://localhost:3000');
+    } else {
+      await win.loadFile(resolveRendererEntry());
+    }
+    showWindow();
+  } catch {
+    showWindow();
+    if (!win.isDestroyed()) {
+      await win.loadURL(
+        `data:text/html;charset=UTF-8,${encodeURIComponent('<!doctype html><title>AudioMorph Studio</title><style>body{font-family:-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,sans-serif;background:#0a0a0a;color:#e5e7eb;margin:0;display:flex;align-items:center;justify-content:center;height:100vh;text-align:center;padding:24px}p{opacity:.85;max-width:560px}</style><main><h1>Renderer failed to load</h1><p>The app window started, but the renderer could not be reached. Keep the dev server running and restart the app.</p></main>')}`,
+      );
+      showWindow();
+    }
+  } finally {
+    clearTimeout(showFallbackTimer);
   }
 
   return win;
