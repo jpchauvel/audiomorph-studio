@@ -26,6 +26,7 @@ import { registerIpcBridge } from './ipc/bridge';
 import { registerVaultHandlers } from './ipc/vault-handlers';
 import { setupAppLifecycle } from './lifecycle/app-lifecycle';
 import { buildMenu } from './menu/menu-builder';
+import { SidecarManager } from './sidecar/manager';
 import { disableAutoUpdater } from './updater/no-updater';
 
 disableAutoUpdater();
@@ -134,6 +135,7 @@ if (app && typeof app.whenReady === 'function' && !process.env.AUDIOMORPH_SHELL_
   app.whenReady().then(async () => {
     setupCrashReporter(app.getPath('userData'));
     await enforceHardwareRequirements();
+    SidecarManager.getInstance({ userDataPath: app.getPath('userData') });
     registerIpcBridge();
     registerHardwareIpcHandler();
     registerVaultHandlers();
