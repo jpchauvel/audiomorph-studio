@@ -24,9 +24,19 @@ type Model = {
   name: string;
 };
 
+export type GenerationRequest = {
+  prompt: string;
+  lyrics: string | undefined;
+  model_id: string;
+  duration_s: number;
+  seed: number | undefined;
+  temperature: number;
+  top_k: number;
+};
+
 type Props = {
   models: Model[];
-  onSubmit: (data: any) => void;
+  onSubmit: (data: GenerationRequest) => void;
   onCancel: () => void;
 };
 

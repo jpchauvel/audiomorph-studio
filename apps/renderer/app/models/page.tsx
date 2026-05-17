@@ -31,12 +31,6 @@ import {
   DownloadProgress as _DownloadProgress,
 } from '@/lib/stores/models';
 
-const API_BASE = () =>
-  (typeof window !== 'undefined' && (window as any).__AUDIOMORPH_API_BASE__) ||
-  'http://localhost:8000';
-const TOKEN = () => (typeof window !== 'undefined' && (window as any).__AUDIOMORPH_TOKEN__) || '';
-const headers = () => ({ 'X-Audiomorph-Token': TOKEN() });
-
 export default function ModelsPage() {
   const {
     models,
@@ -45,15 +39,14 @@ export default function ModelsPage() {
     setProgress,
     clearProgress: _clearProgress,
   } = useModelsStore();
-  const [activeDownloads, setActiveDownloads] = useState<Record<string, EventSource>>({});
+  const [activeDownloads, setActiveDownloads] = useState<Record<string, () => void>>({});
 
   const fetchModels = async () => {
     try {
-      const res = await fetch(`${API_BASE()}/models`, { headers: headers() });
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const data = await res.json();
-      setModels(data);
-    } catch (e: any) {
+      const res = await window.electronAPI.request({ method: 'GET', path: '/models' });
+      if (res.status < 200 || res.status >= 300) throw new Error(`HTTP ${res.status}`);
+      setModels(res.body as Record<string, unknown>);
+    } catch (e: { event: string; data: unknown }) {
       toast.error('Failed to fetch models: ' + e.message);
     }
   };
@@ -66,12 +59,12 @@ export default function ModelsPage() {
 
   const startDownload = async (model: ModelInfo) => {
     try {
-      const res = await fetch(`${API_BASE()}/models/${model.id}/download`, {
+      const res = await window.electronAPI.request({
         method: 'POST',
-        headers: headers(),
+        path: `/models/${model.id}/download`,
       });
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const { job_id } = await res.json();
+      if (res.status < 200 || res.status >= 300) throw new Error(`HTTP ${res.status}`);
+      const { job_id } = res.body as Record<string, unknown>;
 
       setProgress(model.id, {
         jobId: job_id,
@@ -82,47 +75,59 @@ export default function ModelsPage() {
         state: 'downloading',
       });
 
-      const es = new EventSource(`${API_BASE()}/models/jobs/${job_id}/events?token=${TOKEN()}`);
+      const dispose = window.electronAPI.stream(
+        { streamId: `download:${job_id}`, path: `/models/jobs/${job_id}/events` },
+        (e: { event: string; data: unknown }) => {
+          if (e.event === 'progress') {
+            const data = e.data as Record<string, unknown>;
+            setProgress(model.id, {
+              bytesDone: data.bytes_done,
+              totalBytes: data.total_bytes,
+              speedMbps: data.speed_mbps,
+              currentFile: data.current_file,
+            });
+          } else if (e.event === 'done') {
+            dispose();
+            setProgress(model.id, { state: 'done' });
+            setActiveDownloads((prev) => {
+              const n = { ...prev };
+              delete n[model.id];
+              return n;
+            });
+            toast.success(`Downloaded ${model.name}`);
+            fetchModels();
+          } else if (e.event === 'error') {
+            dispose();
+            const data = e.data as Record<string, unknown>;
+            setProgress(model.id, { state: 'error', error: data.error });
+            setActiveDownloads((prev) => {
+              const n = { ...prev };
+              delete n[model.id];
+              return n;
+            });
+            toast.error(`Download failed: ${data.error}`);
+            fetchModels();
+          }
+        },
+        () => {
+          dispose();
+        },
+        (err: { message: string }) => {
+          dispose();
+          const msg = err.message || 'Unknown error';
+          setProgress(model.id, { state: 'error', error: msg });
+          setActiveDownloads((prev) => {
+            const n = { ...prev };
+            delete n[model.id];
+            return n;
+          });
+          toast.error(`Download failed: ${msg}`);
+          fetchModels();
+        },
+      );
 
-      es.addEventListener('progress', (e: Event) => {
-        const messageEvent = e as MessageEvent;
-        const data = JSON.parse(messageEvent.data);
-        setProgress(model.id, {
-          bytesDone: data.bytes_done,
-          totalBytes: data.total_bytes,
-          speedMbps: data.speed_mbps,
-          currentFile: data.current_file,
-        });
-      });
-
-      es.addEventListener('done', () => {
-        es.close();
-        setProgress(model.id, { state: 'done' });
-        setActiveDownloads((prev) => {
-          const n = { ...prev };
-          delete n[model.id];
-          return n;
-        });
-        toast.success(`Downloaded ${model.name}`);
-        fetchModels();
-      });
-
-      es.addEventListener('error', (e: Event) => {
-        es.close();
-        const messageEvent = e as MessageEvent;
-        const data = JSON.parse(messageEvent.data);
-        setProgress(model.id, { state: 'error', error: data.error });
-        setActiveDownloads((prev) => {
-          const n = { ...prev };
-          delete n[model.id];
-          return n;
-        });
-        toast.error(`Download failed: ${data.error}`);
-        fetchModels();
-      });
-
-      setActiveDownloads((prev) => ({ ...prev, [model.id]: es }));
-    } catch (e: any) {
+      setActiveDownloads((prev) => ({ ...prev, [model.id]: dispose }));
+    } catch (e: { event: string; data: unknown }) {
       toast.error('Failed to start download: ' + e.message);
     }
   };
@@ -132,13 +137,13 @@ export default function ModelsPage() {
     if (!job || job.state !== 'downloading') return;
 
     try {
-      await fetch(`${API_BASE()}/models/jobs/${job.jobId}`, {
+      await window.electronAPI.request({
         method: 'DELETE',
-        headers: headers(),
+        path: `/models/jobs/${job.jobId}`,
       });
-      const es = activeDownloads[modelId];
-      if (es) {
-        es.close();
+      const dispose = activeDownloads[modelId];
+      if (dispose) {
+        dispose();
         setActiveDownloads((prev) => {
           const n = { ...prev };
           delete n[modelId];
@@ -148,19 +153,19 @@ export default function ModelsPage() {
       setProgress(modelId, { state: 'cancelled' });
       toast.info('Download cancelled');
       fetchModels();
-    } catch (e: any) {
+    } catch (e: { event: string; data: unknown }) {
       toast.error('Failed to cancel download: ' + e.message);
     }
   };
 
   const verifyModel = async (model: ModelInfo) => {
     try {
-      const res = await fetch(`${API_BASE()}/models/${model.id}/verify`, {
+      const res = await window.electronAPI.request({
         method: 'POST',
-        headers: headers(),
+        path: `/models/${model.id}/verify`,
       });
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const result = await res.json();
+      if (res.status < 200 || res.status >= 300) throw new Error(`HTTP ${res.status}`);
+      const result = res.body as Record<string, unknown>;
 
       if (result.valid) {
         toast.success(`${model.name} is fully verified`);
@@ -168,21 +173,23 @@ export default function ModelsPage() {
         toast.error(`${model.name} has ${result.mismatches.length} corrupted files`);
       }
       fetchModels();
-    } catch (e: any) {
+    } catch (e: { event: string; data: unknown }) {
       toast.error('Failed to verify model: ' + e.message);
     }
   };
 
   const deleteModel = async (model: ModelInfo) => {
     try {
-      const res = await fetch(`${API_BASE()}/models/${model.id}`, {
+      const res = await window.electronAPI.request({
         method: 'DELETE',
-        headers: headers(),
+        path: `/models/${model.id}`,
       });
-      if (!res.ok && res.status !== 204) throw new Error(`HTTP ${res.status}`);
+      if (res.status !== 204 && (res.status < 200 || res.status >= 300)) {
+        throw new Error(`HTTP ${res.status}`);
+      }
       toast.success(`Deleted ${model.name}`);
       fetchModels();
-    } catch (e: any) {
+    } catch (e: { event: string; data: unknown }) {
       toast.error('Failed to delete model: ' + e.message);
     }
   };

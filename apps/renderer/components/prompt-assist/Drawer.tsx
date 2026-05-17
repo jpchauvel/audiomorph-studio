@@ -16,15 +16,9 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { toast } from 'sonner';
 import Link from 'next/link';
 
-const API_BASE = () =>
-  (typeof window !== 'undefined' && (window as any).__AUDIOMORPH_API_BASE__) ||
-  'http://localhost:8000';
-const TOKEN = () => (typeof window !== 'undefined' && (window as any).__AUDIOMORPH_TOKEN__) || '';
-const OPENROUTER_KEY = () =>
-  (typeof window !== 'undefined' && (window as any).__AUDIOMORPH_OPENROUTER_KEY__) || '';
-
-const SYSTEM_PROMPT =
-  'You are a music prompt assistant. Given the user\'s intent, return: 1) An enhanced generation prompt (max 200 chars) 2) Suggested lyrics (max 500 chars). Format your response as JSON: {"prompt": "...", "lyrics": "..."}';
+// TODO(openrouter-ipc): SYSTEM_PROMPT, model selection, and streaming-token
+// append (appendStream) are unused until the api:stream bridge supports
+// POST bodies + the X-OpenRouter-Key header. Restore them with the IPC fix.
 
 export function PromptAssistDrawer() {
   const {
@@ -33,9 +27,7 @@ export function PromptAssistDrawer() {
     messages,
     streaming,
     streamBuffer,
-    model,
     addMessage,
-    appendStream,
     finalizeStream,
     reset: _reset,
   } = usePromptAssistStore();
@@ -48,9 +40,16 @@ export function PromptAssistDrawer() {
 
   useEffect(() => {
     if (open) {
-      fetch(`${API_BASE()}/settings`, { headers: { 'X-Audiomorph-Token': TOKEN() } })
-        .then((r) => r.json())
-        .then((d) => setKeyPresent(d.openrouter_key_present === 'true'))
+      window.electronAPI
+        .request({ method: 'GET', path: '/settings' })
+        .then((res: { status: number; body: unknown }) => {
+          if (res.status >= 200 && res.status < 300) {
+            const data = res.body as Record<string, unknown>;
+            setKeyPresent(data.openrouter_key_present === 'true');
+          } else {
+            setKeyPresent(false);
+          }
+        })
         .catch(() => setKeyPresent(false));
     }
   }, [open]);
@@ -70,61 +69,15 @@ export function PromptAssistDrawer() {
     addMessage({ role: 'user', content: userMsg });
 
     try {
-      const response = await fetch(`${API_BASE()}/openrouter/chat`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-Audiomorph-Token': TOKEN(),
-          'X-OpenRouter-Key': OPENROUTER_KEY(),
-        },
-        body: JSON.stringify({
-          model,
-          stream: true,
-          messages: [
-            { role: 'system', content: SYSTEM_PROMPT },
-            ...messages,
-            { role: 'user', content: userMsg },
-          ],
-        }),
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to fetch from chat API');
-      }
-
-      const reader = response.body?.getReader();
-      const decoder = new TextDecoder();
-
-      if (!reader) throw new Error('No reader');
-
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-
-        const chunk = decoder.decode(value, { stream: true });
-        const lines = chunk.split('\n');
-
-        for (const line of lines) {
-          if (line.startsWith('data: ')) {
-            const dataStr = line.slice(6);
-            if (dataStr.trim() === '[DONE]') {
-              break;
-            }
-            try {
-              const data = JSON.parse(dataStr);
-              const content = data.choices?.[0]?.delta?.content || '';
-              if (content) {
-                appendStream(content);
-              }
-            } catch (_e) {
-              // ignore parse errors for partial chunks
-            }
-          }
-        }
-      }
-      finalizeStream();
-    } catch (_e) {
-      toast.error('Failed to generate response');
+      // TODO(openrouter-ipc): The sidecar expects the X-OpenRouter-Key header for this endpoint,
+      // which api:request does not support, and api:stream is GET-only. We cannot call OpenRouter
+      // via the sidecar without an IPC change.
+      throw new Error(
+        'OpenRouter streaming via sidecar is unsupported over the current IPC bridge',
+      );
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Failed to generate response';
+      toast.error(message);
       finalizeStream();
     }
   };

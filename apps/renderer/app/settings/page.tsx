@@ -10,18 +10,13 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 
-const API_BASE = () =>
-  (typeof window !== 'undefined' && (window as any).__AUDIOMORPH_API_BASE__) ||
-  'http://localhost:8000';
-const TOKEN = () => (typeof window !== 'undefined' && (window as any).__AUDIOMORPH_TOKEN__) || '';
-const headers = () => ({ 'X-Audiomorph-Token': TOKEN(), 'Content-Type': 'application/json' });
-
 export default function SettingsPage() {
   const { theme, setTheme } = useAppStore();
   const [modelsDir, setModelsDir] = useState<string>('');
   const [cpuFallback, setCpuFallback] = useState<boolean>(false);
   const [openrouterKeyPresent, setOpenrouterKeyPresent] = useState<boolean>(false);
   const [hfTokenPresent, setHfTokenPresent] = useState<boolean>(false);
+  const [version, setVersion] = useState<string>('0.1.0');
 
   const [orKeyInput, setOrKeyInput] = useState('');
   const [hfTokenInput, setHfTokenInput] = useState('');
@@ -29,9 +24,9 @@ export default function SettingsPage() {
   useEffect(() => {
     async function fetchSettings() {
       try {
-        const res = await fetch(`${API_BASE()}/settings`, { headers: headers() });
-        if (!res.ok) throw new Error('Failed to fetch settings');
-        const data = await res.json();
+        const res = await window.electronAPI.request({ method: 'GET', path: '/settings' });
+        if (res.status < 200 || res.status >= 300) throw new Error('Failed to fetch settings');
+        const data = res.body as Record<string, unknown>;
 
         if (data.models_dir) setModelsDir(data.models_dir);
         if (data.cpu_fallback_enabled) setCpuFallback(data.cpu_fallback_enabled === 'true');
@@ -43,6 +38,10 @@ export default function SettingsPage() {
       }
     }
     fetchSettings();
+    window.electronAPI
+      .getVersion()
+      .then(setVersion)
+      .catch(() => {});
   }, []);
 
   const handleThemeChange = (newTheme: 'light' | 'dark' | 'system') => {
@@ -53,11 +52,12 @@ export default function SettingsPage() {
   const handleCpuFallbackChange = async (checked: boolean) => {
     setCpuFallback(checked);
     try {
-      await fetch(`${API_BASE()}/settings/cpu_fallback_enabled`, {
+      const res = await window.electronAPI.request({
         method: 'PUT',
-        headers: headers(),
-        body: JSON.stringify({ value: checked ? 'true' : 'false' }),
+        path: '/settings/cpu_fallback_enabled',
+        body: { value: checked ? 'true' : 'false' },
       });
+      if (res.status < 200 || res.status >= 300) throw new Error('Failed');
       toast.success('Performance setting updated');
     } catch (_err) {
       toast.error('Failed to update performance setting');
@@ -68,12 +68,13 @@ export default function SettingsPage() {
   const saveOpenRouterKey = async () => {
     if (!orKeyInput.trim()) return;
     try {
-      await (window as any).__AUDIOMORPH_IPC__?.setOpenRouterKey?.(orKeyInput);
-      await fetch(`${API_BASE()}/settings/openrouter_key_present`, {
+      await window.electronAPI.vault.set('openrouter_key', orKeyInput);
+      const res = await window.electronAPI.request({
         method: 'PUT',
-        headers: headers(),
-        body: JSON.stringify({ value: 'true' }),
+        path: '/settings/openrouter_key_present',
+        body: { value: 'true' },
       });
+      if (res.status < 200 || res.status >= 300) throw new Error('Failed');
       setOpenrouterKeyPresent(true);
       setOrKeyInput('');
       toast.success('OpenRouter key saved');
@@ -85,12 +86,13 @@ export default function SettingsPage() {
   const saveHfToken = async () => {
     if (!hfTokenInput.trim()) return;
     try {
-      await (window as any).__AUDIOMORPH_IPC__?.setHfToken?.(hfTokenInput);
-      await fetch(`${API_BASE()}/settings/hf_token_present`, {
+      await window.electronAPI.vault.set('hf_token', hfTokenInput);
+      const res = await window.electronAPI.request({
         method: 'PUT',
-        headers: headers(),
-        body: JSON.stringify({ value: 'true' }),
+        path: '/settings/hf_token_present',
+        body: { value: 'true' },
       });
+      if (res.status < 200 || res.status >= 300) throw new Error('Failed');
       setHfTokenPresent(true);
       setHfTokenInput('');
       toast.success('HuggingFace token saved');
@@ -101,23 +103,21 @@ export default function SettingsPage() {
 
   const changeModelsDir = async () => {
     try {
-      const dir = await (window as any).__AUDIOMORPH_IPC__?.openDirectory?.();
-      if (dir) {
-        setModelsDir(dir);
-        await fetch(`${API_BASE()}/settings/models_dir`, {
+      const result = await window.electronAPI.openDirectory({});
+      if (result.dirPath && !result.canceled) {
+        setModelsDir(result.dirPath);
+        const res = await window.electronAPI.request({
           method: 'PUT',
-          headers: headers(),
-          body: JSON.stringify({ value: dir }),
+          path: '/settings/models_dir',
+          body: { value: result.dirPath },
         });
+        if (res.status < 200 || res.status >= 300) throw new Error('Failed');
         toast.success('Models directory updated');
       }
     } catch (_err) {
       toast.error('Failed to update models directory');
     }
   };
-
-  const version =
-    (typeof window !== 'undefined' ? (window as any).__AUDIOMORPH_VERSION__ : null) ?? '0.1.0';
 
   return (
     <div className="container mx-auto p-8 space-y-8 max-w-3xl">

@@ -4,16 +4,9 @@ import { useEffect, useState, useRef } from 'react';
 import Link from 'next/link';
 import { toast } from 'sonner';
 import { useGenerationStore, GenPhase } from '@/lib/stores/generation';
-import { GenerationForm } from '@/components/generation/GenerationForm';
+import { GenerationForm, type GenerationRequest } from '@/components/generation/GenerationForm';
 import { PhaseIndicator } from '@/components/generation/PhaseIndicator';
 import { ResultCard } from '@/components/generation/ResultCard';
-
-const API_BASE = () =>
-  (typeof window !== 'undefined' && (window as any).__AUDIOMORPH_API_BASE__) ||
-  'http://localhost:8000';
-const TOKEN = () => (typeof window !== 'undefined' && (window as any).__AUDIOMORPH_TOKEN__) || '';
-
-const headers = () => ({ 'X-Audiomorph-Token': TOKEN(), 'Content-Type': 'application/json' });
 
 type Model = {
   id: string;
@@ -24,15 +17,20 @@ type Model = {
 export default function StudioPage() {
   const [models, setModels] = useState<Model[]>([]);
   const [isLoadingModels, setIsLoadingModels] = useState(true);
-  const esRef = useRef<EventSource | null>(null);
+  const streamDisposeRef = useRef<(() => void) | null>(null);
 
   const { jobId, phase, setJob, setPhase, setError, setResult, reset } = useGenerationStore();
 
   useEffect(() => {
-    fetch(`${API_BASE()}/models`, { headers: { 'X-Audiomorph-Token': TOKEN() } })
-      .then((r) => r.json())
-      .then((data: Model[]) => {
-        setModels(data.filter((m) => m.state === 'verified'));
+    window.electronAPI
+      .request({ method: 'GET', path: '/models' })
+      .then((res: { status: number; body: unknown }) => {
+        if (res.status >= 200 && res.status < 300) {
+          const data = res.body as Model[];
+          setModels(data.filter((m) => m.state === 'verified'));
+        } else {
+          throw new Error('Failed to load models');
+        }
       })
       .catch(() => {
         toast.error('Failed to load models');
@@ -42,13 +40,13 @@ export default function StudioPage() {
       });
 
     return () => {
-      if (esRef.current) {
-        esRef.current.close();
+      if (streamDisposeRef.current) {
+        streamDisposeRef.current();
       }
     };
   }, []);
 
-  const handleSubmit = async (data: any) => {
+  const handleSubmit = async (data: GenerationRequest) => {
     if (phase !== 'idle' && phase !== 'done' && phase !== 'error' && phase !== 'cancelled') {
       toast.error('Generation already in progress');
       return;
@@ -56,10 +54,10 @@ export default function StudioPage() {
 
     try {
       reset();
-      const res = await fetch(`${API_BASE()}/jobs/generate`, {
+      const res = await window.electronAPI.request({
         method: 'POST',
-        headers: headers(),
-        body: JSON.stringify(data),
+        path: '/jobs/generate',
+        body: data,
       });
 
       if (res.status === 429) {
@@ -67,42 +65,50 @@ export default function StudioPage() {
         return;
       }
 
-      if (!res.ok) {
+      if (res.status < 200 || res.status >= 300) {
         throw new Error('Failed to start generation');
       }
 
-      const { job_id } = await res.json();
+      const { job_id } = res.body as Record<string, unknown>;
       setJob(job_id);
 
-      const es = new EventSource(`${API_BASE()}/jobs/${job_id}/events`);
-      esRef.current = es;
-
-      es.addEventListener('progress', (e) => {
-        const d = JSON.parse(e.data);
-        setPhase(d.phase as GenPhase, d.step, d.total_steps, d.eta_s);
-      });
-
-      es.addEventListener('done', (_e) => {
-        setResult(job_id);
-        es.close();
-        esRef.current = null;
-      });
-
-      es.addEventListener('error', (e: any) => {
-        const msg = e.data ? JSON.parse(e.data).message : 'Generation failed';
-        setError(msg);
-        toast.error(`Error: ${msg}`);
-        es.close();
-        esRef.current = null;
-      });
-
-      es.addEventListener('cancelled', () => {
-        setPhase('cancelled');
-        toast.info('Generation cancelled');
-        es.close();
-        esRef.current = null;
-      });
-    } catch (err: any) {
+      const dispose = window.electronAPI.stream(
+        { streamId: `job-events-${job_id}`, path: `/jobs/${job_id}/events` },
+        (e: { event: string; data: unknown }) => {
+          if (e.event === 'progress') {
+            const d = e.data as Record<string, unknown>;
+            setPhase(d.phase as GenPhase, d.step, d.total_steps, d.eta_s);
+          } else if (e.event === 'done') {
+            setResult(job_id);
+            dispose();
+            streamDisposeRef.current = null;
+          } else if (e.event === 'error') {
+            const msg = e.data ? (e.data as Record<string, unknown>).message : 'Generation failed';
+            setError(msg);
+            toast.error(`Error: ${msg}`);
+            dispose();
+            streamDisposeRef.current = null;
+          } else if (e.event === 'cancelled') {
+            setPhase('cancelled');
+            toast.info('Generation cancelled');
+            dispose();
+            streamDisposeRef.current = null;
+          }
+        },
+        () => {
+          dispose();
+          streamDisposeRef.current = null;
+        },
+        (err: { message: string }) => {
+          const msg = err.message || 'Generation failed';
+          setError(msg);
+          toast.error(`Error: ${msg}`);
+          dispose();
+          streamDisposeRef.current = null;
+        },
+      );
+      streamDisposeRef.current = dispose;
+    } catch (err: { message: string }) {
       setError(err.message);
       toast.error(err.message);
     }
@@ -112,14 +118,14 @@ export default function StudioPage() {
     if (!jobId) return;
 
     try {
-      await fetch(`${API_BASE()}/jobs/${jobId}`, {
+      await window.electronAPI.request({
         method: 'DELETE',
-        headers: { 'X-Audiomorph-Token': TOKEN() },
+        path: `/jobs/${jobId}`,
       });
 
-      if (esRef.current) {
-        esRef.current.close();
-        esRef.current = null;
+      if (streamDisposeRef.current) {
+        streamDisposeRef.current();
+        streamDisposeRef.current = null;
       }
       setPhase('cancelled');
     } catch {

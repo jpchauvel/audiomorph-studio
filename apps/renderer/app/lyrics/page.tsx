@@ -1,15 +1,9 @@
 'use client';
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { useGenerationStore } from '@/lib/stores/generation';
-
-const API_BASE = () =>
-  (typeof window !== 'undefined' && (window as any).__AUDIOMORPH_API_BASE__) ||
-  'http://localhost:8000';
-const TOKEN = () => (typeof window !== 'undefined' && (window as any).__AUDIOMORPH_TOKEN__) || '';
-const headers = () => ({ 'X-Audiomorph-Token': TOKEN() });
 
 type Segment = { start: number; end: number; text: string };
 
@@ -21,49 +15,78 @@ export default function LyricsPage() {
   const [jobId, setJobId] = useState<string | null>(null);
   const [transcribing, setTranscribing] = useState(false);
   const [dragOver, setDragOver] = useState(false);
-  const esRef = useRef<EventSource | null>(null);
+  const streamDisposeRef = useRef<(() => void) | null>(null);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    return () => {
+      if (streamDisposeRef.current) {
+        streamDisposeRef.current();
+      }
+    };
+  }, []);
 
   const transcribe = async (file: File) => {
     setTranscribing(true);
     setSegments([]);
     try {
-      const form = new FormData();
-      form.append('file', file);
-      const res = await fetch(`${API_BASE()}/lyrics/transcribe`, {
+      const audioPath = (file as File & { path: string }).path;
+      if (!audioPath) {
+        toast.error('File path not found. Please try again.');
+        setTranscribing(false);
+        return;
+      }
+
+      const res = await window.electronAPI.request({
         method: 'POST',
-        headers: headers(),
-        body: form,
+        path: '/lyrics/transcribe',
+        body: { audio_path: audioPath },
       });
-      if (!res.ok) {
+
+      if (res.status < 200 || res.status >= 300) {
         toast.error('Transcription failed');
         setTranscribing(false);
         return;
       }
-      const { job_id } = await res.json();
+      const { job_id } = res.body as Record<string, unknown>;
       setJobId(job_id);
 
-      const es = new EventSource(`${API_BASE()}/lyrics/jobs/${job_id}/events`);
-      esRef.current = es;
-      es.addEventListener('progress', (e) => {
-        const d = JSON.parse(e.data);
-        if (d.segments) setSegments(d.segments);
-      });
-      es.addEventListener('done', (e) => {
-        const d = JSON.parse(e.data);
-        const text = d.segments?.map((s: Segment) => s.text).join('\n') ?? '';
-        setLyrics(text);
-        setSegments(d.segments ?? []);
-        setTranscribing(false);
-        es.close();
-      });
-      es.addEventListener('error', (e: any) => {
-        const msg = e.data ? JSON.parse(e.data).message : 'Transcription error';
-        toast.error(msg);
-        setTranscribing(false);
-        es.close();
-      });
+      const dispose = window.electronAPI.stream(
+        { streamId: `lyrics-job-${job_id}`, path: `/lyrics/jobs/${job_id}/events` },
+        (e: { event: string; data: unknown }) => {
+          if (e.event === 'progress') {
+            const d = e.data as Record<string, unknown>;
+            if (d.segments) setSegments(d.segments);
+          } else if (e.event === 'done') {
+            const d = e.data as Record<string, unknown>;
+            const text = d.segments?.map((s: Segment) => s.text).join('\n') ?? '';
+            setLyrics(text);
+            setSegments(d.segments ?? []);
+            setTranscribing(false);
+            dispose();
+            streamDisposeRef.current = null;
+          } else if (e.event === 'error') {
+            const d = e.data as Record<string, unknown>;
+            const msg = d ? d.message : 'Transcription error';
+            toast.error(msg);
+            setTranscribing(false);
+            dispose();
+            streamDisposeRef.current = null;
+          }
+        },
+        () => {
+          dispose();
+          streamDisposeRef.current = null;
+        },
+        (err: { message: string }) => {
+          toast.error(err.message || 'Transcription error');
+          setTranscribing(false);
+          dispose();
+          streamDisposeRef.current = null;
+        },
+      );
+      streamDisposeRef.current = dispose;
     } catch {
       toast.error('Failed to start transcription');
       setTranscribing(false);
@@ -72,11 +95,16 @@ export default function LyricsPage() {
 
   const cancel = async () => {
     if (!jobId) return;
-    esRef.current?.close();
-    await fetch(`${API_BASE()}/lyrics/jobs/${jobId}`, {
-      method: 'DELETE',
-      headers: headers(),
-    }).catch(() => {});
+    if (streamDisposeRef.current) {
+      streamDisposeRef.current();
+      streamDisposeRef.current = null;
+    }
+    await window.electronAPI
+      .request({
+        method: 'DELETE',
+        path: `/lyrics/jobs/${jobId}`,
+      })
+      .catch(() => {});
     setTranscribing(false);
     setJobId(null);
   };

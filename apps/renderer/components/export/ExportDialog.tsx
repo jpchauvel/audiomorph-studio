@@ -27,32 +27,29 @@ export function ExportDialog({ open, onClose, jobId }: Props) {
   const [bitrate, setBitrate] = useState(192);
   const [loading, setLoading] = useState(false);
 
-  const apiBase =
-    typeof window !== 'undefined'
-      ? ((window as any).__AUDIOMORPH_API_BASE__ ?? 'http://localhost:8000')
-      : 'http://localhost:8000';
-  const token = typeof window !== 'undefined' ? ((window as any).__AUDIOMORPH_TOKEN__ ?? '') : '';
-
   const handleExport = async () => {
     setLoading(true);
     try {
       const body: Record<string, unknown> = { job_id: jobId, format };
       if (format === 'mp3') body.bitrate_kbps = bitrate;
-      const res = await fetch(`${apiBase}/export`, {
+
+      const res = await window.electronAPI.request({
         method: 'POST',
-        headers: { 'X-Audiomorph-Token': token, 'Content-Type': 'application/json' },
-        body: JSON.stringify(body),
+        path: '/export',
+        body,
       });
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({}));
+
+      if (res.status < 200 || res.status >= 300) {
+        const err = (res.body as Record<string, unknown>) || {};
         toast.error(err.message ?? 'Export failed', { description: err.hint });
         return;
       }
-      const { file_path } = await res.json();
+
+      const { file_path } = res.body as Record<string, unknown>;
       toast.success(`Exported to ${file_path}`, {
         action: {
           label: 'Show in Finder',
-          onClick: () => (window as any).__AUDIOMORPH_IPC__?.showItemInFolder?.(file_path),
+          onClick: () => window.electronAPI.showItemInFolder({ filePath: file_path }),
         },
       });
       onClose();

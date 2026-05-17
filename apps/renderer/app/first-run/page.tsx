@@ -6,13 +6,6 @@ import { useFirstRunStore } from '@/lib/stores/first-run';
 import { Progress } from '@/components/ui/progress';
 import { Button } from '@/components/ui/button';
 
-const API_BASE = () =>
-  (typeof window !== 'undefined' && (window as any).__AUDIOMORPH_API_BASE__) ||
-  'http://localhost:8000';
-const TOKEN = () => (typeof window !== 'undefined' && (window as any).__AUDIOMORPH_TOKEN__) || '';
-
-const headers = () => ({ 'X-Audiomorph-Token': TOKEN() });
-
 type Model = {
   id: string;
   repo_id: string;
@@ -28,22 +21,27 @@ export default function FirstRunPage() {
   const { step, modelsDir, freeDiskGb, downloadJobs, setStep, setModelsDir, setDownloadJob } =
     useFirstRunStore();
   const [models, setModels] = useState<Model[]>([]);
-  const [activeDownloads, setActiveDownloads] = useState<Record<string, EventSource>>({});
+  const [activeDownloads, setActiveDownloads] = useState<Record<string, () => void>>({});
 
   useEffect(() => {
-    fetch(`${API_BASE()}/first-run/status`, { headers: headers() })
-      .then((r) => r.json())
-      .then((data) => {
-        if (data.completed) router.replace('/');
+    window.electronAPI
+      .request({ method: 'GET', path: '/first-run/status' })
+      .then((res: { status: number; body: unknown }) => {
+        if (res.status >= 200 && res.status < 300) {
+          const data = res.body as Record<string, unknown>;
+          if (data.completed) router.replace('/');
+        }
       })
       .catch(() => {});
   }, [router]);
 
   const pickDir = async () => {
     try {
+      const result = await window.electronAPI.openDirectory({});
+      if (result.canceled || !result.dirPath) return;
+      const dir = result.dirPath;
       const ipc = (window as any).__AUDIOMORPH_IPC__;
-      const dir = ipc ? await ipc.openDirectory() : '/tmp/models';
-      if (!dir) return;
+      // TODO(disk-free): getDiskFreeGb is missing from electronAPI
       const freeGb = ipc?.getDiskFreeGb ? await ipc.getDiskFreeGb(dir) : 999;
       setModelsDir(dir, freeGb);
     } catch {
@@ -53,19 +51,27 @@ export default function FirstRunPage() {
 
   useEffect(() => {
     if (step !== 3) return;
-    fetch(`${API_BASE()}/models`, { headers: headers() })
-      .then((r) => r.json())
-      .then(setModels)
+    window.electronAPI
+      .request({ method: 'GET', path: '/models' })
+      .then((res: { status: number; body: unknown }) => {
+        if (res.status >= 200 && res.status < 300) {
+          setModels(res.body as Model[]);
+        } else {
+          toast.error('Failed to load models');
+        }
+      })
       .catch(() => toast.error('Failed to load models'));
   }, [step]);
 
   const startDownload = async (model: Model) => {
     try {
-      const res = await fetch(`${API_BASE()}/models/${model.id}/download`, {
+      const res = await window.electronAPI.request({
         method: 'POST',
-        headers: headers(),
+        path: `/models/${model.id}/download`,
       });
-      const { job_id } = await res.json();
+      if (res.status < 200 || res.status >= 300) throw new Error('HTTP Error');
+      const { job_id } = res.body as Record<string, unknown>;
+
       setDownloadJob(model.id, {
         jobId: job_id,
         state: 'downloading',
@@ -75,53 +81,71 @@ export default function FirstRunPage() {
         currentFile: '',
       });
 
-      const es = new EventSource(`${API_BASE()}/models/jobs/${job_id}/events`);
-      setActiveDownloads((prev) => ({ ...prev, [model.id]: es }));
+      const dispose = window.electronAPI.stream(
+        { streamId: `download:${job_id}`, path: `/models/jobs/${job_id}/events` },
+        (e: { event: string; data: unknown }) => {
+          if (e.event === 'progress') {
+            const d = e.data as Record<string, unknown>;
+            setDownloadJob(model.id, {
+              bytesDone: d.bytes_done,
+              totalBytes: d.total_bytes,
+              speedMbps: d.speed_mbps,
+              currentFile: d.current_file,
+            });
+          } else if (e.event === 'done') {
+            setDownloadJob(model.id, { state: 'done' });
+            dispose();
+            setActiveDownloads((prev) => {
+              const n = { ...prev };
+              delete n[model.id];
+              return n;
+            });
+          } else if (e.event === 'error') {
+            const msg = e.data ? (e.data as Record<string, unknown>).message : 'Download failed';
+            setDownloadJob(model.id, { state: 'error', error: msg });
+            toast.error(`${model.name}: ${msg}`);
+            dispose();
+            setActiveDownloads((prev) => {
+              const n = { ...prev };
+              delete n[model.id];
+              return n;
+            });
+          }
+        },
+        () => {
+          dispose();
+        },
+        (err: { message: string }) => {
+          const msg = err.message || 'Download failed';
+          setDownloadJob(model.id, { state: 'error', error: msg });
+          toast.error(`${model.name}: ${msg}`);
+          dispose();
+          setActiveDownloads((prev) => {
+            const n = { ...prev };
+            delete n[model.id];
+            return n;
+          });
+        },
+      );
 
-      es.addEventListener('progress', (e) => {
-        const d = JSON.parse(e.data);
-        setDownloadJob(model.id, {
-          bytesDone: d.bytes_done,
-          totalBytes: d.total_bytes,
-          speedMbps: d.speed_mbps,
-          currentFile: d.current_file,
-        });
-      });
-      es.addEventListener('done', () => {
-        setDownloadJob(model.id, { state: 'done' });
-        es.close();
-        setActiveDownloads((prev) => {
-          const n = { ...prev };
-          delete n[model.id];
-          return n;
-        });
-      });
-      es.addEventListener('error', (e: any) => {
-        const msg = e.data ? JSON.parse(e.data).message : 'Download failed';
-        setDownloadJob(model.id, { state: 'error', error: msg });
-        toast.error(`${model.name}: ${msg}`);
-        es.close();
-        setActiveDownloads((prev) => {
-          const n = { ...prev };
-          delete n[model.id];
-          return n;
-        });
-      });
+      setActiveDownloads((prev) => ({ ...prev, [model.id]: dispose }));
     } catch {
       toast.error(`Failed to start download for ${model.name}`);
     }
   };
 
   const cancelAll = () => {
-    Object.entries(activeDownloads).forEach(([modelId, es]) => {
+    Object.entries(activeDownloads).forEach(([modelId, dispose]) => {
       const job = downloadJobs[modelId];
       if (job?.jobId) {
-        fetch(`${API_BASE()}/models/jobs/${job.jobId}`, {
-          method: 'DELETE',
-          headers: headers(),
-        }).catch(() => {});
+        window.electronAPI
+          .request({
+            method: 'DELETE',
+            path: `/models/jobs/${job.jobId}`,
+          })
+          .catch(() => {});
       }
-      es.close();
+      dispose();
       setDownloadJob(modelId, { state: 'cancelled' });
     });
     setActiveDownloads({});
@@ -134,11 +158,12 @@ export default function FirstRunPage() {
 
   const completeFirstRun = async () => {
     try {
-      await fetch(`${API_BASE()}/settings/first_run_completed`, {
+      const res = await window.electronAPI.request({
         method: 'PUT',
-        headers: { ...headers(), 'Content-Type': 'application/json' },
-        body: JSON.stringify({ value: 'true' }),
+        path: '/settings/first_run_completed',
+        body: { value: 'true' },
       });
+      if (res.status < 200 || res.status >= 300) throw new Error('Failed');
       router.replace('/');
     } catch {
       toast.error('Failed to complete setup');
