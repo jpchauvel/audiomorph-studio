@@ -96,7 +96,7 @@ jobs:
 
       - name: Update visual baselines
         if: inputs.platforms == 'all' || inputs.platforms == matrix.platform
-        run: pnpm test:visual -- --update-snapshots
+        run: pnpm test:visual:update
 
       - name: Commit updated baselines
         if: inputs.platforms == 'all' || inputs.platforms == matrix.platform
