@@ -117,13 +117,17 @@ async function createWindow(): Promise<BrowserWindow> {
     }
   });
 
+  // Register show listener BEFORE loadURL/loadFile so we don't miss
+  // ready-to-show firing during page load (the event is one-shot and
+  // attaching after `await load*` is a race we always lose in dev).
+  win.once('ready-to-show', () => win.show());
+
   if (isDev) {
     await win.loadURL('http://localhost:3000');
   } else {
     await win.loadFile(resolveRendererEntry());
   }
 
-  win.once('ready-to-show', () => win.show());
   return win;
 }
 
