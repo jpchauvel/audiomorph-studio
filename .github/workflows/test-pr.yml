@@ -79,6 +79,9 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Build renderer (static export for playwright webServer)
+        run: pnpm --filter renderer build
+
       - name: Component tests
         run: pnpm test:component
 
