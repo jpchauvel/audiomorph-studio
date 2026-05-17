@@ -121,6 +121,57 @@ describe('hardware detect()', () => {
     expect(report.failures.some((f) => f.requirement === 'ram')).toBe(true);
   });
 
+  it('macOS arm64 with unified memory (no spdisplays_vram) maps RAM to VRAM', async () => {
+    setPlatform('darwin');
+    setArch('arm64');
+    withExecMap({
+      'sysctl|-n hw.optional.arm64': { stdout: '1\n' },
+      'sysctl|-n hw.memsize': { stdout: String(64 * 1024 ** 3) },
+      'df|-k /': {
+        stdout:
+          'Filesystem 1024-blocks Used Available Capacity iused ifree %iused Mounted on\n/dev/disk3s1 100 20 104857600 1% 0 0 0% /\n',
+      },
+      'system_profiler|SPDisplaysDataType -json': {
+        stdout: JSON.stringify({
+          SPDisplaysDataType: [{ sppci_model: 'Apple M1 Max' }],
+        }),
+      },
+    });
+
+    const { detect } = await import('../src/detect');
+    const report = await detect();
+
+    expect(report.ok).toBe(true);
+    expect(report.failures).toHaveLength(0);
+    expect(report.details.vram_gb).toBe(64);
+    expect(report.details.gpu).toBe('Apple M1 Max');
+  });
+
+  it('macOS arm64 with unified memory below VRAM threshold still fails', async () => {
+    setPlatform('darwin');
+    setArch('arm64');
+    withExecMap({
+      'sysctl|-n hw.optional.arm64': { stdout: '1\n' },
+      'sysctl|-n hw.memsize': { stdout: String(4 * 1024 ** 3) },
+      'df|-k /': {
+        stdout:
+          'Filesystem 1024-blocks Used Available Capacity iused ifree %iused Mounted on\n/dev/disk3s1 100 20 104857600 1% 0 0 0% /\n',
+      },
+      'system_profiler|SPDisplaysDataType -json': {
+        stdout: JSON.stringify({
+          SPDisplaysDataType: [{ sppci_model: 'Apple M1' }],
+        }),
+      },
+    });
+
+    const { detect } = await import('../src/detect');
+    const report = await detect();
+
+    expect(report.ok).toBe(false);
+    expect(report.failures.some((f) => f.requirement === 'vram')).toBe(true);
+    expect(report.details.vram_gb).toBe(4);
+  });
+
   it('Linux NVIDIA 8GB VRAM passes', async () => {
     setPlatform('linux');
     setArch('x64');

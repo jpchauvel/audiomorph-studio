@@ -243,6 +243,14 @@ export async function detect(): Promise<HardwareReport> {
       details.vram_gb = null;
     }
 
+    // Apple Silicon has unified memory: the GPU shares system RAM and
+    // `system_profiler` reports no `spdisplays_vram`. Treat unified RAM as
+    // VRAM so the threshold reflects what the GPU can actually access.
+    if (vramGbMeasured === null && process.arch === 'arm64' && ramGbMeasured > 0) {
+      vramGbMeasured = ramGbMeasured;
+      details.vram_gb = roundGb(vramGbMeasured);
+    }
+
     if ((vramGbMeasured ?? 0) < VRAM_MIN_GB) {
       failures.push({
         requirement: 'vram',
