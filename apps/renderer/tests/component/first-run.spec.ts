@@ -20,7 +20,7 @@ async function waitForServer(url: string, timeoutMs = 15000): Promise<void> {
 }
 
 test.beforeAll(async () => {
-  serverProcess = spawn('bunx', ['serve', outDir, '-l', '8080'], {
+  serverProcess = spawn('pnpm', ['dlx', 'serve@latest', outDir, '-l', '8080'], {
     stdio: 'pipe',
   });
   await waitForServer('http://localhost:8080/first-run/index.html');

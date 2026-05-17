@@ -27,7 +27,7 @@ export interface StaticServerHandle {
 
 export async function startStaticServer(rootDir: string): Promise<StaticServerHandle> {
   const candidates: Array<{ cmd: string; args: string[] }> = [
-    { cmd: 'bunx', args: ['--bun', 'serve', rootDir, '-l', '0', '--no-clipboard'] },
+    { cmd: 'pnpm', args: ['dlx', 'serve@latest', rootDir, '-l', '0', '--no-clipboard'] },
     { cmd: 'npx', args: ['--yes', 'serve', rootDir, '-l', '0', '--no-clipboard'] },
   ];
 
@@ -40,7 +40,7 @@ export async function startStaticServer(rootDir: string): Promise<StaticServerHa
     }
   }
   throw new Error(
-    `Failed to start static server (tried bunx, npx): ${lastErr?.message ?? 'unknown'}`,
+    `Failed to start static server (tried pnpm dlx, npx): ${lastErr?.message ?? 'unknown'}`,
   );
 }
 
