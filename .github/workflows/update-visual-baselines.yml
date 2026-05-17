@@ -82,6 +82,10 @@ jobs:
         if: inputs.platforms == 'all' || inputs.platforms == matrix.platform
         run: pip install -e "apps/sidecar[dev]"
 
+      - name: Build workspace packages
+        if: inputs.platforms == 'all' || inputs.platforms == matrix.platform
+        run: pnpm -r --filter "./packages/*" build
+
       - name: Build renderer (static export for playwright webServer)
         if: inputs.platforms == 'all' || inputs.platforms == matrix.platform
         run: pnpm --filter renderer build
