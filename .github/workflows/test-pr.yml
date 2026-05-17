@@ -43,6 +43,9 @@ jobs:
       - name: Install JS deps
         run: pnpm install --frozen-lockfile
 
+      - name: Install Playwright browsers (chromium + system deps)
+        run: pnpm --filter renderer exec playwright install --with-deps chromium
+
       - name: Install Python deps
         run: pip install -e "apps/sidecar[dev]"
 
