@@ -54,23 +54,45 @@ def _sha256_file(path: Path) -> str:
     return h.hexdigest()
 
 
+_GEN_COMPOSED_ID = "HeartMuLa/HeartMuLaGen"
+_GEN_3B_REPO = "HeartMuLa/HeartMuLa-oss-3B-happy-new-year"
+_GEN_CODEC_REPO = "HeartMuLa/HeartCodec-oss-20260123"
+_TRANSCRIPTOR_REPO = "HeartMuLa/HeartTranscriptor-oss"
+
+# Priority 1: Documents the composed-layout contract required by
+# heartlib's HeartMuLaGenPipeline.from_pretrained (see
+# docs/heartlib-api-surface.md:220-260). Each tuple is
+# (source-repo-id, subdir-name-inside-composed-root | None for flat).
+_GEN_COMPOSITION: tuple[tuple[str, str | None], ...] = (
+    (_GEN_COMPOSED_ID, None),
+    (_GEN_3B_REPO, "HeartMuLa-oss-3B"),
+    (_GEN_CODEC_REPO, "HeartCodec-oss"),
+)
+
+
 class ModelDownloadManager:
     REQUIRED_MODELS: list[dict[str, Any]] = [
         {
-            "id": "HeartMuLa/HeartMuLaGen",
+            "id": _GEN_COMPOSED_ID,
             "name": "HeartMuLaGen",
             "size_gb": 4,
             "bytes_total": 4 * 1024 * 1024 * 1024,
         },
         {
-            "id": "HeartMuLa/HeartMuLa-oss-3B-happy-new-year",
+            "id": _GEN_3B_REPO,
             "name": "HeartMuLa-oss-3B-happy-new-year",
             "size_gb": 3,
             "bytes_total": 3 * 1024 * 1024 * 1024,
         },
         {
-            "id": "HeartMuLa/HeartCodec-oss-20260123",
+            "id": _GEN_CODEC_REPO,
             "name": "HeartCodec-oss-20260123",
+            "size_gb": 1,
+            "bytes_total": 1 * 1024 * 1024 * 1024,
+        },
+        {
+            "id": _TRANSCRIPTOR_REPO,
+            "name": "HeartTranscriptor-oss",
             "size_gb": 1,
             "bytes_total": 1 * 1024 * 1024 * 1024,
         },
@@ -80,6 +102,7 @@ class ModelDownloadManager:
         self._logger = get_logger("audiomorph.models")
         self._models_dir = (models_dir or get_models_dir()).resolve()
         self._models_dir.mkdir(parents=True, exist_ok=True)
+        self._composed_dir = (self._models_dir / "_composed").resolve()
         self._api = HfApi()
         self._download_lock = asyncio.Lock()
         self._hash_pool = ThreadPoolExecutor(max_workers=4)
@@ -87,6 +110,10 @@ class ModelDownloadManager:
         self._job_tasks: dict[str, asyncio.Task[None]] = {}
         self._job_events: dict[str, asyncio.Queue[dict[str, Any]]] = {}
         self._model_states: dict[str, str] = {}
+        # Priority 2: Adopt pre-downloaded HF cache so users with warmed
+        # ~/.cache/huggingface/hub don't re-download multi-GB weights.
+        self._adopt_hf_cache()
+        self._compose_generation_pipeline()
 
     def list_required_models(self) -> list[dict[str, Any]]:
         return [dict(m) for m in self.REQUIRED_MODELS]
@@ -178,6 +205,86 @@ class ModelDownloadManager:
     def _required_bytes_with_headroom(self, model_id: str) -> int:
         model = self._required_model(model_id)
         return int(float(model["bytes_total"]) * 1.2)
+
+    def composed_generation_path(self) -> Path:
+        return (self._composed_dir / "HeartMuLaGen").resolve()
+
+    def pipeline_path(self, kind: str) -> Path:
+        if kind == "generation":
+            return self.composed_generation_path()
+        if kind == "transcription":
+            return self.model_path(_TRANSCRIPTOR_REPO)
+        raise _api_error(
+            code="VALIDATION_ERROR",
+            message=f"Unknown pipeline kind: {kind}",
+            retriable=False,
+        )
+
+    def _hf_cache_snapshot(self, repo_id: str) -> Path | None:
+        hub = Path(
+            os.environ.get("HF_HOME")
+            or os.environ.get("HUGGINGFACE_HUB_CACHE")
+            or (Path.home() / ".cache" / "huggingface")
+        )
+        if hub.name != "hub":
+            hub = hub / "hub"
+        repo_dir = hub / f"models--{repo_id.replace('/', '--')}"
+        snapshots = repo_dir / "snapshots"
+        if not snapshots.is_dir():
+            return None
+        revs = [p for p in snapshots.iterdir() if p.is_dir()]
+        if not revs:
+            return None
+        return max(revs, key=lambda p: p.stat().st_mtime)
+
+    def _link_or_copy(self, src: Path, dst: Path) -> None:
+        if dst.exists() or dst.is_symlink():
+            return
+        dst.parent.mkdir(parents=True, exist_ok=True)
+        resolved = src.resolve()
+        try:
+            dst.symlink_to(resolved)
+        except (OSError, NotImplementedError):
+            shutil.copy2(resolved, dst)
+
+    def _populate_from_snapshot(self, snapshot: Path, dest: Path) -> int:
+        copied = 0
+        for entry in snapshot.rglob("*"):
+            if not entry.is_file():
+                continue
+            rel = entry.relative_to(snapshot)
+            target = dest / rel
+            if target.exists() or target.is_symlink():
+                continue
+            self._link_or_copy(entry, target)
+            copied += 1
+        return copied
+
+    def _adopt_hf_cache(self) -> None:
+        for model in self.REQUIRED_MODELS:
+            repo_id = str(model["id"])
+            dest = self._models_dir / repo_id
+            if dest.exists() and any(dest.rglob("*")):
+                continue
+            snapshot = self._hf_cache_snapshot(repo_id)
+            if snapshot is None:
+                continue
+            copied = self._populate_from_snapshot(snapshot, dest)
+            if copied > 0:
+                self._logger.info(
+                    "hf_cache_adopted",
+                    model_id=repo_id,
+                    files=copied,
+                )
+
+    def _compose_generation_pipeline(self) -> None:
+        composed = self.composed_generation_path()
+        for repo_id, subdir in _GEN_COMPOSITION:
+            source = self._models_dir / repo_id
+            if not source.exists():
+                continue
+            target = composed if subdir is None else composed / subdir
+            self._populate_from_snapshot(source, target)
 
     def _disk_free_bytes(self) -> int:
         return int(shutil.disk_usage(self._models_dir).free)
@@ -360,6 +467,7 @@ class ModelDownloadManager:
                 else:
                     job["state"] = "completed"
                     self._model_states[model_id] = "partial"
+                    self._compose_generation_pipeline()
                 job["updated_at"] = time.time()
                 self._emit_progress(job_id, current_file=None, speed_mbps=0.0)
             except Exception as exc:
@@ -393,3 +501,13 @@ class ModelDownloadManager:
             yield {"event": "progress", "data": payload}
             if self._jobs[job_id]["state"] in terminal and queue.empty():
                 break
+
+
+_manager_singleton: ModelDownloadManager | None = None
+
+
+def get_manager() -> ModelDownloadManager:
+    global _manager_singleton
+    if _manager_singleton is None:
+        _manager_singleton = ModelDownloadManager()
+    return _manager_singleton

@@ -174,12 +174,10 @@ class TranscriptionEngine:
             )
 
         async with self._transcription_lock:
-            from audiomorph.paths import get_models_dir
+            from audiomorph.models import get_manager
 
             device, dtype, _torch = self._pick_device()
-            model_root = (
-                get_models_dir() / "HeartMuLa" / "HeartTranscriptor-oss"
-            )
+            model_root = get_manager().pipeline_path("transcription")
 
             progress(1, 3, 2.0, "loading")
             pipe = self._ensure_pipeline(model_root, device, dtype)

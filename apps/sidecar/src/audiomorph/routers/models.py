@@ -26,10 +26,10 @@ except (
             super().__init__(_encode(), media_type="text/event-stream")
 
 
-from audiomorph.models.manager import ModelDownloadManager
+from audiomorph.models.manager import get_manager
 
 router = APIRouter(prefix="/models", tags=["models"])
-_MANAGER = ModelDownloadManager()
+_MANAGER = get_manager()
 
 
 @router.get("")

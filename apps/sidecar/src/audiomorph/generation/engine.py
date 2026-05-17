@@ -11,7 +11,7 @@ from typing import Any
 
 from audiomorph._errors import ApiError
 from audiomorph._logging import get_logger
-from audiomorph.paths import get_jobs_dir, get_models_dir
+from audiomorph.paths import get_jobs_dir
 from audiomorph.schemas import GenerationRequest, GenerationResult
 
 
@@ -69,15 +69,18 @@ class GenerationEngine:
             )
 
     def _resolve_model_root(self, model_id: str) -> Path:
-        model_root = (get_models_dir() / model_id).resolve()
-        models_dir = get_models_dir().resolve()
-        if models_dir not in model_root.parents and model_root != models_dir:
-            raise _api_error(
-                code="VALIDATION_ERROR",
-                message="Invalid model path",
-                retriable=False,
-                hint="Path traversal is not allowed",
-            )
+        # Priority 3: canonical HeartMuLaGen routes through composed pipeline
+        # (multi-repo layout); any other id resolves to its per-id dir under
+        # AUDIOMORPH_DATA_DIR/models — preserves original MODEL_NOT_FOUND
+        # semantics for unknown ids (tests + engineering tools rely on this).
+        from audiomorph.paths import get_models_dir
+
+        if model_id == "HeartMuLa/HeartMuLaGen":
+            from audiomorph.models import get_manager
+
+            model_root = get_manager().pipeline_path("generation")
+        else:
+            model_root = get_models_dir() / model_id
         if not model_root.exists() or not model_root.is_dir():
             raise _api_error(
                 code="MODEL_NOT_FOUND",

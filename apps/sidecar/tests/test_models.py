@@ -50,6 +50,7 @@ def test_list_required_models_has_expected_repos(tmp_path: Path) -> None:
         "HeartMuLa/HeartMuLaGen",
         "HeartMuLa/HeartMuLa-oss-3B-happy-new-year",
         "HeartMuLa/HeartCodec-oss-20260123",
+        "HeartMuLa/HeartTranscriptor-oss",
     ]
 
 
@@ -173,7 +174,7 @@ def test_models_router_endpoints_and_sse_stream(
             "/models", headers={"X-Audiomorph-Token": "test-token"}
         )
         assert listed.status_code == 200
-        assert len(listed.json()["items"]) == 3
+        assert len(listed.json()["items"]) == 4
 
         started = client.post(
             "/models/HeartMuLa__HeartMuLaGen/download",
