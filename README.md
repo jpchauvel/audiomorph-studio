@@ -82,12 +82,12 @@ pre-commit install --hook-type pre-push
 # 5. Run the full dev environment
 #    - boots Electron shell (main process)
 #    - boots Next.js renderer with HMR
-#    - sidecar is auto-spawned by the shell on demand
+#    - sidecar is eagerly spawned by the shell on app.whenReady() (fire-and-forget)
 pnpm dev
 ```
 
 The Electron window will open once the shell builds and the renderer
-compiles. The sidecar is launched lazily by the shell as
+compiles. The sidecar is launched eagerly by the shell at `app.whenReady()` as
 `python -m audiomorph --port 0 --parent-pid <shell-pid> --auth-token <generated> --handshake-file <tmp>`.
 The shell reads `{"port": N, "token": "...", "pid": N}` from the handshake
 file once the FastAPI server is bound, then exposes the API base URL to

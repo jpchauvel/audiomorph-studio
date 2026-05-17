@@ -18,8 +18,8 @@ Root context: `/AGENTS.md`. This file covers shell-specific wiring.
 
 ## Boot Flow
 
-1. `main.ts` creates window with `webPreferences.preload = dist/preload.js`, registers IPC bridge.
-2. First renderer API call triggers `SidecarManager.getInstance().spawnAndHandshake()`.
+1. `main.ts` on `app.whenReady()` eagerly fires `void SidecarManager.getInstance(...).start()` (fire-and-forget), creates window with `webPreferences.preload = dist/preload.js`, registers IPC bridge — all in parallel. First-paint latency is prioritized over handshake completion.
+2. `start()` invokes `spawnAndHandshake()` and emits `sidecar:ready` when handshake lands. Renderer `/models` calls arriving before handshake will fail with "Sidecar is not ready" (one-off toast on slow boots is an accepted tradeoff).
 3. Manager generates per-run hex token, spawns `python -m audiomorph --port 0 --parent-pid <pid> --auth-token <token> --handshake-{fd|file} ...`.
 4. Manager reads first stdout JSON line OR handshake fd/file: `{"event":"listening","port":N,"token":"...","pid":N}`.
 5. Manager stores port+token; bridge.ts forwards all `api:*` calls with `X-Audiomorph-Token` header.

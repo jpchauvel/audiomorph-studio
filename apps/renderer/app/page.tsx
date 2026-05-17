@@ -26,8 +26,9 @@ export default function StudioPage() {
       .request({ method: 'GET', path: '/models' })
       .then((res: { status: number; body: unknown }) => {
         if (res.status >= 200 && res.status < 300) {
-          const data = res.body as Model[];
-          setModels(data.filter((m) => m.state === 'verified'));
+          const body = res.body as { items?: Model[] } | Model[] | null;
+          const items = Array.isArray(body) ? body : (body?.items ?? []);
+          setModels(items.filter((m) => m.state === 'verified'));
         } else {
           throw new Error('Failed to load models');
         }

@@ -174,7 +174,13 @@ if (app && typeof app.whenReady === 'function' && !process.env.AUDIOMORPH_SHELL_
   app.whenReady().then(async () => {
     setupCrashReporter(app.getPath('userData'));
     await enforceHardwareRequirements();
-    SidecarManager.getInstance({ userDataPath: app.getPath('userData') });
+    // Eager fire-and-forget boot: matches documented intent in apps/shell/AGENTS.md.
+    // Window opens in parallel; manager emits 'sidecar:ready' and handles its own
+    // errors. The renderer's first /models call may land before handshake on slow
+    // boots; that produces a one-off toast which the user has accepted as the
+    // tradeoff for fastest first paint.
+    const sidecar = SidecarManager.getInstance({ userDataPath: app.getPath('userData') });
+    void sidecar.start();
     registerIpcBridge();
     registerHardwareIpcHandler();
     registerVaultHandlers();

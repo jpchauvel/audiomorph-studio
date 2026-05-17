@@ -55,7 +55,9 @@ export default function FirstRunPage() {
       .request({ method: 'GET', path: '/models' })
       .then((res: { status: number; body: unknown }) => {
         if (res.status >= 200 && res.status < 300) {
-          setModels(res.body as Model[]);
+          const body = res.body as { items?: Model[] } | Model[] | null;
+          const items = Array.isArray(body) ? body : (body?.items ?? []);
+          setModels(items);
         } else {
           toast.error('Failed to load models');
         }
