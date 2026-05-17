@@ -4,7 +4,7 @@ from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 import os
 
-# pyright: reportMissingImports=false, reportUnknownVariableType=false, reportUnknownParameterType=false, reportUnknownMemberType=false, reportUnknownArgumentType=false
+# pyright: reportMissingImports=false, reportUnknownVariableType=false, reportUnknownParameterType=false, reportUnknownMemberType=false, reportUnknownArgumentType=false, reportUnusedFunction=false
 import platform
 from time import perf_counter
 import traceback
@@ -19,6 +19,7 @@ from ._auth import AuthMiddleware
 from ._errors import ApiError
 from ._logging import get_logger, setup_logging
 from .db.session import init_db
+from .models import get_registry
 from .paths import get_models_dir
 from .routers.export import router as export_router
 from .routers.jobs import router as jobs_router
@@ -76,6 +77,7 @@ def create_app(auth_token: str = "") -> FastAPI:
         except Exception as e:
             logger.error("db_init_failed", error=str(e))
         yield
+        await get_registry().clear()
 
     app = FastAPI(lifespan=lifespan)
 

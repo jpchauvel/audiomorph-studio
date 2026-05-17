@@ -1,8 +1,10 @@
 from __future__ import annotations
 
-# pyright: reportMissingImports=false, reportUnknownVariableType=false, reportUnknownMemberType=false, reportUnknownArgumentType=false, reportUnknownParameterType=false
+# pyright: reportMissingImports=false, reportMissingTypeStubs=false, reportUnknownVariableType=false, reportUnknownMemberType=false, reportUnknownArgumentType=false, reportUnknownParameterType=false
 import asyncio
 from collections.abc import Callable
+import contextlib
+import gc
 import os
 from pathlib import Path
 from typing import Any
@@ -14,6 +16,7 @@ from audiomorph.schemas import LyricsResult, LyricsSegment
 MAX_AUDIO_BYTES = 50 * 1024 * 1024
 SUPPORTED_EXTS = {".wav", ".mp3", ".flac", ".ogg", ".m4a"}
 MAX_DURATION_SECONDS = 600
+_TRANSCRIPTION_MODEL_ID = "HeartMuLa/HeartTranscriptor-oss"
 
 
 def _api_error(
@@ -105,19 +108,52 @@ class TranscriptionEngine:
             )
         return torch.device("cpu"), torch.float32, torch
 
-    def _ensure_pipeline(
-        self, model_root: Path, device: Any, dtype: Any
+    def _unload_pipeline(self, torch_mod: Any) -> None:
+        self._pipe = None
+        gc.collect()
+
+        with contextlib.suppress(Exception):
+            if torch_mod.cuda.is_available():
+                torch_mod.cuda.empty_cache()
+
+        with contextlib.suppress(Exception):
+            mps_backend = getattr(torch_mod.backends, "mps", None)
+            if mps_backend and mps_backend.is_available():
+                mps_mod = getattr(torch_mod, "mps", None)
+                empty_cache = getattr(mps_mod, "empty_cache", None)
+                if callable(empty_cache):
+                    empty_cache()
+
+    async def _ensure_pipeline(
+        self,
+        model_root: Path,
+        device: Any,
+        dtype: Any,
+        torch_mod: Any,
     ) -> Any:
-        if self._pipe is not None:
-            return self._pipe
+        from audiomorph.models import get_registry
         from heartlib import HeartTranscriptorPipeline
 
-        self._pipe = HeartTranscriptorPipeline.from_pretrained(
-            pretrained_path=str(model_root),
-            device=device,
-            dtype=dtype,
+        def _loader() -> Any:
+            if self._pipe is not None:
+                return self._pipe
+
+            self._pipe = HeartTranscriptorPipeline.from_pretrained(
+                pretrained_path=str(model_root),
+                device=device,
+                dtype=dtype,
+            )
+            return self._pipe
+
+        def _unloader() -> None:
+            self._unload_pipeline(torch_mod)
+
+        return await get_registry().acquire(
+            kind="transcription",
+            model_id=_TRANSCRIPTION_MODEL_ID,
+            loader=_loader,
+            unloader=_unloader,
         )
-        return self._pipe
 
     def _normalize_result(self, raw: Any) -> LyricsResult:
         if isinstance(raw, dict):
@@ -176,11 +212,16 @@ class TranscriptionEngine:
         async with self._transcription_lock:
             from audiomorph.models import get_manager
 
-            device, dtype, _torch = self._pick_device()
+            device, dtype, torch = self._pick_device()
             model_root = get_manager().pipeline_path("transcription")
 
             progress(1, 3, 2.0, "loading")
-            pipe = self._ensure_pipeline(model_root, device, dtype)
+            pipe = await self._ensure_pipeline(
+                model_root,
+                device,
+                dtype,
+                torch,
+            )
 
             def _invoke() -> Any:
                 return pipe(

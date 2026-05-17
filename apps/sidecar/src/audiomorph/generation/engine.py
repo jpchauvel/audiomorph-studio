@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-# pyright: reportMissingImports=false, reportUnknownVariableType=false, reportUnknownMemberType=false, reportUnknownArgumentType=false, reportUnknownParameterType=false
+# pyright: reportMissingImports=false, reportMissingTypeStubs=false, reportUnknownVariableType=false, reportUnknownMemberType=false, reportUnknownArgumentType=false, reportUnknownParameterType=false
 import asyncio
 import contextlib
 from datetime import UTC, datetime
@@ -123,22 +123,55 @@ class GenerationEngine:
         dtype = {"mula": torch.float32, "codec": torch.float32}
         return device, dtype, torch
 
-    def _ensure_pipeline(
-        self, model_root: Path, device: dict[str, Any], dtype: dict[str, Any]
-    ) -> Any:
-        if self._pipe is not None:
-            return self._pipe
+    def _unload_pipeline(self, torch_mod: Any) -> None:
+        self._pipe = None
+        gc.collect()
 
+        with contextlib.suppress(Exception):
+            if torch_mod.cuda.is_available():
+                torch_mod.cuda.empty_cache()
+
+        with contextlib.suppress(Exception):
+            mps_backend = getattr(torch_mod.backends, "mps", None)
+            if mps_backend and mps_backend.is_available():
+                mps_mod = getattr(torch_mod, "mps", None)
+                empty_cache = getattr(mps_mod, "empty_cache", None)
+                if callable(empty_cache):
+                    empty_cache()
+
+    async def _ensure_pipeline(
+        self,
+        model_id: str,
+        model_root: Path,
+        device: dict[str, Any],
+        dtype: dict[str, Any],
+        torch_mod: Any,
+    ) -> Any:
+        from audiomorph.models import get_registry
         from heartlib import HeartMuLaGenPipeline
 
-        self._pipe = HeartMuLaGenPipeline.from_pretrained(
-            pretrained_path=str(model_root),
-            device=device,
-            dtype=dtype,
-            version="3B",
-            lazy_load=True,
+        def _loader() -> Any:
+            if self._pipe is not None:
+                return self._pipe
+
+            self._pipe = HeartMuLaGenPipeline.from_pretrained(
+                pretrained_path=str(model_root),
+                device=device,
+                dtype=dtype,
+                version="3B",
+                lazy_load=True,
+            )
+            return self._pipe
+
+        def _unloader() -> None:
+            self._unload_pipeline(torch_mod)
+
+        return await get_registry().acquire(
+            kind="generation",
+            model_id=model_id,
+            loader=_loader,
+            unloader=_unloader,
         )
-        return self._pipe
 
     def _cleanup_after_cancel(self, output_path: Path) -> None:
         if output_path.exists():
@@ -194,7 +227,13 @@ class GenerationEngine:
                 torch.cuda.manual_seed_all(req.seed)
 
             progress(1, 4, 2.0, "loading")
-            pipe = self._ensure_pipeline(model_root, device, dtype)
+            pipe = await self._ensure_pipeline(
+                req.model_id,
+                model_root,
+                device,
+                dtype,
+                torch,
+            )
 
             force_oom = os.environ.get("AUDIOMORPH_FORCE_OOM") == "1"
 
