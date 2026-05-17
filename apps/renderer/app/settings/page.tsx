@@ -34,6 +34,7 @@ export default function SettingsPage() {
           setOpenrouterKeyPresent(data.openrouter_key_present === 'true');
         if (data.hf_token_present) setHfTokenPresent(data.hf_token_present === 'true');
       } catch (err) {
+        // eslint-disable-next-line no-console -- surfaces settings-load failures in devtools for user-reported bugs
         console.error(err);
       }
     }

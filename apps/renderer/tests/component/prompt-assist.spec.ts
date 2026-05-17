@@ -11,9 +11,9 @@ test.describe('Prompt Assist Drawer', () => {
     });
 
     await page.addInitScript(() => {
-      (window as any).__AUDIOMORPH_OPENROUTER_KEY__ = 'test-key';
-      (window as any).__AUDIOMORPH_API_BASE__ = 'http://localhost:8000';
-      (window as any).__AUDIOMORPH_TOKEN__ = 'test-token';
+      window.__AUDIOMORPH_OPENROUTER_KEY__ = 'test-key';
+      window.__AUDIOMORPH_API_BASE__ = 'http://localhost:8000';
+      window.__AUDIOMORPH_TOKEN__ = 'test-token';
     });
   });
 

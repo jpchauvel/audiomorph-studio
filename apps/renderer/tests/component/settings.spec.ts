@@ -3,12 +3,14 @@ import { test, expect } from '@playwright/test';
 test.describe('Settings Page', () => {
   test.beforeEach(async ({ page }) => {
     await page.addInitScript(() => {
-      (window as any).__AUDIOMORPH_VERSION__ = '1.0.0';
-      (window as any).__AUDIOMORPH_IPC__ = {
+      window.__AUDIOMORPH_VERSION__ = '1.0.0';
+      window.__AUDIOMORPH_IPC__ = {
         setOpenRouterKey: async (key: string) => {
+          // eslint-disable-next-line no-console -- test-only mock IPC handler; visible in Playwright trace for debugging
           console.log('IPC setOpenRouterKey called', key);
         },
         setHfToken: async (token: string) => {
+          // eslint-disable-next-line no-console -- test-only mock IPC handler; visible in Playwright trace for debugging
           console.log('IPC setHfToken called', token);
         },
         openDirectory: async () => {

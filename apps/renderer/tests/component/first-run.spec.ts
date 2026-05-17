@@ -32,9 +32,9 @@ test.afterAll(() => {
 
 test.beforeEach(async ({ page }) => {
   await page.addInitScript(() => {
-    (window as any).__AUDIOMORPH_API_BASE__ = 'http://localhost:8000';
-    (window as any).__AUDIOMORPH_TOKEN__ = 'test-token';
-    (window as any).__AUDIOMORPH_IPC__ = {
+    window.__AUDIOMORPH_API_BASE__ = 'http://localhost:8000';
+    window.__AUDIOMORPH_TOKEN__ = 'test-token';
+    window.__AUDIOMORPH_IPC__ = {
       openDirectory: async () => '/tmp/models',
       getDiskFreeGb: async () => 50,
     };
@@ -74,7 +74,7 @@ test('step progression: 1 → 2 → 3', async ({ page }) => {
 
 test('low disk blocks next button', async ({ page }) => {
   await page.addInitScript(() => {
-    (window as any).__AUDIOMORPH_IPC__ = {
+    window.__AUDIOMORPH_IPC__ = {
       openDirectory: async () => '/tmp/small',
       getDiskFreeGb: async () => 5,
     };

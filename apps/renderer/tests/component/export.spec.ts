@@ -35,7 +35,7 @@ test.describe('Export Dialog', () => {
     await expect(page.getByText('Generation complete')).toBeVisible();
 
     await page.evaluate(() => {
-      (window as any).__AUDIOMORPH_IPC__ = {
+      window.__AUDIOMORPH_IPC__ = {
         showItemInFolder: () => {},
       };
     });
@@ -80,10 +80,10 @@ test.describe('Export Dialog', () => {
     });
 
     await page.evaluate(() => {
-      (window as any).folderOpenedPath = null;
-      (window as any).__AUDIOMORPH_IPC__ = {
+      window.folderOpenedPath = null;
+      window.__AUDIOMORPH_IPC__ = {
         showItemInFolder: (path: string) => {
-          (window as any).folderOpenedPath = path;
+          window.folderOpenedPath = path;
         },
       };
     });
@@ -97,7 +97,7 @@ test.describe('Export Dialog', () => {
     await expect(showInFinderBtn).toBeVisible();
     await showInFinderBtn.click();
 
-    const openedPath = await page.evaluate(() => (window as any).folderOpenedPath);
+    const openedPath = await page.evaluate(() => window.folderOpenedPath);
     expect(openedPath).toBe('/mock/path/audio.mp3');
 
     await expect(page.getByRole('dialog')).toBeHidden();

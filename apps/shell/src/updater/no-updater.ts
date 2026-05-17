@@ -1,3 +1,4 @@
+/* eslint-disable no-console -- user-facing notice for forbidden auto-update channel */
 import { autoUpdater } from 'electron';
 
 const DISABLED_MESSAGE = 'Auto-update is disabled in AudioMorph Studio';

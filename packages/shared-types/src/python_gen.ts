@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+/* eslint-disable no-console -- codegen CLI reports progress to stdout */
 /**
  * Code generator: TypeScript types -> Python Pydantic v2 models
  * Reads from packages/shared-types/src/index.ts and writes to apps/sidecar/src/audiomorph/schemas.py

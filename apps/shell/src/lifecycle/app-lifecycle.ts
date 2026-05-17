@@ -1,3 +1,4 @@
+/* eslint-disable no-console -- main-process lifecycle logger writes to Electron stdout */
 import { app, BrowserWindow, ipcMain, nativeImage } from 'electron';
 import * as path from 'node:path';
 import * as process from 'node:process';

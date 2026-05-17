@@ -202,7 +202,9 @@ export function GenerationForm({ models, onSubmit, onCancel }: Props) {
         </div>
         <Slider
           value={[duration]}
-          onValueChange={(vals: any) => setDuration(Array.isArray(vals) ? vals[0] : vals)}
+          onValueChange={(vals: number | number[]) =>
+            setDuration(Array.isArray(vals) ? (vals[0] ?? duration) : vals)
+          }
           min={1}
           max={240}
           step={1}
@@ -227,7 +229,9 @@ export function GenerationForm({ models, onSubmit, onCancel }: Props) {
               <Label>Temperature: {temperature}</Label>
               <Slider
                 value={[temperature]}
-                onValueChange={(vals: any) => setTemperature(Array.isArray(vals) ? vals[0] : vals)}
+                onValueChange={(vals: number | number[]) =>
+                  setTemperature(Array.isArray(vals) ? (vals[0] ?? temperature) : vals)
+                }
                 min={0.1}
                 max={2.0}
                 step={0.1}

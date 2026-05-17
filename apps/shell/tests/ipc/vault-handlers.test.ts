@@ -1,15 +1,16 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import type { IpcMainInvokeEvent } from 'electron';
+
+type IpcHandler = (event: IpcMainInvokeEvent, payload: unknown) => Promise<unknown> | unknown;
 
 const mocks = vi.hoisted(() => {
-  const handlers = new Map<string, (event: any, payload: any) => Promise<unknown> | unknown>();
+  const handlers = new Map<string, IpcHandler>();
   return {
     handlers,
     ipcMain: {
-      handle: vi.fn(
-        (channel: string, cb: (event: any, payload: any) => Promise<unknown> | unknown) => {
-          handlers.set(channel, cb);
-        },
-      ),
+      handle: vi.fn((channel: string, cb: IpcHandler) => {
+        handlers.set(channel, cb);
+      }),
       removeHandler: vi.fn((channel: string) => {
         handlers.delete(channel);
       }),

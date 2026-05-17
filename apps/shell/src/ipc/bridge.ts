@@ -258,6 +258,7 @@ async function forwardSse(
 export function registerIpcBridge(options: RegisterIpcBridgeOptions = {}): void {
   const sidecar = options.sidecar ?? SidecarManager.getInstance();
   const fetchImpl = options.fetchImpl ?? fetch;
+  // eslint-disable-next-line no-console -- default logger when caller injects none; goes to Electron main stdout
   const logger = options.logger ?? ((line: string) => console.info(line));
 
   handleTyped(

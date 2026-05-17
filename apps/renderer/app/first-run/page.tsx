@@ -40,7 +40,7 @@ export default function FirstRunPage() {
       const result = await window.electronAPI.openDirectory({});
       if (result.canceled || !result.dirPath) return;
       const dir = result.dirPath;
-      const ipc = (window as any).__AUDIOMORPH_IPC__;
+      const ipc = window.__AUDIOMORPH_IPC__;
       // TODO(disk-free): getDiskFreeGb is missing from electronAPI
       const freeGb = ipc?.getDiskFreeGb ? await ipc.getDiskFreeGb(dir) : 999;
       setModelsDir(dir, freeGb);

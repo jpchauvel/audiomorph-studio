@@ -7,8 +7,8 @@ const mockModels = [
 
 test.beforeEach(async ({ page }) => {
   await page.addInitScript(() => {
-    (window as any).__AUDIOMORPH_API_BASE__ = 'http://localhost:8000';
-    (window as any).__AUDIOMORPH_TOKEN__ = 'test-token';
+    window.__AUDIOMORPH_API_BASE__ = 'http://localhost:8000';
+    window.__AUDIOMORPH_TOKEN__ = 'test-token';
   });
 });
 

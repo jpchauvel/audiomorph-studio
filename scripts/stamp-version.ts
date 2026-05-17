@@ -1,3 +1,4 @@
+/* eslint-disable no-console -- build-time CLI script reports progress to stdout/stderr */
 import { readFileSync, writeFileSync, mkdirSync } from 'node:fs';
 import { resolve, dirname } from 'node:path';
 
