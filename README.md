@@ -86,12 +86,14 @@ pre-commit install --hook-type pre-push
 pnpm dev
 ```
 
-The Electron window will open once both the shell and renderer have
-compiled. The sidecar is launched lazily by the shell with
-`python -m audiomorph.main --port 0 --token <generated>`. The shell reads
-the first stdout line (`{"event":"listening","port":...,"token":"..."}`)
-and exposes the API base URL to the renderer as
-`window.__AUDIOMORPH_API_BASE__`.
+The Electron window will open once the shell builds and the renderer
+compiles. The sidecar is launched lazily by the shell as
+`python -m audiomorph --port 0 --parent-pid <shell-pid> --auth-token <generated> --handshake-file <tmp>`.
+The shell reads `{"port": N, "token": "...", "pid": N}` from the handshake
+file once the FastAPI server is bound, then exposes the API base URL to
+the renderer as `window.__AUDIOMORPH_API_BASE__`. The sidecar self-exits
+when its parent shell dies (POSIX `getppid`) or the parent pipe closes
+(Windows).
 
 ### Useful dev commands
 
@@ -109,9 +111,24 @@ pnpm dist:linux          # build AppImage / deb
 ```bash
 cd apps/sidecar
 source .venv/bin/activate
-python -m audiomorph.main --port 8001 --token dev-local-token
-# now: curl -H "X-Audiomorph-Token: dev-local-token" http://127.0.0.1:8001/health
+python -m audiomorph \
+  --port 8001 \
+  --parent-pid $$ \
+  --auth-token dev-local-token \
+  --handshake-file /tmp/audiomorph-dev-handshake.json
+
+# In another shell:
+curl http://127.0.0.1:8001/healthz                      # auth-exempt liveness
+curl -H "X-Audiomorph-Token: dev-local-token" \
+  http://127.0.0.1:8001/models                          # authenticated route
 ```
+
+`--parent-pid` is required: the sidecar watchdog exits when this PID is no
+longer its parent (use `$$` to bind to the current shell). `--handshake-file`
+receives `{"port": N, "token": "...", "pid": N}` as soon as the server is
+bound — useful for integration scripts. Alternatively, pass `--handshake-fd <n>`
+to write the same payload to an inherited file descriptor (used by the
+Electron shell in production).
 
 ---
 
