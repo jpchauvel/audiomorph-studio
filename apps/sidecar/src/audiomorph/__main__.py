@@ -8,8 +8,8 @@ import socket
 
 import uvicorn
 
-from audiomorph._watchdog import start_watchdog
-from audiomorph.app import create_app
+from ._watchdog import start_watchdog
+from .app import create_app
 
 
 def parse_args() -> argparse.Namespace:
@@ -78,15 +78,6 @@ def main() -> int:
     sock.listen(socket.SOMAXCONN)
     actual_port = sock.getsockname()[1]
 
-    app = create_app(auth_token=args.auth_token)
-    config = uvicorn.Config(
-        app=app, host=args.host, port=args.port, log_level="warning"
-    )
-    config.fd = sock.fileno()
-    server = uvicorn.Server(config=config)
-
-    start_watchdog(args.parent_pid, server)
-
     write_handshake(
         fd=args.handshake_fd,
         path=args.handshake_file,
@@ -96,6 +87,15 @@ def main() -> int:
             "pid": os.getpid(),
         },
     )
+
+    app = create_app(auth_token=args.auth_token)
+    config = uvicorn.Config(
+        app=app, host=args.host, port=args.port, log_level="warning"
+    )
+    config.fd = sock.fileno()
+    server = uvicorn.Server(config=config)
+
+    start_watchdog(args.parent_pid, server)
 
     server.run()
     return 0

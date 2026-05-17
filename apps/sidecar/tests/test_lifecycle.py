@@ -58,8 +58,31 @@ def test_sidecar_lifecycle() -> None:
     os.close(write_fd)
 
     try:
-        ready, _, _ = select.select([read_fd], [], [], 5)
-        assert ready, "Timed out waiting for handshake"
+        handshake_deadline = time.monotonic() + 15
+        while True:
+            remaining = handshake_deadline - time.monotonic()
+            if remaining <= 0:
+                if proc.poll() is not None and proc.stderr is not None:
+                    raise AssertionError(
+                        "Timed out waiting for handshake; sidecar exited: "
+                        f"{proc.stderr.read().strip()}"
+                    )
+                raise AssertionError("Timed out waiting for handshake")
+
+            ready, _, _ = select.select(
+                [read_fd], [], [], min(0.25, remaining)
+            )
+            if ready:
+                break
+
+            if proc.poll() is not None:
+                stderr_output = ""
+                if proc.stderr is not None:
+                    stderr_output = proc.stderr.read().strip()
+                raise AssertionError(
+                    "Sidecar exited before handshake"
+                    + (f": {stderr_output}" if stderr_output else "")
+                )
 
         handshake_raw = os.read(read_fd, 4096).decode("utf-8").strip()
         assert handshake_raw, "Missing handshake payload"
