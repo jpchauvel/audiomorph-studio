@@ -30,6 +30,10 @@ import {
   ModelInfo,
   DownloadProgress as _DownloadProgress,
 } from '@/lib/stores/models';
+import type { StreamError } from '@audiomorph/ipc-contracts';
+
+const errMessage = (e: unknown): string =>
+  e instanceof Error ? e.message : typeof e === 'string' ? e : JSON.stringify(e);
 
 export default function ModelsPage() {
   const {
@@ -39,15 +43,19 @@ export default function ModelsPage() {
     setProgress,
     clearProgress: _clearProgress,
   } = useModelsStore();
-  const [activeDownloads, setActiveDownloads] = useState<Record<string, () => void>>({});
+  const [activeDownloads, setActiveDownloads] = useState<
+    Record<string, { dispose: () => void; jobId: string }>
+  >({});
 
   const fetchModels = async () => {
     try {
       const res = await window.electronAPI.request({ method: 'GET', path: '/models' });
       if (res.status < 200 || res.status >= 300) throw new Error(`HTTP ${res.status}`);
-      setModels(res.body as Record<string, unknown>);
-    } catch (e: { event: string; data: unknown }) {
-      toast.error('Failed to fetch models: ' + e.message);
+      const body = res.body as { items?: ModelInfo[] } | ModelInfo[] | null;
+      const items = Array.isArray(body) ? body : (body?.items ?? []);
+      setModels(items);
+    } catch (e: unknown) {
+      toast.error('Failed to fetch models: ' + errMessage(e));
     }
   };
 
@@ -64,12 +72,12 @@ export default function ModelsPage() {
         path: `/models/${model.id}/download`,
       });
       if (res.status < 200 || res.status >= 300) throw new Error(`HTTP ${res.status}`);
-      const { job_id } = res.body as Record<string, unknown>;
+      const { job_id } = res.body as { job_id: string };
 
       setProgress(model.id, {
         jobId: job_id,
         bytesDone: 0,
-        totalBytes: 100, // placeholder until first event
+        totalBytes: 100,
         speedMbps: 0,
         currentFile: '',
         state: 'downloading',
@@ -79,40 +87,46 @@ export default function ModelsPage() {
         { streamId: `download:${job_id}`, path: `/models/jobs/${job_id}/events` },
         (e: { event: string; data: unknown }) => {
           if (e.event === 'progress') {
-            const data = e.data as Record<string, unknown>;
+            const data = e.data as {
+              bytes_done: number;
+              bytes_total: number;
+              speed_mbps: number;
+              current_file: string | null;
+              state?: string;
+            };
             setProgress(model.id, {
               bytesDone: data.bytes_done,
-              totalBytes: data.total_bytes,
+              totalBytes: data.bytes_total,
               speedMbps: data.speed_mbps,
-              currentFile: data.current_file,
+              currentFile: data.current_file ?? '',
             });
-          } else if (e.event === 'done') {
-            dispose();
-            setProgress(model.id, { state: 'done' });
-            setActiveDownloads((prev) => {
-              const n = { ...prev };
-              delete n[model.id];
-              return n;
-            });
-            toast.success(`Downloaded ${model.name}`);
-            fetchModels();
-          } else if (e.event === 'error') {
-            dispose();
-            const data = e.data as Record<string, unknown>;
-            setProgress(model.id, { state: 'error', error: data.error });
-            setActiveDownloads((prev) => {
-              const n = { ...prev };
-              delete n[model.id];
-              return n;
-            });
-            toast.error(`Download failed: ${data.error}`);
-            fetchModels();
+            if (data.state === 'completed') {
+              dispose();
+              setProgress(model.id, { state: 'done' });
+              setActiveDownloads((prev) => {
+                const n = { ...prev };
+                delete n[model.id];
+                return n;
+              });
+              toast.success(`Downloaded ${model.name}`);
+              fetchModels();
+            } else if (data.state === 'failed') {
+              dispose();
+              setProgress(model.id, { state: 'error' });
+              setActiveDownloads((prev) => {
+                const n = { ...prev };
+                delete n[model.id];
+                return n;
+              });
+              toast.error(`Download failed`);
+              fetchModels();
+            }
           }
         },
         () => {
           dispose();
         },
-        (err: { message: string }) => {
+        (err: StreamError) => {
           dispose();
           const msg = err.message || 'Unknown error';
           setProgress(model.id, { state: 'error', error: msg });
@@ -126,9 +140,9 @@ export default function ModelsPage() {
         },
       );
 
-      setActiveDownloads((prev) => ({ ...prev, [model.id]: dispose }));
-    } catch (e: { event: string; data: unknown }) {
-      toast.error('Failed to start download: ' + e.message);
+      setActiveDownloads((prev) => ({ ...prev, [model.id]: { dispose, jobId: job_id } }));
+    } catch (e: unknown) {
+      toast.error('Failed to start download: ' + errMessage(e));
     }
   };
 
@@ -139,11 +153,11 @@ export default function ModelsPage() {
     try {
       await window.electronAPI.request({
         method: 'DELETE',
-        path: `/models/jobs/${job.jobId}`,
+        path: `/models/${modelId}/download/${job.jobId}`,
       });
-      const dispose = activeDownloads[modelId];
-      if (dispose) {
-        dispose();
+      const handle = activeDownloads[modelId];
+      if (handle) {
+        handle.dispose();
         setActiveDownloads((prev) => {
           const n = { ...prev };
           delete n[modelId];
@@ -153,8 +167,8 @@ export default function ModelsPage() {
       setProgress(modelId, { state: 'cancelled' });
       toast.info('Download cancelled');
       fetchModels();
-    } catch (e: { event: string; data: unknown }) {
-      toast.error('Failed to cancel download: ' + e.message);
+    } catch (e: unknown) {
+      toast.error('Failed to cancel download: ' + errMessage(e));
     }
   };
 
@@ -165,16 +179,16 @@ export default function ModelsPage() {
         path: `/models/${model.id}/verify`,
       });
       if (res.status < 200 || res.status >= 300) throw new Error(`HTTP ${res.status}`);
-      const result = res.body as Record<string, unknown>;
+      const result = res.body as { valid: boolean; mismatches?: unknown[] };
 
       if (result.valid) {
         toast.success(`${model.name} is fully verified`);
       } else {
-        toast.error(`${model.name} has ${result.mismatches.length} corrupted files`);
+        toast.error(`${model.name} has ${result.mismatches?.length ?? 0} corrupted files`);
       }
       fetchModels();
-    } catch (e: { event: string; data: unknown }) {
-      toast.error('Failed to verify model: ' + e.message);
+    } catch (e: unknown) {
+      toast.error('Failed to verify model: ' + errMessage(e));
     }
   };
 
@@ -189,8 +203,8 @@ export default function ModelsPage() {
       }
       toast.success(`Deleted ${model.name}`);
       fetchModels();
-    } catch (e: { event: string; data: unknown }) {
-      toast.error('Failed to delete model: ' + e.message);
+    } catch (e: unknown) {
+      toast.error('Failed to delete model: ' + errMessage(e));
     }
   };
 

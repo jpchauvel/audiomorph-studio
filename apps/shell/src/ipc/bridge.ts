@@ -145,15 +145,25 @@ async function forwardSse(
   const controller = new AbortController();
   STREAM_CONTROLLERS.set(streamId, controller);
 
+  // Priority 1 (Correctness): SSE endpoints in the sidecar are GET (FastAPI
+  // `@router.get(".../events")`). If a body is supplied we still POST so
+  // future job-creating streaming endpoints keep working; otherwise GET so
+  // pure event subscriptions like `/models/jobs/{id}/events` succeed.
+  const hasBody = body !== undefined;
+  const method = hasBody ? 'POST' : 'GET';
+  const headers: Record<string, string> = {
+    'X-Audiomorph-Token': sidecar.getApiToken(),
+    Accept: 'text/event-stream',
+  };
+  if (hasBody) {
+    headers['Content-Type'] = 'application/json';
+  }
+
   try {
     const response = await fetchImpl(joinApiUrl(sidecar.getApiBaseUrl(), streamPath), {
-      method: 'POST',
-      headers: {
-        'X-Audiomorph-Token': sidecar.getApiToken(),
-        Accept: 'text/event-stream',
-        'Content-Type': 'application/json',
-      },
-      body: body === undefined ? undefined : JSON.stringify(body),
+      method,
+      headers,
+      body: hasBody ? JSON.stringify(body) : undefined,
       signal: controller.signal,
     });
 
