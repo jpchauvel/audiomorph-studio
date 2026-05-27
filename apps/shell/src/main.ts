@@ -180,7 +180,10 @@ if (app && typeof app.whenReady === 'function' && !process.env.AUDIOMORPH_SHELL_
     // boots; that produces a one-off toast which the user has accepted as the
     // tradeoff for fastest first paint.
     const sidecar = SidecarManager.getInstance({ userDataPath: app.getPath('userData') });
-    void sidecar.start();
+    sidecar.start().catch((err: unknown) => {
+      const message = err instanceof Error ? (err.stack ?? err.message) : String(err);
+      console.error(`[main] sidecar.start() failed: ${message}`);
+    });
     registerIpcBridge();
     registerHardwareIpcHandler();
     registerVaultHandlers();

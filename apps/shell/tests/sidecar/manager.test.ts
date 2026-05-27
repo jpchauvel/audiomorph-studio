@@ -9,7 +9,14 @@ const mocks = vi.hoisted(() => {
     spawnMock: vi.fn(),
     spawnSyncMock: vi.fn(() => ({ stdout: '' })),
     fsExistsSync: vi.fn((p: string) => files.has(p)),
-    fsReadFileSync: vi.fn((p: string) => files.get(p) ?? ''),
+    fsReadFileSync: vi.fn((p: string) => {
+      if (!files.has(p)) {
+        const err = new Error(`ENOENT: ${p}`) as NodeJS.ErrnoException;
+        err.code = 'ENOENT';
+        throw err;
+      }
+      return files.get(p) ?? '';
+    }),
     fsWriteFileSync: vi.fn((p: string, data: string) => {
       files.set(p, data);
     }),
@@ -20,6 +27,7 @@ const mocks = vi.hoisted(() => {
     fsStatSync: vi.fn(() => ({ size: 0 })),
     fsAppendFileSync: vi.fn(),
     fsRenameSync: vi.fn(),
+    fsAccessSync: vi.fn(),
     httpGetMock: vi.fn(),
     httpRequestMock: vi.fn(),
   };
@@ -39,6 +47,8 @@ vi.mock('node:fs', () => ({
   statSync: mocks.fsStatSync,
   appendFileSync: mocks.fsAppendFileSync,
   renameSync: mocks.fsRenameSync,
+  accessSync: mocks.fsAccessSync,
+  constants: { X_OK: 1 },
 }));
 
 vi.mock('node:http', () => ({
@@ -65,10 +75,26 @@ class FakeChild extends EventEmitter {
   }
 }
 
-function writeHandshake(child: FakeChild, port = 40123, token = 'aabbccddeeff'): void {
-  queueMicrotask(() => {
-    child.stdout.write(`${JSON.stringify({ event: 'listening', port, token })}\n`);
-  });
+function extractHandshakeFile(spawnArgs: readonly string[]): string {
+  const idx = spawnArgs.indexOf('--handshake-file');
+  if (idx === -1 || idx + 1 >= spawnArgs.length) {
+    throw new Error('spawn args missing --handshake-file');
+  }
+  const value = spawnArgs[idx + 1];
+  if (typeof value !== 'string') {
+    throw new Error('--handshake-file value not a string');
+  }
+  return value;
+}
+
+function writeHandshake(
+  spawnArgs: readonly string[],
+  port = 40123,
+  token = 'aabbccddeeff',
+  pid = 99999,
+): void {
+  const file = extractHandshakeFile(spawnArgs);
+  mocks.files.set(file, `${JSON.stringify({ port, token, pid })}\n`);
 }
 
 function setupHttpMocks(): void {
@@ -111,8 +137,8 @@ describe('SidecarManager', () => {
 
   it('spawn + handshake happy path emits ready and exposes API base URL', async () => {
     const child = new FakeChild(1101);
-    mocks.spawnMock.mockImplementation(() => {
-      writeHandshake(child, 43210, 'atesttoken');
+    mocks.spawnMock.mockImplementation((_bin: string, args: readonly string[]) => {
+      writeHandshake(args, 43210, 'atesttoken', 1101);
       return child;
     });
 
@@ -131,9 +157,19 @@ describe('SidecarManager', () => {
     expect(ready).toHaveBeenCalledTimes(1);
     expect(manager.getApiBaseUrl()).toBe('http://127.0.0.1:43210');
     expect(manager.getApiToken()).toBe('atesttoken');
+
+    const spawnCall = mocks.spawnMock.mock.calls[0];
+    expect(spawnCall).toBeDefined();
+    const args = spawnCall![1] as readonly string[];
+    expect(args).toContain('-m');
+    expect(args).toContain('audiomorph');
+    expect(args).toContain('--parent-pid');
+    expect(args).toContain('--auth-token');
+    expect(args).toContain('atesttoken');
+    expect(args).toContain('--handshake-file');
   });
 
-  it('handshake timeout rejects when no stdout arrives', async () => {
+  it('handshake timeout rejects when no handshake file arrives', async () => {
     vi.useFakeTimers();
     const child = new FakeChild(1102);
     mocks.spawnMock.mockReturnValue(child);
@@ -163,8 +199,8 @@ describe('SidecarManager', () => {
       }
     });
 
-    mocks.spawnMock.mockImplementation(() => {
-      writeHandshake(child, 42000, 'aterm');
+    mocks.spawnMock.mockImplementation((_bin: string, args: readonly string[]) => {
+      writeHandshake(args, 42000, 'aterm', 1103);
       return child;
     });
 
@@ -188,8 +224,8 @@ describe('SidecarManager', () => {
   it('force kills sidecar when process hangs after SIGTERM', async () => {
     vi.useFakeTimers();
     const child = new FakeChild(1104);
-    mocks.spawnMock.mockImplementation(() => {
-      writeHandshake(child, 42001, 'ahang');
+    mocks.spawnMock.mockImplementation((_bin: string, args: readonly string[]) => {
+      writeHandshake(args, 42001, 'ahang', 1104);
       return child;
     });
 
@@ -210,9 +246,9 @@ describe('SidecarManager', () => {
     vi.useRealTimers();
   });
 
-  it('zombie reaper SIGKILLs existing audiomorph.main pid before spawn', async () => {
+  it('zombie reaper SIGKILLs existing audiomorph pid before spawn', async () => {
     mocks.files.set('/tmp/audiomorph/sidecar.pid', '999\n');
-    mocks.spawnSyncMock.mockReturnValue({ stdout: 'python -m audiomorph.main --port 0' });
+    mocks.spawnSyncMock.mockReturnValue({ stdout: 'python -m audiomorph --port 0' });
 
     const killer = vi.fn((pid: number, signal?: NodeJS.Signals | number) => {
       if (signal === 0) return;
@@ -221,8 +257,8 @@ describe('SidecarManager', () => {
     });
 
     const child = new FakeChild(1105);
-    mocks.spawnMock.mockImplementation(() => {
-      writeHandshake(child, 42002, 'azombie');
+    mocks.spawnMock.mockImplementation((_bin: string, args: readonly string[]) => {
+      writeHandshake(args, 42002, 'azombie', 1105);
       return child;
     });
 
@@ -251,10 +287,10 @@ describe('SidecarManager', () => {
       new FakeChild(1205),
     ];
     let spawnIndex = 0;
-    mocks.spawnMock.mockImplementation(() => {
+    mocks.spawnMock.mockImplementation((_bin: string, args: readonly string[]) => {
       const child = children[spawnIndex] ?? new FakeChild(1300 + spawnIndex);
       spawnIndex += 1;
-      writeHandshake(child, 43000 + spawnIndex, 'arest');
+      writeHandshake(args, 43000 + spawnIndex, 'arest', child.pid);
       return child;
     });
 
@@ -291,8 +327,8 @@ describe('SidecarManager', () => {
     const logger = { log: vi.fn() };
     const child = new FakeChild(1106);
 
-    mocks.spawnMock.mockImplementation(() => {
-      writeHandshake(child, 45555, rawToken);
+    mocks.spawnMock.mockImplementation((_bin: string, args: readonly string[]) => {
+      writeHandshake(args, 45555, rawToken, 1106);
       return child;
     });
 

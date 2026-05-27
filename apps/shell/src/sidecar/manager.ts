@@ -1,6 +1,7 @@
 import { EventEmitter } from 'node:events';
 import * as fs from 'node:fs';
 import * as http from 'node:http';
+import * as os from 'node:os';
 import * as path from 'node:path';
 import * as process from 'node:process';
 import * as readline from 'node:readline';
@@ -12,9 +13,9 @@ import { maskToken, SidecarFileLogger, type SidecarLogWriter } from './logger';
 type SidecarProcess = ReturnType<typeof spawn>;
 
 interface HandshakePayload {
-  event: string;
   port: number;
   token: string;
+  pid: number;
 }
 
 interface SidecarManagerOptions {
@@ -150,7 +151,7 @@ export class SidecarManager extends EventEmitter {
       const pid = Number.parseInt(raw, 10);
       if (Number.isFinite(pid) && this.isProcessAlive(pid)) {
         const cmdline = this.readProcessCommandLine(pid);
-        if (cmdline.includes('audiomorph.main')) {
+        if (cmdline.includes('audiomorph')) {
           this.processKiller(pid, 'SIGKILL');
         }
       }
@@ -162,8 +163,11 @@ export class SidecarManager extends EventEmitter {
   private async spawnAndHandshake(): Promise<void> {
     const pythonPath = this.resolvePythonPath();
     const launchToken = this.tokenGenerator();
+    const handshakeFile = path.join(
+      os.tmpdir(),
+      `audiomorph-handshake-${randomBytes(8).toString('hex')}.json`,
+    );
 
-    // AUDIOMORPH_TEST_MODE hook
     const env =
       process.env.AUDIOMORPH_TEST_MODE === '1'
         ? { ...process.env, AUDIOMORPH_TEST_MODE: '1' }
@@ -171,7 +175,18 @@ export class SidecarManager extends EventEmitter {
 
     const proc = spawn(
       pythonPath,
-      ['-m', 'audiomorph.main', '--port', '0', '--token', launchToken],
+      [
+        '-m',
+        'audiomorph',
+        '--port',
+        '0',
+        '--parent-pid',
+        String(process.pid),
+        '--auth-token',
+        launchToken,
+        '--handshake-file',
+        handshakeFile,
+      ],
       {
         detached: false,
         stdio: ['ignore', 'pipe', 'pipe'],
@@ -186,15 +201,45 @@ export class SidecarManager extends EventEmitter {
     this.attachExitHandler(proc);
     fs.writeFileSync(this.pidFilePath(), `${proc.pid}\n`, 'utf8');
 
-    const payload = await this.readHandshake(proc, launchToken);
-    this.port = payload.port;
-    this.token = payload.token;
+    try {
+      const payload = await this.readHandshake(proc, launchToken, handshakeFile);
+      this.port = payload.port;
+      this.token = payload.token;
+    } finally {
+      try {
+        fs.unlinkSync(handshakeFile);
+      } catch {
+        void 0;
+      }
+    }
   }
 
   private resolvePythonPath(): string {
     if (process.env.NODE_ENV === 'development') {
       const repoRoot = path.resolve(__dirname, '..', '..', '..', '..');
-      return path.join(repoRoot, '.venv', 'bin', 'python');
+      const pythonExe = process.platform === 'win32' ? 'python.exe' : 'python';
+      const binDir = process.platform === 'win32' ? 'Scripts' : 'bin';
+      // Priority: README setup (apps/sidecar/.venv) > legacy repo-root .venv.
+      const candidates = [
+        path.join(repoRoot, 'apps', 'sidecar', '.venv', binDir, pythonExe),
+        path.join(repoRoot, '.venv', binDir, pythonExe),
+      ];
+      const found = candidates.find((p) => {
+        try {
+          fs.accessSync(p, fs.constants.X_OK);
+          return true;
+        } catch {
+          return false;
+        }
+      });
+      if (!found) {
+        throw new Error(
+          `Sidecar Python venv not found. Looked in:\n  ${candidates.join('\n  ')}\n` +
+            `Create it with: cd apps/sidecar && python -m venv .venv && ` +
+            `source .venv/bin/activate && pip install -e ".[dev]"`,
+        );
+      }
+      return found;
     }
 
     const mapped = PLATFORM_MAP[process.platform];
@@ -205,7 +250,11 @@ export class SidecarManager extends EventEmitter {
     return path.join(process.resourcesPath, 'python', mapped, 'bin', 'python');
   }
 
-  private readHandshake(proc: SidecarProcess, launchToken: string): Promise<HandshakePayload> {
+  private readHandshake(
+    proc: SidecarProcess,
+    launchToken: string,
+    handshakeFile: string,
+  ): Promise<HandshakePayload> {
     return new Promise<HandshakePayload>((resolve, reject) => {
       const stdout = proc.stdout;
       const stderr = proc.stderr;
@@ -217,10 +266,26 @@ export class SidecarManager extends EventEmitter {
       const outRl = readline.createInterface({ input: stdout });
       const errRl = readline.createInterface({ input: stderr });
       let settled = false;
+      let pollTimer: NodeJS.Timeout | null = null;
+
+      outRl.on('line', (line) => {
+        this.handleOutputLine('stdout', this.sanitizeLine(line, launchToken));
+      });
+      errRl.on('line', (line) => {
+        this.handleOutputLine('stderr', line);
+      });
+
+      const stopPoll = (): void => {
+        if (pollTimer) {
+          clearInterval(pollTimer);
+          pollTimer = null;
+        }
+      };
 
       const timer = setTimeout(() => {
         if (settled) return;
         settled = true;
+        stopPoll();
         outRl.close();
         errRl.close();
         this.sendSignal('SIGKILL');
@@ -231,6 +296,7 @@ export class SidecarManager extends EventEmitter {
         if (settled) return;
         settled = true;
         clearTimeout(timer);
+        stopPoll();
         resolve(payload);
       };
 
@@ -238,39 +304,50 @@ export class SidecarManager extends EventEmitter {
         if (settled) return;
         settled = true;
         clearTimeout(timer);
+        stopPoll();
         reject(err);
       };
 
-      outRl.once('line', (line) => {
-        this.pushRecentLog(this.sanitizeLine(line, launchToken));
+      const tryReadHandshake = (): void => {
+        if (settled) return;
+        let raw: string;
         try {
-          const parsed = JSON.parse(line) as Partial<HandshakePayload>;
-          if (
-            parsed.event !== 'listening' ||
-            typeof parsed.port !== 'number' ||
-            typeof parsed.token !== 'string'
-          ) {
-            fail(new Error('Invalid sidecar handshake payload'));
-            return;
-          }
-
-          this.logger.log(
-            'stdout',
-            `sidecar listening on 127.0.0.1:${parsed.port}, token=${maskToken(parsed.token)}`,
-          );
-
-          outRl.on('line', (nextLine) => {
-            this.handleOutputLine('stdout', nextLine);
-          });
-          finish(parsed as HandshakePayload);
+          raw = fs.readFileSync(handshakeFile, 'utf8');
         } catch {
-          fail(new Error('Handshake line is not valid JSON'));
+          return;
         }
-      });
+        if (!raw.trim()) return;
 
-      errRl.on('line', (line) => {
-        this.handleOutputLine('stderr', line);
-      });
+        let parsed: Partial<HandshakePayload>;
+        try {
+          parsed = JSON.parse(raw) as Partial<HandshakePayload>;
+        } catch {
+          fail(new Error('Handshake file is not valid JSON'));
+          return;
+        }
+
+        if (
+          typeof parsed.port !== 'number' ||
+          typeof parsed.token !== 'string' ||
+          typeof parsed.pid !== 'number'
+        ) {
+          fail(new Error('Invalid sidecar handshake payload'));
+          return;
+        }
+        if (parsed.token !== launchToken) {
+          fail(new Error('Sidecar handshake token mismatch'));
+          return;
+        }
+
+        this.logger.log(
+          'stdout',
+          `sidecar listening on 127.0.0.1:${parsed.port}, token=${maskToken(parsed.token)}`,
+        );
+        finish(parsed as HandshakePayload);
+      };
+
+      pollTimer = setInterval(tryReadHandshake, 50);
+      tryReadHandshake();
 
       proc.once('error', (err) => {
         fail(err instanceof Error ? err : new Error(String(err)));
