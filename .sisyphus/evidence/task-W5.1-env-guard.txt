@@ -1,3 +1,0 @@
-Command: env -i HOME="$HOME" PATH="$PATH" bash scripts/build-mac.sh
-Output:
-Missing required env var: CSC_LINK

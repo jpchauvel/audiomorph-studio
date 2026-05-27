@@ -1,7 +1,0 @@
-  configuration: --cc=/usr/bin/clang --prefix=/opt/ffmpeg --extra-version=tessus --enable-avisynth --enable-fontconfig --enable-gpl --enable-libaom --enable-libass --enable-libbluray --enable-libdav1d --enable-libfreetype --enable-libgsm --enable-libharfbuzz --enable-libmodplug --enable-libmp3lame --enable-libmysofa --enable-libopencore-amrnb --enable-libopencore-amrwb --enable-libopenh264 --enable-libopenjpeg --enable-libopus --enable-librubberband --enable-libshine --enable-libsnappy --enable-libsoxr --enable-libspeex --enable-libtheora --enable-libtwolame --enable-libvidstab --enable-libvmaf --enable-libvo-amrwbenc --enable-libvorbis --enable-libvpx --enable-libwebp --enable-libx264 --enable-libx265 --enable-libxavs --enable-libxml2 --enable-libxvid --enable-libzimg --enable-libzmq --enable-libzvbi --enable-version3 --pkg-config-flags=--static --disable-ffplay
- DEA.L. aac                  AAC (Advanced Audio Coding) (decoders: aac aac_fixed aac_at) (encoders: aac aac_at)
- D.A.L. aac_latm             AAC LATM (Advanced Audio Coding LATM syntax)
- DEAI.S flac                 FLAC (Free Lossless Audio Codec)
- DEAIL. mp3                  MP3 (MPEG audio layer 3) (decoders: mp3float mp3 mp3_at) (encoders: libmp3lame libshine)
- DEAI.S pcm_s16le            PCM signed 16-bit little-endian
- DEAI.S pcm_s16le_planar     PCM signed 16-bit little-endian planar
