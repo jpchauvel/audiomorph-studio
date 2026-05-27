@@ -102,6 +102,8 @@ See `docs/ci-cost-guards.md`.
 - **Renderer can't reach sidecar in tests** → `apps/renderer/tests/integration/_setup.ts` `installRendererBootstrap()` must run.
 - **Hardware gate false-positive** → `packages/hardware-gate/src/detect.ts` (Apple Silicon unified-memory mapping lives there).
 - **HF cache missing** → `scripts/ci-hf-cache-verify.mjs` + `pnpm test:hf:warm`.
+- **`pnpm dev` eats RAM / Turbopack slow** → check `apps/shell/electron-builder.yml` `directories.output` is `../../.release-artifacts/shell` (outside workspace). In-workspace `release/` makes Next/Turbopack watch multi-GB build artifacts.
+- **`pnpm dev` exits before Electron launches** → renderer-readiness gate is `scripts/wait-for-url.mjs` (not `wait-on`; wait-on 8.x produces false-negative timeouts against Next 16 first-compile). Set `WAIT_FOR_URL_VERBOSE=1` to trace polls.
 
 ## Subdir Guides
 
