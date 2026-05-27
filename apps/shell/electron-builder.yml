@@ -2,7 +2,11 @@ appId: studio.audiomorph.app
 productName: AudioMorph Studio
 copyright: Copyright (c) 2026 AudioMorph Studio
 directories:
-  output: release
+  # Output sits OUTSIDE the workspace tree so Next.js / Turbopack file
+  # watching in apps/renderer does not have to traverse multi-GB
+  # electron-builder artifacts (dmg, zip, mac-arm64 unpacked, etc.).
+  # See AGENTS.md "Where to Look When..." perf notes.
+  output: ../../.release-artifacts/shell
   buildResources: build
 files:
   - dist/**/*

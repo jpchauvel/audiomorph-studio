@@ -54,7 +54,11 @@ Thumbs.db
 /.sisyphus/evidence/
 **/.sisyphus/evidence/
 
-# Release artifacts
+# Release artifacts (electron-builder output relocated out of the
+# workspace so it does not pollute Next/Turbopack file watching).
+/.release-artifacts/
+# Legacy in-workspace location, kept for safety if any old checkout
+# still has it on disk.
 release/
 
 # Local security scan reports

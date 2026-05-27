@@ -10,7 +10,7 @@
   "homepage": "https://github.com/audiomorph/audiomorph-studio",
   "main": "dist/main.js",
   "scripts": {
-    "dev": "pnpm run build:shell && concurrently -k -n RENDERER,SHELL -c blue,magenta \"cross-env NODE_OPTIONS=--disable-warning=DEP0205 pnpm --filter renderer dev\" \"wait-on -t 60000 http-get://localhost:3000 && electron dist/main.js\"",
+    "dev": "pnpm run build:shell && concurrently -k -n RENDERER,SHELL -c blue,magenta \"cross-env NODE_OPTIONS=--disable-warning=DEP0205 pnpm --filter renderer dev\" \"node ../../scripts/wait-for-url.mjs http://localhost:3000 60000 && electron dist/main.js\"",
     "build:shell": "pnpm --filter @audiomorph/ipc-contracts build && pnpm --filter @audiomorph/hardware-gate build && tsc -p tsconfig.json",
     "build:renderer": "pnpm --filter renderer build",
     "build:all": "pnpm run build:renderer && pnpm run build:shell",
