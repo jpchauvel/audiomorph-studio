@@ -22,23 +22,35 @@ export default function StudioPage() {
   const { jobId, phase, setJob, setPhase, setError, setResult, reset } = useGenerationStore();
 
   useEffect(() => {
-    window.electronAPI
-      .request({ method: 'GET', path: '/models' })
-      .then((res: { status: number; body: unknown }) => {
-        if (res.status >= 200 && res.status < 300) {
-          const body = res.body as { items?: Model[] } | Model[] | null;
-          const items = Array.isArray(body) ? body : (body?.items ?? []);
-          setModels(items.filter((m) => m.state === 'verified'));
-        } else {
-          throw new Error('Failed to load models');
-        }
-      })
-      .catch(() => {
-        toast.error('Failed to load models');
-      })
-      .finally(() => {
-        setIsLoadingModels(false);
-      });
+    const api = typeof window !== 'undefined' ? window.electronAPI : undefined;
+    if (!api || typeof api.request !== 'function') {
+      setIsLoadingModels(false);
+      toast.error('Desktop bridge unavailable — please restart the app');
+      return;
+    }
+
+    try {
+      api
+        .request({ method: 'GET', path: '/models' })
+        .then((res: { status: number; body: unknown }) => {
+          if (res.status >= 200 && res.status < 300) {
+            const body = res.body as { items?: Model[] } | Model[] | null;
+            const items = Array.isArray(body) ? body : (body?.items ?? []);
+            setModels(items.filter((m) => m.state === 'verified'));
+          } else {
+            throw new Error('Failed to load models');
+          }
+        })
+        .catch(() => {
+          toast.error('Failed to load models');
+        })
+        .finally(() => {
+          setIsLoadingModels(false);
+        });
+    } catch {
+      setIsLoadingModels(false);
+      toast.error('Failed to load models');
+    }
 
     return () => {
       if (streamDisposeRef.current) {
