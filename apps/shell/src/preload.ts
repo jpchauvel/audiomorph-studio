@@ -1,5 +1,7 @@
 import { contextBridge, ipcRenderer } from 'electron';
 import type {
+  ApiFetchAudioArgs,
+  ApiFetchAudioResult,
   ApiRequestArgs,
   ApiResponse,
   ApiStreamArgs,
@@ -72,6 +74,10 @@ const electronAPI: ElectronAPI = {
 
   async streamCancel(args: { streamId: string }): Promise<void> {
     await ipcRenderer.invoke('api:stream:cancel', args);
+  },
+
+  fetchAudio(args: ApiFetchAudioArgs): Promise<ApiFetchAudioResult> {
+    return ipcRenderer.invoke('api:fetchAudio', args) as Promise<ApiFetchAudioResult>;
   },
 
   saveAs(args: DialogSaveAsArgs): Promise<DialogSaveAsResult> {

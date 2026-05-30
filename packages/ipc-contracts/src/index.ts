@@ -14,6 +14,15 @@ export interface ApiCancelInput {
   requestId: string;
 }
 
+export interface ApiFetchAudioInput {
+  jobId: string;
+}
+
+export interface ApiFetchAudioOutput {
+  bytes: Uint8Array;
+  contentType: string;
+}
+
 export interface ApiStreamInput {
   streamId: string;
   path: string;
@@ -189,6 +198,8 @@ export type DialogOpenFileArgs = DialogOpenFileInput;
 export type DialogOpenFileResult = DialogOpenFileOutput;
 export type FsCopyFileArgs = FsCopyFileInput;
 export type FsReadFileArgs = FsReadFileInput;
+export type ApiFetchAudioArgs = ApiFetchAudioInput;
+export type ApiFetchAudioResult = ApiFetchAudioOutput;
 
 export interface ElectronAPI {
   request(args: ApiRequestArgs): Promise<ApiResponse>;
@@ -200,6 +211,8 @@ export interface ElectronAPI {
     onError: (error: StreamError) => void,
   ): () => void;
   streamCancel(args: { streamId: string }): Promise<void>;
+
+  fetchAudio(args: ApiFetchAudioInput): Promise<ApiFetchAudioOutput>;
 
   saveAs(args: DialogSaveAsArgs): Promise<DialogSaveAsResult>;
   openDirectory(args: DialogOpenDirectoryArgs): Promise<DialogOpenDirectoryResult>;
@@ -239,6 +252,10 @@ export type IpcInvokeMap = {
   'api:stream:cancel': {
     in: ApiStreamCancelInput;
     out: { ok: true };
+  };
+  'api:fetchAudio': {
+    in: ApiFetchAudioInput;
+    out: ApiFetchAudioOutput;
   };
   'dialog:saveAs': {
     in: DialogSaveAsInput;

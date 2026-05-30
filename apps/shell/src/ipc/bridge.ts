@@ -5,6 +5,8 @@ import * as os from 'node:os';
 
 import type {
   ApiCancelInput,
+  ApiFetchAudioInput,
+  ApiFetchAudioOutput,
   ApiRequestInput,
   ApiRequestOutput,
   ApiStreamCancelInput,
@@ -348,6 +350,33 @@ export function registerIpcBridge(options: RegisterIpcBridgeOptions = {}): void 
     STREAM_CONTROLLERS.delete(payload.streamId);
     return { ok: true };
   });
+
+  handleTyped(
+    'api:fetchAudio',
+    async (_event, payload: ApiFetchAudioInput): Promise<ApiFetchAudioOutput> => {
+      if (!payload.jobId || typeof payload.jobId !== 'string') {
+        throw new IpcBridgeError('INVALID_JOB_ID', 'jobId is required');
+      }
+      if (!/^[a-zA-Z0-9-]+$/.test(payload.jobId)) {
+        throw new IpcBridgeError('INVALID_JOB_ID', 'jobId has invalid characters');
+      }
+      const url = joinApiUrl(sidecar.getApiBaseUrl(), `/jobs/${payload.jobId}/audio`);
+      const response = await fetchImpl(url, {
+        method: 'GET',
+        headers: { 'X-Audiomorph-Token': sidecar.getApiToken() },
+      });
+      if (!response.ok) {
+        throw new IpcBridgeError(
+          'AUDIO_FETCH_FAILED',
+          `audio fetch failed with status ${response.status}`,
+        );
+      }
+      const buf = await response.arrayBuffer();
+      const contentType = response.headers.get('content-type') ?? 'audio/wav';
+      logger(`[ipc] GET /jobs/${payload.jobId}/audio ${response.status} ${buf.byteLength}b`);
+      return { bytes: new Uint8Array(buf), contentType };
+    },
+  );
 
   handleTyped('dialog:saveAs', async (_event, payload: DialogSaveAsInput) => {
     const result = await dialog.showSaveDialog({

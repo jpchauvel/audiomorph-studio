@@ -375,4 +375,42 @@ describe('IPC bridge', () => {
       'X-HuggingFace-Token': 'hf_stream_token_xyz',
     });
   });
+
+  it('api:fetchAudio proxies sidecar WAV bytes and strips token from response', async () => {
+    const wavBytes = new Uint8Array([0x52, 0x49, 0x46, 0x46, 0x00, 0x00, 0x00, 0x00]);
+    mocks.fetch.mockResolvedValueOnce(
+      new Response(wavBytes, { status: 200, headers: { 'content-type': 'audio/wav' } }),
+    );
+
+    const handler = mocks.handlers.get('api:fetchAudio')!;
+    const out = (await handler(
+      { sender: { send: vi.fn() } },
+      { jobId: 'abc-123' },
+    )) as { bytes: Uint8Array; contentType: string };
+
+    const [url, init] = mocks.fetch.mock.calls[0] as [string, RequestInit];
+    expect(url).toBe('http://127.0.0.1:40123/jobs/abc-123/audio');
+    expect((init.headers as Record<string, string>)['X-Audiomorph-Token']).toBe(
+      'super-secret-token',
+    );
+    expect(out.contentType).toBe('audio/wav');
+    expect(Array.from(out.bytes)).toEqual(Array.from(wavBytes));
+    expect(JSON.stringify(Array.from(out.bytes))).not.toContain('super-secret-token');
+  });
+
+  it('api:fetchAudio rejects invalid jobId', async () => {
+    const handler = mocks.handlers.get('api:fetchAudio')!;
+    await expect(
+      handler({ sender: { send: vi.fn() } }, { jobId: '../../etc/passwd' }),
+    ).rejects.toMatchObject({ code: 'INVALID_JOB_ID' });
+    expect(mocks.fetch).not.toHaveBeenCalled();
+  });
+
+  it('api:fetchAudio surfaces upstream non-200 as AUDIO_FETCH_FAILED', async () => {
+    mocks.fetch.mockResolvedValueOnce(new Response('not found', { status: 404 }));
+    const handler = mocks.handlers.get('api:fetchAudio')!;
+    await expect(
+      handler({ sender: { send: vi.fn() } }, { jobId: 'missing-job' }),
+    ).rejects.toMatchObject({ code: 'AUDIO_FETCH_FAILED' });
+  });
 });

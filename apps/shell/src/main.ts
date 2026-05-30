@@ -17,7 +17,7 @@
  *   - prod: file://<resourcesPath>/renderer/index.html (static export)
  */
 
-import { app, BrowserWindow, protocol, shell } from 'electron';
+import { app, BrowserWindow, shell } from 'electron';
 import * as path from 'node:path';
 import * as process from 'node:process';
 import { setupCrashReporter } from './crash/crash-reporter';
@@ -26,33 +26,10 @@ import { registerIpcBridge } from './ipc/bridge';
 import { registerVaultHandlers } from './ipc/vault-handlers';
 import { setupAppLifecycle } from './lifecycle/app-lifecycle';
 import { buildMenu } from './menu/menu-builder';
-import { AUDIOMORPH_SCHEME, registerAudiomorphProtocol } from './protocol/audiomorph-protocol';
 import { SidecarManager } from './sidecar/manager';
 import { disableAutoUpdater } from './updater/no-updater';
 
 disableAutoUpdater();
-
-if (
-  app &&
-  typeof app.whenReady === 'function' &&
-  !process.env.AUDIOMORPH_SHELL_TEST &&
-  protocol &&
-  typeof protocol.registerSchemesAsPrivileged === 'function'
-) {
-  protocol.registerSchemesAsPrivileged([
-    {
-      scheme: AUDIOMORPH_SCHEME,
-      privileges: {
-        secure: true,
-        standard: true,
-        supportFetchAPI: true,
-        stream: true,
-        bypassCSP: true,
-        corsEnabled: true,
-      },
-    },
-  ]);
-}
 
 const isDev = process.env.NODE_ENV === 'development';
 let mainWindow: BrowserWindow | null = null;
@@ -206,19 +183,6 @@ if (app && typeof app.whenReady === 'function' && !process.env.AUDIOMORPH_SHELL_
     sidecar.start().catch((err: unknown) => {
       const message = err instanceof Error ? (err.stack ?? err.message) : String(err);
       console.error(`[main] sidecar.start() failed: ${message}`);
-    });
-    sidecar.once('sidecar:ready', () => {
-      try {
-        registerAudiomorphProtocol(protocol, {
-          getApiBaseUrl: () => sidecar.getApiBaseUrl(),
-          getApiToken: () => sidecar.getApiToken(),
-          logger: (line: string) => console.log(line),
-        });
-        console.log('[main] audiomorph:// protocol handler registered');
-      } catch (err: unknown) {
-        const message = err instanceof Error ? (err.stack ?? err.message) : String(err);
-        console.error(`[main] registerAudiomorphProtocol failed: ${message}`);
-      }
     });
     registerIpcBridge();
     registerHardwareIpcHandler();

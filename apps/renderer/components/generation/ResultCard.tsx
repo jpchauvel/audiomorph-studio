@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useGenerationStore } from '@/lib/stores/generation';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -15,10 +15,42 @@ const WaveformPlayer = dynamic(
 export function ResultCard() {
   const { phase, resultJobId } = useGenerationStore();
   const [isExportOpen, setIsExportOpen] = useState(false);
+  const [audioUrl, setAudioUrl] = useState<string | null>(null);
+  const [audioError, setAudioError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (phase !== 'done' || !resultJobId) {
+      setAudioUrl(null);
+      return;
+    }
+    const api = window.electronAPI;
+    if (!api?.fetchAudio) {
+      setAudioError('Audio bridge unavailable');
+      return;
+    }
+    let cancelled = false;
+    let createdUrl: string | null = null;
+    setAudioError(null);
+    void api
+      .fetchAudio({ jobId: resultJobId })
+      .then(({ bytes, contentType }) => {
+        if (cancelled) return;
+        const blob = new Blob([new Uint8Array(bytes)], { type: contentType });
+        createdUrl = URL.createObjectURL(blob);
+        setAudioUrl(createdUrl);
+      })
+      .catch((err: unknown) => {
+        if (cancelled) return;
+        const msg = err instanceof Error ? err.message : String(err);
+        setAudioError(msg);
+      });
+    return () => {
+      cancelled = true;
+      if (createdUrl) URL.revokeObjectURL(createdUrl);
+    };
+  }, [phase, resultJobId]);
 
   if (phase !== 'done' || !resultJobId) return null;
-
-  const audioUrl = `audiomorph://jobs/${resultJobId}/audio`;
 
   return (
     <Card className="mt-6 border border-[var(--color-success)] bg-[var(--color-success)]/5">
@@ -35,7 +67,15 @@ export function ResultCard() {
           </code>
         </div>
 
-        <WaveformPlayer audioUrl={audioUrl} />
+        {audioError && (
+          <div
+            className="text-sm text-[var(--color-danger)]"
+            data-testid="result-card-audio-error"
+          >
+            Failed to load audio: {audioError}
+          </div>
+        )}
+        {audioUrl && <WaveformPlayer audioUrl={audioUrl} />}
         <div className="flex justify-end">
           <Button onClick={() => setIsExportOpen(true)}>Export</Button>
         </div>
