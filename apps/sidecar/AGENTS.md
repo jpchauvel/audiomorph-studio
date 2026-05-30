@@ -11,6 +11,12 @@ cd apps/sidecar
 python -m venv .venv
 source .venv/bin/activate   # Windows: .venv\Scripts\activate
 pip install -e ".[dev]"
+
+# REQUIRED for generation/transcription. Pulls torch + torchaudio +
+# transformers + accelerate + bitsandbytes (~multi-GB, 5-15 min).
+# Without this, _pick_device() raises ModuleNotFoundError: No module
+# named 'torch' and POST /jobs/generate fails with INTERNAL_ERROR.
+pip install -e ../../heartlib
 ```
 
 ## Run Standalone
