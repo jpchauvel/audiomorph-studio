@@ -1,7 +1,18 @@
 import { test, expect } from '@playwright/test';
+import { installElectronApiMock } from './_setup';
 
 test.describe('Lyrics Workspace', () => {
   test.beforeEach(async ({ page }) => {
+    await installElectronApiMock(page);
+    await page.addInitScript(() => {
+      // Electron-only File.path getter; renderer's transcribe() reads it directly.
+      Object.defineProperty(File.prototype, 'path', {
+        configurable: true,
+        get(this: File) {
+          return `/tmp/${this.name}`;
+        },
+      });
+    });
     await page.route('**/lyrics/transcribe', async (route) => {
       const form = route.request().postData();
       if (form) {
@@ -13,7 +24,7 @@ test.describe('Lyrics Workspace', () => {
 
     await page.route('**/lyrics/jobs/*/events', async (_route) => {});
 
-    await page.goto('http://localhost:3000/lyrics');
+    await page.goto('/lyrics.html');
   });
 
   test('renders drop zone', async ({ page }) => {
@@ -38,7 +49,7 @@ test.describe('Lyrics Workspace', () => {
 
     await btn.click();
 
-    await expect(page).toHaveURL('http://localhost:3000/');
+    await expect(page).toHaveURL(/\/(index(\.html)?)?$/);
   });
 
   test('cancel button visible during transcription', async ({ page }) => {

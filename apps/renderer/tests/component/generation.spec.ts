@@ -1,7 +1,9 @@
 import { test, expect } from '@playwright/test';
+import { installElectronApiMock } from './_setup';
 
 test.describe('Generation Studio', () => {
   test.beforeEach(async ({ page }) => {
+    await installElectronApiMock(page);
     await page.route('**/models', async (route) => {
       await route.fulfill({
         status: 200,

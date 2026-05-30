@@ -1,7 +1,9 @@
 import { test, expect } from '@playwright/test';
+import { installElectronApiMock } from './_setup';
 
 test.describe('Settings Page', () => {
   test.beforeEach(async ({ page }) => {
+    await installElectronApiMock(page);
     await page.addInitScript(() => {
       window.__AUDIOMORPH_VERSION__ = '1.0.0';
       window.__AUDIOMORPH_IPC__ = {

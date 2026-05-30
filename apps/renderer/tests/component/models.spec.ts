@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+import { installElectronApiMock } from './_setup';
 
 const mockModels = [
   { id: 'model-1', repo_id: 'org/model-1', name: 'Model 1', size_gb: 2.5, state: 'verified' },
@@ -6,10 +7,7 @@ const mockModels = [
 ];
 
 test.beforeEach(async ({ page }) => {
-  await page.addInitScript(() => {
-    window.__AUDIOMORPH_API_BASE__ = 'http://localhost:8000';
-    window.__AUDIOMORPH_TOKEN__ = 'test-token';
-  });
+  await installElectronApiMock(page);
 });
 
 test('displays list of models', async ({ page }) => {

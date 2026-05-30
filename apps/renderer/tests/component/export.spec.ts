@@ -1,7 +1,9 @@
 import { test, expect } from '@playwright/test';
+import { installElectronApiMock } from './_setup';
 
 test.describe('Export Dialog', () => {
   test.beforeEach(async ({ page }) => {
+    await installElectronApiMock(page);
     await page.route('**/models', async (route) => {
       await route.fulfill({
         status: 200,
@@ -81,10 +83,14 @@ test.describe('Export Dialog', () => {
 
     await page.evaluate(() => {
       window.folderOpenedPath = null;
-      window.__AUDIOMORPH_IPC__ = {
-        showItemInFolder: (path: string) => {
-          window.folderOpenedPath = path;
-        },
+      const api = (
+        window as unknown as {
+          electronAPI: { showItemInFolder: (a: { filePath: string }) => Promise<{ ok: true }> };
+        }
+      ).electronAPI;
+      api.showItemInFolder = async ({ filePath }: { filePath: string }) => {
+        window.folderOpenedPath = filePath;
+        return { ok: true };
       };
     });
 
