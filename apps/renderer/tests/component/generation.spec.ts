@@ -9,8 +9,8 @@ test.describe('Generation Studio', () => {
         status: 200,
         contentType: 'application/json',
         body: JSON.stringify([
-          { id: 'model-1', name: 'Test Model 1', state: 'verified' },
-          { id: 'model-2', name: 'Test Model 2', state: 'missing' },
+          { id: 'model-1', name: 'Test Model 1', state: 'verified', role: 'generation' },
+          { id: 'model-2', name: 'Test Model 2', state: 'missing', role: 'generation' },
         ]),
       });
     });
@@ -28,7 +28,9 @@ test.describe('Generation Studio', () => {
       await route.fulfill({
         status: 200,
         contentType: 'application/json',
-        body: JSON.stringify([{ id: 'model-2', name: 'Test Model 2', state: 'missing' }]),
+        body: JSON.stringify([
+          { id: 'model-2', name: 'Test Model 2', state: 'missing', role: 'generation' },
+        ]),
       });
     });
     await page.goto('/');
@@ -48,7 +50,7 @@ test.describe('Generation Studio', () => {
       await route.fulfill({
         status: 200,
         contentType: 'application/json',
-        body: JSON.stringify([{ id: 'mm-1', name: 'Mock Model', state }]),
+        body: JSON.stringify([{ id: 'mm-1', name: 'Mock Model', state, role: 'generation' }]),
       });
     });
     await page.route('**/models/mm-1/verify', async (route) => {

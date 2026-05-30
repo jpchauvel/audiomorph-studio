@@ -9,7 +9,9 @@ test.describe('Prompt Assist Drawer', () => {
     });
 
     await page.route('**/models', async (route) => {
-      await route.fulfill({ json: [{ id: 'model-1', name: 'Model 1', state: 'verified' }] });
+      await route.fulfill({
+        json: [{ id: 'model-1', name: 'Model 1', state: 'verified', role: 'generation' }],
+      });
     });
 
     await page.addInitScript(() => {

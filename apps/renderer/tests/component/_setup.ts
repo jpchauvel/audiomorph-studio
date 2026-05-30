@@ -85,6 +85,7 @@ export async function installElectronApiMock(page: Page): Promise<void> {
         return () => ctrl.abort();
       },
       streamCancel: async () => {},
+      fetchAudio: async () => ({ bytes: new Uint8Array([0]), contentType: 'audio/wav' }),
       saveAs: async () => ({ filePath: undefined, canceled: true }),
       openDirectory: async () => ({ dirPath: '/tmp/models', canceled: false }),
       openFile: async () => ({ filePaths: [], canceled: true }),

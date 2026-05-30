@@ -8,7 +8,9 @@ test.describe('Player Component', () => {
       await route.fulfill({
         status: 200,
         contentType: 'application/json',
-        body: JSON.stringify([{ id: 'model-1', name: 'Test Model', state: 'verified' }]),
+        body: JSON.stringify([
+          { id: 'model-1', name: 'Test Model', state: 'verified', role: 'generation' },
+        ]),
       });
     });
 
