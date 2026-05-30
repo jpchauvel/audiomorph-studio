@@ -24,6 +24,16 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { NumberTicker } from '@/components/magicui/number-ticker';
 import {
   useModelsStore,
@@ -49,6 +59,30 @@ export default function ModelsPage() {
   const [activeDownloads, setActiveDownloads] = useState<
     Record<string, { dispose: () => void; jobId: string }>
   >({});
+  const [hfDialogOpen, setHfDialogOpen] = useState(false);
+  const [hfTokenInput, setHfTokenInput] = useState('');
+  const [hfSaving, setHfSaving] = useState(false);
+
+  const saveHfToken = async () => {
+    if (!hfTokenInput.trim()) return;
+    setHfSaving(true);
+    try {
+      await window.electronAPI.vault.set('hf_token', hfTokenInput);
+      const res = await window.electronAPI.request({
+        method: 'PUT',
+        path: '/settings/hf_token_present',
+        body: { value: 'true' },
+      });
+      if (res.status < 200 || res.status >= 300) throw new Error(`HTTP ${res.status}`);
+      setHfTokenInput('');
+      setHfDialogOpen(false);
+      toast.success('HuggingFace token saved');
+    } catch (e: unknown) {
+      toast.error('Failed to save HuggingFace token: ' + errMessage(e));
+    } finally {
+      setHfSaving(false);
+    }
+  };
 
   const fetchModels = async () => {
     try {
@@ -96,6 +130,8 @@ export default function ModelsPage() {
               speed_mbps: number;
               current_file: string | null;
               state?: string;
+              error?: string;
+              error_code?: string;
             };
             setProgress(model.id, {
               bytesDone: data.bytes_done,
@@ -115,13 +151,22 @@ export default function ModelsPage() {
               fetchModels();
             } else if (data.state === 'failed') {
               dispose();
-              setProgress(model.id, { state: 'error' });
+              setProgress(model.id, {
+                state: 'error',
+                error: data.error,
+                errorCode: data.error_code,
+              });
               setActiveDownloads((prev) => {
                 const n = { ...prev };
                 delete n[model.id];
                 return n;
               });
-              toast.error(`Download failed`);
+              if (data.error_code === 'AUTH_REQUIRED') {
+                setHfDialogOpen(true);
+                toast.error('HuggingFace login required for this model');
+              } else {
+                toast.error(`Download failed: ${data.error ?? 'unknown error'}`);
+              }
               fetchModels();
             }
           }
@@ -241,7 +286,58 @@ export default function ModelsPage() {
     <div className="container mx-auto py-10 max-w-5xl">
       {/* AUDIOMORPH_TEST_MODE hook */}
       <span hidden data-testid="route-ready" />
-      <h1 className="text-3xl font-bold mb-8">Model Library</h1>
+      <div className="flex items-center justify-between mb-8">
+        <h1 className="text-3xl font-bold">Model Library</h1>
+        <Button
+          variant="outline"
+          size="sm"
+          data-testid="hf-login-button"
+          onClick={() => setHfDialogOpen(true)}
+        >
+          HuggingFace Login
+        </Button>
+      </div>
+
+      <Dialog open={hfDialogOpen} onOpenChange={setHfDialogOpen}>
+        <DialogContent data-testid="hf-login-dialog">
+          <DialogHeader>
+            <DialogTitle>HuggingFace Login</DialogTitle>
+            <DialogDescription>
+              Paste an HF access token (hf_...) to authorize gated / private model downloads. The
+              token is stored in your OS keychain and never leaves this machine.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-2">
+            <Label htmlFor="hf-login-input">Access Token</Label>
+            <Input
+              id="hf-login-input"
+              type="password"
+              placeholder="hf_..."
+              value={hfTokenInput}
+              onChange={(e) => setHfTokenInput(e.target.value)}
+              data-testid="hf-login-input"
+            />
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setHfTokenInput('');
+                setHfDialogOpen(false);
+              }}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={saveHfToken}
+              disabled={!hfTokenInput.trim() || hfSaving}
+              data-testid="hf-login-save"
+            >
+              {hfSaving ? 'Saving...' : 'Save'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {models.map((model) => {

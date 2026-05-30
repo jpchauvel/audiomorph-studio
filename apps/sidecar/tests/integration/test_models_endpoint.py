@@ -84,3 +84,54 @@ def test_raw_slash_model_id_paths_return_404(
         "/models/HeartMuLa/HeartMuLaGen", headers=auth_headers
     )
     assert resp.status_code == 404
+
+
+def test_download_forwards_hf_token_header_to_manager(
+    app_client, auth_headers, monkeypatch
+) -> None:
+    # Regression: bridge.ts injects X-HuggingFace-Token from the OS keychain
+    # vault; router must thread it into manager.start_download(hf_token=...)
+    # so HF auth happens per-call (no env-var leak between users).
+    from audiomorph.routers import models as models_router
+
+    captured: dict[str, object] = {}
+
+    async def fake_start(model_id: str, hf_token: str | None = None) -> str:
+        captured["model_id"] = model_id
+        captured["hf_token"] = hf_token
+        return "fake-job-id"
+
+    monkeypatch.setattr(
+        models_router._MANAGER, "start_download", fake_start
+    )
+
+    headers = {**auth_headers, "X-HuggingFace-Token": "hf_user_keychain_xyz"}
+    resp = app_client.post(
+        "/models/HeartMuLa__HeartMuLaGen/download", headers=headers
+    )
+    assert resp.status_code == 200, resp.text
+    assert resp.json() == {"job_id": "fake-job-id"}
+    assert captured["hf_token"] == "hf_user_keychain_xyz"
+    assert captured["model_id"] == "HeartMuLa/HeartMuLaGen"
+
+
+def test_download_without_hf_token_header_passes_none(
+    app_client, auth_headers, monkeypatch
+) -> None:
+    from audiomorph.routers import models as models_router
+
+    captured: dict[str, object] = {}
+
+    async def fake_start(model_id: str, hf_token: str | None = None) -> str:
+        captured["hf_token"] = hf_token
+        return "fake-job-id"
+
+    monkeypatch.setattr(
+        models_router._MANAGER, "start_download", fake_start
+    )
+
+    resp = app_client.post(
+        "/models/HeartMuLa__HeartMuLaGen/download", headers=auth_headers
+    )
+    assert resp.status_code == 200, resp.text
+    assert captured["hf_token"] is None

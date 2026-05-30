@@ -146,6 +146,85 @@ test('encodes slash in model id when deleting', async ({ page }) => {
   expect(rawSlashDeleteCalled).toBe(false);
 });
 
+test('shows HuggingFace Login button in header', async ({ page }) => {
+  await page.route('**/models', async (route) => {
+    await route.fulfill({ json: mockModels });
+  });
+
+  await page.goto('/models.html');
+
+  await expect(page.getByTestId('hf-login-button')).toBeVisible();
+});
+
+test('saves HF token via vault when login dialog submitted', async ({ page }) => {
+  let putCalled = false;
+  await page.route('**/models', async (route) => {
+    await route.fulfill({ json: mockModels });
+  });
+  await page.route('**/settings/hf_token_present', async (route) => {
+    if (route.request().method() === 'PUT') {
+      putCalled = true;
+      await route.fulfill({ status: 204 });
+    }
+  });
+
+  await page.goto('/models.html');
+
+  await page.getByTestId('hf-login-button').click();
+  await expect(page.getByTestId('hf-login-dialog')).toBeVisible();
+  await page.getByTestId('hf-login-input').fill('hf_test_xyz');
+  await page.getByTestId('hf-login-save').click();
+
+  await expect(page.locator('text=HuggingFace token saved')).toBeVisible();
+  expect(putCalled).toBe(true);
+});
+
+test('auto-opens HF login dialog when download fails with AUTH_REQUIRED', async ({ page }) => {
+  await page.route('**/models', async (route) => {
+    await route.fulfill({ json: mockModels });
+  });
+  await page.route('**/models/model-2/download', async (route) => {
+    if (route.request().method() === 'POST') {
+      await route.fulfill({ json: { job_id: 'job-auth', state: 'queued' } });
+    }
+  });
+  await page.route('**/models/jobs/job-auth/events', async (route) => {
+    const body =
+      'event: progress\ndata: {"bytes_done":0,"bytes_total":0,"speed_mbps":0,"current_file":null,"state":"failed","error":"unauthorized","error_code":"AUTH_REQUIRED"}\n\n';
+    await route.fulfill({ contentType: 'text/event-stream', body });
+  });
+
+  await page.goto('/models.html');
+
+  const card = page.locator('.flex-col').filter({ hasText: 'Model 2' });
+  await card.getByRole('button', { name: 'Download' }).click();
+
+  await expect(page.getByTestId('hf-login-dialog')).toBeVisible();
+});
+
+test('progress bar reflects bytes_done from SSE events', async ({ page }) => {
+  await page.route('**/models', async (route) => {
+    await route.fulfill({ json: mockModels });
+  });
+  await page.route('**/models/model-2/download', async (route) => {
+    if (route.request().method() === 'POST') {
+      await route.fulfill({ json: { job_id: 'job-pg', state: 'queued' } });
+    }
+  });
+  await page.route('**/models/jobs/job-pg/events', async (route) => {
+    const body =
+      'event: progress\ndata: {"bytes_done":512,"bytes_total":1024,"speed_mbps":2.5,"current_file":"part-1.bin","state":"downloading"}\n\n';
+    await route.fulfill({ contentType: 'text/event-stream', body });
+  });
+
+  await page.goto('/models.html');
+
+  const card = page.locator('.flex-col').filter({ hasText: 'Model 2' });
+  await card.getByRole('button', { name: 'Download' }).click();
+
+  await expect(card.locator('text=part-1.bin')).toBeVisible();
+});
+
 test('encodes slash in model id when downloading', async ({ page }) => {
   let encodedDownloadCalled = false;
   let rawSlashDownloadCalled = false;

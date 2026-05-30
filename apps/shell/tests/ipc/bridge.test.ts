@@ -45,6 +45,11 @@ vi.mock('electron', () => ({
   ipcMain: mocks.ipcMain,
   dialog: mocks.dialog,
   shell: mocks.shell,
+  safeStorage: {
+    isEncryptionAvailable: () => false,
+    encryptString: (v: string) => Buffer.from(v),
+    decryptString: (b: Buffer) => b.toString('utf8'),
+  },
 }));
 
 vi.mock('node:fs/promises', () => ({
@@ -245,5 +250,129 @@ describe('IPC bridge', () => {
 
     const serialized = JSON.stringify(out);
     expect(serialized).not.toContain(token);
+  });
+
+  it('api:request injects X-HuggingFace-Token from vault for /models/* paths', async () => {
+    vi.resetModules();
+    mocks.handlers.clear();
+    mocks.fetch.mockResolvedValueOnce(createJsonResponse({ job_id: 'j-1' }, { status: 200 }));
+    const vaultGet = vi.fn(async (key: string) =>
+      key === 'hf_token' ? 'hf_vault_token_abc' : null,
+    );
+
+    const mod = await import('../../src/ipc/bridge');
+    mod.registerIpcBridge({
+      sidecar: {
+        getApiBaseUrl: () => 'http://127.0.0.1:40123',
+        getApiToken: () => 'super-secret-token',
+      },
+      fetchImpl: mocks.fetch as unknown as typeof fetch,
+      logger: mocks.logger,
+      vaultGet,
+    });
+
+    const handler = mocks.handlers.get('api:request')!;
+    await handler(
+      { sender: { send: vi.fn() } },
+      { method: 'POST', path: '/models/HeartMuLa__HeartMuLaGen/download' },
+    );
+
+    expect(vaultGet).toHaveBeenCalledWith('hf_token');
+    const [, init] = mocks.fetch.mock.calls[0] as [string, RequestInit];
+    expect(init.headers).toMatchObject({
+      'X-HuggingFace-Token': 'hf_vault_token_abc',
+    });
+  });
+
+  it('api:request omits X-HuggingFace-Token when vault has no hf_token', async () => {
+    vi.resetModules();
+    mocks.handlers.clear();
+    mocks.fetch.mockResolvedValueOnce(createJsonResponse({ ok: true }, { status: 200 }));
+    const vaultGet = vi.fn(async () => null);
+
+    const mod = await import('../../src/ipc/bridge');
+    mod.registerIpcBridge({
+      sidecar: {
+        getApiBaseUrl: () => 'http://127.0.0.1:40123',
+        getApiToken: () => 'super-secret-token',
+      },
+      fetchImpl: mocks.fetch as unknown as typeof fetch,
+      logger: mocks.logger,
+      vaultGet,
+    });
+
+    const handler = mocks.handlers.get('api:request')!;
+    await handler(
+      { sender: { send: vi.fn() } },
+      { method: 'POST', path: '/models/HeartMuLa__HeartMuLaGen/download' },
+    );
+
+    const [, init] = mocks.fetch.mock.calls[0] as [string, RequestInit];
+    const headers = init.headers as Record<string, string>;
+    expect(headers['X-HuggingFace-Token']).toBeUndefined();
+  });
+
+  it('api:request does not inject X-HuggingFace-Token on non-/models paths', async () => {
+    vi.resetModules();
+    mocks.handlers.clear();
+    mocks.fetch.mockResolvedValueOnce(createJsonResponse({ ok: true }));
+    const vaultGet = vi.fn(async () => 'hf_should_not_be_used');
+
+    const mod = await import('../../src/ipc/bridge');
+    mod.registerIpcBridge({
+      sidecar: {
+        getApiBaseUrl: () => 'http://127.0.0.1:40123',
+        getApiToken: () => 'super-secret-token',
+      },
+      fetchImpl: mocks.fetch as unknown as typeof fetch,
+      logger: mocks.logger,
+      vaultGet,
+    });
+
+    const handler = mocks.handlers.get('api:request')!;
+    await handler(
+      { sender: { send: vi.fn() } },
+      { method: 'GET', path: '/healthz' },
+    );
+
+    expect(vaultGet).not.toHaveBeenCalled();
+    const [, init] = mocks.fetch.mock.calls[0] as [string, RequestInit];
+    const headers = init.headers as Record<string, string>;
+    expect(headers['X-HuggingFace-Token']).toBeUndefined();
+  });
+
+  it('api:stream injects X-HuggingFace-Token from vault for /models/* SSE streams', async () => {
+    vi.resetModules();
+    mocks.handlers.clear();
+    mocks.fetch.mockResolvedValueOnce(
+      createSseResponse(['event: progress\n', 'data: {"bytes_done":1}\n\n']),
+    );
+    const vaultGet = vi.fn(async () => 'hf_stream_token_xyz');
+
+    const mod = await import('../../src/ipc/bridge');
+    mod.registerIpcBridge({
+      sidecar: {
+        getApiBaseUrl: () => 'http://127.0.0.1:40123',
+        getApiToken: () => 'super-secret-token',
+      },
+      fetchImpl: mocks.fetch as unknown as typeof fetch,
+      logger: mocks.logger,
+      vaultGet,
+    });
+
+    const send = vi.fn();
+    const handler = mocks.handlers.get('api:stream')!;
+    await handler(
+      { sender: { send } },
+      { streamId: 's-hf-1', path: '/models/jobs/abc/events' },
+    );
+    await vi.waitFor(() => {
+      expect(send).toHaveBeenCalledWith('api:stream:end', { streamId: 's-hf-1' });
+    });
+
+    const [, init] = mocks.fetch.mock.calls[0] as [string, RequestInit];
+    expect(init.headers).toMatchObject({
+      'X-HuggingFace-Token': 'hf_stream_token_xyz',
+    });
   });
 });

@@ -59,6 +59,7 @@ async def test_start_download_uses_resume_and_byok_token_with_global_single_flig
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
+    monkeypatch.setenv("HF_HOME", str(tmp_path / "hf-cache"))
     manager = ModelDownloadManager(models_dir=tmp_path)
 
     def _du_9g(_p: object) -> Any:
@@ -72,25 +73,32 @@ async def test_start_download_uses_resume_and_byok_token_with_global_single_flig
     max_active = 0
     calls: list[dict[str, object]] = []
 
-    def fake_snapshot_download(**kwargs: object) -> str:
+    siblings = [_FakeSibling("weights.bin", 3)]
+
+    def _model_info(self: Any, model_id: str, **kwargs: Any) -> Any:
+        _ = (self, model_id, kwargs)
+        return _FakeModelInfo(siblings)
+
+    def fake_hf_hub_download(**kwargs: object) -> str:
         nonlocal active, max_active
         with lock:
             active += 1
             max_active = max(max_active, active)
-
         calls.append(dict(kwargs))
         local_dir = Path(str(kwargs["local_dir"]))
         local_dir.mkdir(parents=True, exist_ok=True)
         time.sleep(0.2)
-        (local_dir / "weights.bin").write_bytes(b"abc")
-
+        target = local_dir / str(kwargs["filename"])
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_bytes(b"abc")
         with lock:
             active -= 1
-        return str(local_dir)
+        return str(target)
 
-    monkeypatch.setattr(
-        "audiomorph.models.manager.snapshot_download", fake_snapshot_download
-    )
+    from audiomorph.models import manager as mod
+
+    monkeypatch.setattr(mod.HfApi, "model_info", _model_info, raising=False)
+    monkeypatch.setattr(mod, "hf_hub_download", fake_hf_hub_download)
 
     job_a = await manager.start_download("HeartMuLa/HeartMuLaGen")
     job_b = await manager.start_download("HeartMuLa/HeartCodec-oss-20260123")
@@ -99,10 +107,9 @@ async def test_start_download_uses_resume_and_byok_token_with_global_single_flig
 
     assert max_active == 1
     assert len(calls) == 2
-    assert calls[0]["resume_download"] is True
-    assert calls[0]["max_workers"] == 4
     assert calls[0]["etag_timeout"] == 30
     assert calls[0]["token"] == "top-secret-token"
+    assert calls[0]["filename"] == "weights.bin"
 
 
 @pytest.mark.anyio
@@ -208,3 +215,287 @@ def test_models_router_endpoints_and_sse_stream(
             headers={"X-Audiomorph-Token": "test-token"},
         )
         assert deleted.status_code == 204
+
+
+# ---------------------------------------------------------------------------
+# Regression: download progress + HF auth (RED tests written first).
+# Bug 1: progress bar stuck at 0 because the manager polled
+# `_bytes_done(model_dir)` while snapshot_download writes to the HF cache
+# first and only symlinks/copies into local_dir at the end. Manager must
+# emit per-file progress driven by an actual file iteration.
+# Bug 2: no way to authenticate with HuggingFace from the renderer. Manager
+# must accept a per-call `hf_token` (so the Electron bridge can forward the
+# user-provided token from the OS keychain) and surface a stable
+# `error_code = "AUTH_REQUIRED"` when downloads fail for auth reasons.
+# ---------------------------------------------------------------------------
+
+
+class _FakeSibling:
+    def __init__(
+        self, rfilename: str, size: int, sha256: str | None = None
+    ) -> None:
+        self.rfilename = rfilename
+        self.size = size
+
+        class _Lfs:
+            def __init__(self, sha: str | None) -> None:
+                self.sha256 = sha
+
+        self.lfs = _Lfs(sha256)
+
+
+class _FakeModelInfo:
+    def __init__(self, siblings: list[_FakeSibling]) -> None:
+        self.siblings = siblings
+
+
+def _install_hf_stubs(
+    monkeypatch: pytest.MonkeyPatch,
+    *,
+    siblings: list[_FakeSibling],
+    download_side_effect: Any,
+    model_info_side_effect: Any | None = None,
+) -> dict[str, list[Any]]:
+    from audiomorph.models import manager as mod
+
+    calls: dict[str, list[Any]] = {"downloads": [], "model_info": []}
+    def _model_info(self: Any, model_id: str, **kwargs: Any) -> Any:
+        _ = self
+        calls["model_info"].append({"model_id": model_id, **kwargs})
+        if model_info_side_effect is not None:
+            if isinstance(model_info_side_effect, BaseException):
+                raise model_info_side_effect
+            return model_info_side_effect
+        return _FakeModelInfo(siblings)
+
+    def _hf_hub_download(**kwargs: Any) -> str:
+        calls["downloads"].append(dict(kwargs))
+        if callable(download_side_effect):
+            return str(download_side_effect(**kwargs))
+        if isinstance(download_side_effect, BaseException):
+            raise download_side_effect
+        return str(download_side_effect)
+
+    monkeypatch.setattr(mod.HfApi, "model_info", _model_info, raising=False)
+    monkeypatch.setattr(mod, "hf_hub_download", _hf_hub_download, raising=False)
+    # disk-space happy path
+    monkeypatch.setattr(mod.shutil, "disk_usage", lambda _p: _disk_usage(9_000_000_000))
+    return calls
+
+
+@pytest.mark.anyio
+async def test_start_download_accepts_hf_token_and_threads_it_through(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setenv("HF_HOME", str(tmp_path / "hf-cache"))
+    manager = ModelDownloadManager(models_dir=tmp_path)
+
+    siblings = [_FakeSibling("config.json", 10)]
+
+    def _write(**kwargs: Any) -> str:
+        local_dir = Path(str(kwargs["local_dir"]))
+        local_dir.mkdir(parents=True, exist_ok=True)
+        target = local_dir / str(kwargs["filename"])
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_bytes(b"x" * 10)
+        return str(target)
+
+    calls = _install_hf_stubs(
+        monkeypatch, siblings=siblings, download_side_effect=_write
+    )
+
+    job_id = await manager.start_download(
+        "HeartMuLa/HeartMuLaGen", hf_token="hf_user_token_abc"
+    )
+    job = manager.get_job(job_id)
+    assert job["hf_token"] == "hf_user_token_abc"
+
+    await _wait_for_terminal(manager, job_id)
+
+    assert any(
+        call.get("token") == "hf_user_token_abc"
+        for call in calls["downloads"]
+    ), f"hf_hub_download was not called with token. calls={calls['downloads']}"
+    assert any(
+        call.get("token") == "hf_user_token_abc"
+        for call in calls["model_info"]
+    ), f"model_info was not called with token. calls={calls['model_info']}"
+
+
+@pytest.mark.anyio
+async def test_per_file_download_emits_incremental_progress(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setenv("HF_HOME", str(tmp_path / "hf-cache"))
+    manager = ModelDownloadManager(models_dir=tmp_path)
+    siblings = [
+        _FakeSibling("config.json", 100),
+        _FakeSibling("weights/part-1.bin", 200),
+        _FakeSibling("weights/part-2.bin", 300),
+    ]
+
+    def _write_file(**kwargs: Any) -> str:
+        local_dir = Path(str(kwargs["local_dir"]))
+        local_dir.mkdir(parents=True, exist_ok=True)
+        target = local_dir / str(kwargs["filename"])
+        target.parent.mkdir(parents=True, exist_ok=True)
+        # Match sibling size for accurate bytes_done assertions.
+        size_map = {s.rfilename: s.size for s in siblings}
+        target.write_bytes(b"x" * size_map[str(kwargs["filename"])])
+        return str(target)
+
+    _install_hf_stubs(
+        monkeypatch, siblings=siblings, download_side_effect=_write_file
+    )
+
+    job_id = await manager.start_download("HeartMuLa/HeartMuLaGen")
+
+    # Drain the queue concurrently with the running job.
+    queue = manager._job_events[job_id]  # noqa: SLF001 - test surface
+    seen: list[dict[str, Any]] = []
+    while True:
+        payload = await asyncio.wait_for(queue.get(), timeout=3.0)
+        seen.append(payload)
+        if manager.get_job(job_id)["state"] in {"completed", "failed", "cancelled"} and queue.empty():
+            break
+
+    # The first event should be the initial queued event (bytes_done=0).
+    assert seen[0]["bytes_done"] == 0
+    # At least one event during the download should report bytes_done > 0
+    # AND name a current_file (the per-file regression check).
+    intermediates = [
+        p
+        for p in seen
+        if p["bytes_done"] > 0 and p.get("state") == "running"
+    ]
+    assert intermediates, (
+        f"expected at least one running-state progress event with bytes_done>0; "
+        f"got {seen}"
+    )
+    files_reported = {p.get("current_file") for p in intermediates}
+    assert any(
+        f and f != "" for f in files_reported
+    ), f"expected current_file to be populated in progress events; got {files_reported}"
+    # bytes_done should be monotonically non-decreasing across running events.
+    running_bytes = [p["bytes_done"] for p in seen if p.get("state") == "running"]
+    assert running_bytes == sorted(running_bytes), (
+        f"bytes_done regressed during download: {running_bytes}"
+    )
+
+
+@pytest.mark.anyio
+async def test_bytes_total_reflects_real_file_sizes_from_model_info(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setenv("HF_HOME", str(tmp_path / "hf-cache"))
+    manager = ModelDownloadManager(models_dir=tmp_path)
+    siblings = [
+        _FakeSibling("a.bin", 1024),
+        _FakeSibling("b.bin", 2048),
+    ]
+
+    def _write(**kwargs: Any) -> str:
+        local_dir = Path(str(kwargs["local_dir"]))
+        local_dir.mkdir(parents=True, exist_ok=True)
+        target = local_dir / str(kwargs["filename"])
+        size_map = {s.rfilename: s.size for s in siblings}
+        target.write_bytes(b"y" * size_map[str(kwargs["filename"])])
+        return str(target)
+
+    _install_hf_stubs(
+        monkeypatch, siblings=siblings, download_side_effect=_write
+    )
+    job_id = await manager.start_download("HeartMuLa/HeartMuLaGen")
+
+    queue = manager._job_events[job_id]  # noqa: SLF001
+    payloads: list[dict[str, Any]] = []
+    while True:
+        payload = await asyncio.wait_for(queue.get(), timeout=3.0)
+        payloads.append(payload)
+        if manager.get_job(job_id)["state"] in {"completed", "failed", "cancelled"} and queue.empty():
+            break
+
+    running = [p for p in payloads if p.get("state") == "running"]
+    assert running, "no running-state progress payloads observed"
+    # Once siblings are known, bytes_total must equal sum(sizes) = 3072.
+    assert any(
+        p["bytes_total"] == 3072 for p in running
+    ), f"bytes_total never reached real per-file sum 3072. payloads={running}"
+
+
+@pytest.mark.anyio
+async def test_gated_repo_error_yields_AUTH_REQUIRED_error_code(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setenv("HF_HOME", str(tmp_path / "hf-cache"))
+    manager = ModelDownloadManager(models_dir=tmp_path)
+
+    class FakeGatedRepoError(Exception):
+        pass
+
+    # Monkey-patch the manager's view of GatedRepoError so the check picks
+    # up our fake; this isolates the test from huggingface_hub version drift.
+    from audiomorph.models import manager as mod
+
+    monkeypatch.setattr(
+        mod, "GatedRepoError", FakeGatedRepoError, raising=False
+    )
+
+    siblings = [_FakeSibling("config.json", 10)]
+    _install_hf_stubs(
+        monkeypatch,
+        siblings=siblings,
+        download_side_effect=FakeGatedRepoError("403 gated"),
+    )
+
+    job_id = await manager.start_download("HeartMuLa/HeartMuLaGen")
+    job = await _wait_for_terminal(manager, job_id)
+    assert job["state"] == "failed"
+    assert job.get("error_code") == "AUTH_REQUIRED", (
+        f"expected error_code=AUTH_REQUIRED on auth failure; got {job}"
+    )
+
+    # The final emitted progress payload must also carry error_code so the
+    # renderer SSE handler can react without an extra round-trip.
+    queue = manager._job_events[job_id]  # noqa: SLF001
+    last: dict[str, Any] | None = None
+    while not queue.empty():
+        last = queue.get_nowait()
+    assert last is not None
+    assert last.get("error_code") == "AUTH_REQUIRED"
+    assert last.get("error"), "expected non-empty error message in payload"
+
+
+@pytest.mark.anyio
+async def test_http_401_from_model_info_is_AUTH_REQUIRED(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setenv("HF_HOME", str(tmp_path / "hf-cache"))
+    manager = ModelDownloadManager(models_dir=tmp_path)
+
+    class FakeHfHubHTTPError(Exception):
+        def __init__(self) -> None:
+            super().__init__("401 Unauthorized")
+
+            class _Resp:
+                status_code = 401
+
+            self.response = _Resp()
+
+    from audiomorph.models import manager as mod
+
+    monkeypatch.setattr(
+        mod, "HfHubHTTPError", FakeHfHubHTTPError, raising=False
+    )
+
+    _install_hf_stubs(
+        monkeypatch,
+        siblings=[],
+        download_side_effect=lambda **_: "",
+        model_info_side_effect=FakeHfHubHTTPError(),
+    )
+
+    job_id = await manager.start_download("HeartMuLa/HeartMuLaGen")
+    job = await _wait_for_terminal(manager, job_id)
+    assert job["state"] == "failed"
+    assert job.get("error_code") == "AUTH_REQUIRED"

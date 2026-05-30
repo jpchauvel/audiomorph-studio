@@ -21,8 +21,11 @@ import type {
   ShellShowItemInFolderInput,
 } from '@audiomorph/ipc-contracts';
 import { SidecarManager } from '../sidecar/manager';
+import { getSecretForSidecar } from './vault-handlers';
+import type { VaultKey } from '../vault/vault';
 
 type SidecarLike = Pick<SidecarManager, 'getApiBaseUrl' | 'getApiToken'>;
+type VaultGetFn = (key: VaultKey) => Promise<string | null>;
 
 type LoggerFn = (message: string) => void;
 
@@ -38,6 +41,7 @@ export interface RegisterIpcBridgeOptions {
   sidecar?: SidecarLike;
   fetchImpl?: typeof fetch;
   logger?: LoggerFn;
+  vaultGet?: VaultGetFn;
 }
 
 class IpcBridgeError extends Error {
@@ -96,6 +100,23 @@ function joinApiUrl(baseUrl: string, requestPath: string): string {
   return `${baseUrl}${normalized}`;
 }
 
+function isModelsPath(requestPath: string): boolean {
+  const normalized = requestPath.startsWith('/') ? requestPath : `/${requestPath}`;
+  return normalized === '/models' || normalized.startsWith('/models/');
+}
+
+async function injectHfTokenIfModelsPath(
+  headers: Record<string, string>,
+  requestPath: string,
+  vaultGet: VaultGetFn,
+): Promise<void> {
+  if (!isModelsPath(requestPath)) return;
+  const token = await vaultGet('hf_token');
+  if (token) {
+    headers['X-HuggingFace-Token'] = token;
+  }
+}
+
 function parseMaybeJson(value: string): unknown {
   const trimmed = value.trim();
   if (!trimmed) return '';
@@ -140,6 +161,7 @@ async function forwardSse(
   input: ApiStreamInput,
   sidecar: SidecarLike,
   fetchImpl: typeof fetch,
+  vaultGet: VaultGetFn,
 ): Promise<void> {
   const { streamId, path: streamPath, body } = input;
   const controller = new AbortController();
@@ -158,6 +180,7 @@ async function forwardSse(
   if (hasBody) {
     headers['Content-Type'] = 'application/json';
   }
+  await injectHfTokenIfModelsPath(headers, streamPath, vaultGet);
 
   try {
     const response = await fetchImpl(joinApiUrl(sidecar.getApiBaseUrl(), streamPath), {
@@ -260,6 +283,15 @@ export function registerIpcBridge(options: RegisterIpcBridgeOptions = {}): void 
   const fetchImpl = options.fetchImpl ?? fetch;
   // eslint-disable-next-line no-console -- default logger when caller injects none; goes to Electron main stdout
   const logger = options.logger ?? ((line: string) => console.info(line));
+  const vaultGet: VaultGetFn =
+    options.vaultGet ??
+    (async (key) => {
+      try {
+        return await getSecretForSidecar(key);
+      } catch {
+        return null;
+      }
+    });
 
   handleTyped(
     'api:request',
@@ -273,12 +305,14 @@ export function registerIpcBridge(options: RegisterIpcBridgeOptions = {}): void 
       }
 
       try {
+        const headers: Record<string, string> = {
+          'X-Audiomorph-Token': sidecar.getApiToken(),
+          'Content-Type': 'application/json',
+        };
+        await injectHfTokenIfModelsPath(headers, requestPath, vaultGet);
         const response = await fetchImpl(joinApiUrl(sidecar.getApiBaseUrl(), requestPath), {
           method,
-          headers: {
-            'X-Audiomorph-Token': sidecar.getApiToken(),
-            'Content-Type': 'application/json',
-          },
+          headers,
           body: body === undefined ? undefined : JSON.stringify(body),
           signal: controller.signal,
         });
@@ -305,7 +339,7 @@ export function registerIpcBridge(options: RegisterIpcBridgeOptions = {}): void 
 
   handleTyped('api:stream', async (event, payload: ApiStreamInput) => {
     STREAM_CONTROLLERS.get(payload.streamId)?.abort();
-    void forwardSse(event.sender, payload, sidecar, fetchImpl);
+    void forwardSse(event.sender, payload, sidecar, fetchImpl, vaultGet);
     return { ok: true };
   });
 

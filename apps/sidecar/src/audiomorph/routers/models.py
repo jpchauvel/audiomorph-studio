@@ -5,7 +5,7 @@ from collections.abc import AsyncGenerator
 # pyright: reportMissingImports=false, reportUnknownVariableType=false, reportUnknownParameterType=false, reportArgumentType=false
 import json
 
-from fastapi import APIRouter, Response
+from fastapi import APIRouter, Request, Response
 
 try:
     from sse_starlette.sse import EventSourceResponse
@@ -49,9 +49,10 @@ async def list_models() -> dict[str, list[dict[str, object]]]:
 
 
 @router.post("/{model_id}/download")
-async def start_download(model_id: str) -> dict[str, str]:
+async def start_download(model_id: str, request: Request) -> dict[str, str]:
     normalized = _MANAGER.normalize_and_validate_model_id(model_id)
-    job_id = await _MANAGER.start_download(normalized)
+    hf_token = request.headers.get("X-HuggingFace-Token") or None
+    job_id = await _MANAGER.start_download(normalized, hf_token=hf_token)
     return {"job_id": job_id}
 
 

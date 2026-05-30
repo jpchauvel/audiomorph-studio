@@ -14,7 +14,7 @@ from typing import Any
 from uuid import uuid4
 
 try:
-    from huggingface_hub import HfApi, snapshot_download
+    from huggingface_hub import HfApi, hf_hub_download, snapshot_download
 except Exception:  # pragma: no cover - optional at test-runtime
 
     class HfApi:  # type: ignore[no-redef]
@@ -24,8 +24,29 @@ except Exception:  # pragma: no cover - optional at test-runtime
                 "huggingface_hub is required for model metadata"
             )
 
+    def hf_hub_download(**_: Any) -> str:
+        raise RuntimeError("huggingface_hub is required for downloads")
+
     def snapshot_download(**_: Any) -> str:
         raise RuntimeError("huggingface_hub is required for downloads")
+
+
+try:
+    from huggingface_hub.errors import (
+        GatedRepoError,
+        HfHubHTTPError,
+        RepositoryNotFoundError,
+    )
+except Exception:  # pragma: no cover
+
+    class GatedRepoError(Exception):  # type: ignore[no-redef]
+        pass
+
+    class HfHubHTTPError(Exception):  # type: ignore[no-redef]
+        pass
+
+    class RepositoryNotFoundError(Exception):  # type: ignore[no-redef]
+        pass
 
 
 from audiomorph._errors import ApiError
@@ -301,7 +322,9 @@ class ModelDownloadManager:
                 hint=f"Need {need_gb:.2f} GB free",
             )
 
-    async def start_download(self, model_id: str) -> str:
+    async def start_download(
+        self, model_id: str, hf_token: str | None = None
+    ) -> str:
         safe = self.normalize_and_validate_model_id(model_id)
         self._assert_disk_space(safe)
 
@@ -326,6 +349,10 @@ class ModelDownloadManager:
             "created_at": now,
             "updated_at": now,
             "error": None,
+            "error_code": None,
+            "hf_token": hf_token,
+            "bytes_total_override": None,
+            "current_file": None,
         }
         self._jobs[job_id] = job
         self._job_events[job_id] = asyncio.Queue()
@@ -404,19 +431,48 @@ class ModelDownloadManager:
     ) -> None:
         job = self._jobs[job_id]
         status = self.get_status(job["model_id"])
-        payload = {
+        override = job.get("bytes_total_override")
+        bytes_total = (
+            int(override) if override is not None else status["bytes_total"]
+        )
+        effective_file = current_file if current_file is not None else job.get(
+            "current_file"
+        )
+        if current_file is not None:
+            job["current_file"] = current_file
+        payload: dict[str, Any] = {
             "bytes_done": status["bytes_done"],
-            "bytes_total": status["bytes_total"],
-            "current_file": current_file,
+            "bytes_total": bytes_total,
+            "current_file": effective_file,
             "speed_mbps": round(speed_mbps, 3),
             "state": job["state"],
         }
+        if job.get("error"):
+            payload["error"] = job["error"]
+        if job.get("error_code"):
+            payload["error_code"] = job["error_code"]
         self._job_events[job_id].put_nowait(payload)
+
+    def _classify_hf_error(self, exc: BaseException) -> str | None:
+        if isinstance(exc, GatedRepoError):
+            return "AUTH_REQUIRED"
+        if isinstance(exc, HfHubHTTPError):
+            resp = getattr(exc, "response", None)
+            status = getattr(resp, "status_code", None)
+            if status in (401, 403):
+                return "AUTH_REQUIRED"
+        if isinstance(exc, RepositoryNotFoundError):
+            return "AUTH_REQUIRED"
+        msg = str(exc).lower()
+        if "401" in msg or "403" in msg or "gated" in msg or "unauthorized" in msg:
+            return "AUTH_REQUIRED"
+        return None
 
     async def _run_download(self, job_id: str) -> None:
         job = self._jobs[job_id]
         model_id = str(job["model_id"])
         model_dir = self.model_path(model_id)
+        token = job.get("hf_token") or os.environ.get("HF_TOKEN") or None
 
         async with self._download_lock:
             if job["cancel_requested"]:
@@ -428,38 +484,62 @@ class ModelDownloadManager:
             self._model_states[model_id] = "partial"
             self._emit_progress(job_id, current_file=None, speed_mbps=0.0)
 
-            token = os.environ.get("HF_TOKEN") or None
+            try:
+                info = await asyncio.to_thread(
+                    self._api.model_info,
+                    model_id,
+                    files_metadata=True,
+                    token=token,
+                )
+            except Exception as exc:
+                self._finalize_failure(job_id, model_id, exc)
+                return
 
-            kwargs: dict[str, Any] = {
-                "repo_id": model_id,
-                "local_dir": str(model_dir),
-                "resume_download": True,
-                "max_workers": 4,
-                "etag_timeout": 30,
-                "token": token,
-            }
+            siblings = list(getattr(info, "siblings", []) or [])
+            total_bytes = 0
+            for sibling in siblings:
+                size = getattr(sibling, "size", None)
+                if isinstance(size, int) and size > 0:
+                    total_bytes += size
+            if total_bytes > 0:
+                job["bytes_total_override"] = total_bytes
+                self._emit_progress(
+                    job_id, current_file=None, speed_mbps=0.0
+                )
 
-            task = asyncio.create_task(
-                asyncio.to_thread(snapshot_download, **kwargs)
-            )
             last_bytes = self._bytes_done(model_dir)
             last_ts = time.monotonic()
 
             try:
-                while not task.done():
-                    await asyncio.sleep(0.15)
+                for sibling in siblings:
+                    if job["cancel_requested"]:
+                        break
+                    rel = getattr(sibling, "rfilename", None)
+                    if not rel:
+                        continue
+                    rel_str = str(rel)
+                    job["current_file"] = rel_str
+                    self._emit_progress(
+                        job_id, current_file=rel_str, speed_mbps=0.0
+                    )
+                    await asyncio.to_thread(
+                        hf_hub_download,
+                        repo_id=model_id,
+                        filename=rel_str,
+                        local_dir=str(model_dir),
+                        token=token,
+                        etag_timeout=30,
+                    )
                     now = time.monotonic()
                     done = self._bytes_done(model_dir)
                     delta_bytes = max(0, done - last_bytes)
                     delta_t = max(1e-6, now - last_ts)
                     speed_mbps = (delta_bytes / (1024 * 1024)) / delta_t
                     self._emit_progress(
-                        job_id, current_file=None, speed_mbps=speed_mbps
+                        job_id, current_file=rel_str, speed_mbps=speed_mbps
                     )
                     last_bytes = done
                     last_ts = now
-
-                await task
 
                 if job["cancel_requested"]:
                     job["state"] = "cancelled"
@@ -471,17 +551,26 @@ class ModelDownloadManager:
                 job["updated_at"] = time.time()
                 self._emit_progress(job_id, current_file=None, speed_mbps=0.0)
             except Exception as exc:
-                self._logger.error(
-                    "model_download_failed",
-                    model_id=model_id,
-                    job_id=job_id,
-                    error=str(exc),
-                )
-                job["state"] = "failed"
-                job["error"] = str(exc)
-                job["updated_at"] = time.time()
-                self._model_states[model_id] = "partial"
-                self._emit_progress(job_id, current_file=None, speed_mbps=0.0)
+                self._finalize_failure(job_id, model_id, exc)
+
+    def _finalize_failure(
+        self, job_id: str, model_id: str, exc: BaseException
+    ) -> None:
+        job = self._jobs[job_id]
+        self._logger.error(
+            "model_download_failed",
+            model_id=model_id,
+            job_id=job_id,
+            error=str(exc),
+        )
+        job["state"] = "failed"
+        job["error"] = str(exc)
+        code = self._classify_hf_error(exc)
+        if code:
+            job["error_code"] = code
+        job["updated_at"] = time.time()
+        self._model_states[model_id] = "partial"
+        self._emit_progress(job_id, current_file=None, speed_mbps=0.0)
 
     async def stream_job_events(
         self, job_id: str

@@ -19,6 +19,7 @@ export type DownloadProgress = {
   currentFile: string;
   state: 'downloading' | 'done' | 'error' | 'cancelled';
   error?: string;
+  errorCode?: string;
 };
 
 type ModelsStore = {
