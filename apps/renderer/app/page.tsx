@@ -14,7 +14,8 @@ type Model = {
   state: string;
 };
 
-const encodeModelId = (id: string) => id.split('/').map(encodeURIComponent).join('/');
+// FastAPI {model_id} path params reject '/'. Sidecar manager decodes '__'→'/'.
+const encodeModelId = (id: string): string => id.replace(/\//g, '__');
 
 export default function StudioPage() {
   const [models, setModels] = useState<Model[]>([]);

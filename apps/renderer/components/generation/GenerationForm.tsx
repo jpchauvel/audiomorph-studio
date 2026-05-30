@@ -28,7 +28,7 @@ export type GenerationRequest = {
   prompt: string;
   lyrics: string | undefined;
   model_id: string;
-  duration_s: number;
+  duration_seconds: number;
   seed: number | undefined;
   temperature: number;
   top_k: number;
@@ -73,7 +73,7 @@ export function GenerationForm({ models, onSubmit, onCancel }: Props) {
       prompt,
       lyrics: lyrics.trim() ? lyrics : undefined,
       model_id: modelId,
-      duration_s: duration,
+      duration_seconds: duration,
       seed: seed.trim() ? parseInt(seed, 10) : undefined,
       temperature,
       top_k: topK,
