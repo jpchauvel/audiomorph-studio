@@ -9,6 +9,7 @@ from typing import Any
 from uuid import uuid4
 
 from fastapi import APIRouter, Response
+from fastapi.responses import FileResponse
 
 try:
     from sse_starlette.sse import EventSourceResponse
@@ -31,6 +32,7 @@ except (
 
 from audiomorph._errors import ApiError
 from audiomorph.generation import get_engine
+from audiomorph.paths import get_jobs_dir
 from audiomorph.schemas import GenerationRequest, JobStatus
 
 _logger = logging.getLogger("audiomorph.jobs")
@@ -167,3 +169,15 @@ async def cancel_job(job_id: str) -> Response:
     _job_state(job_id)
     _ENGINE.cancel(job_id)
     return Response(status_code=202)
+
+
+@router.get("/{job_id}/audio")
+async def get_job_audio(job_id: str) -> FileResponse:
+    audio_path = get_jobs_dir() / job_id / "audio.wav"
+    if not audio_path.is_file():
+        raise ApiError(
+            code="JOB_NOT_FOUND",
+            message=f"audio for job {job_id} not found",
+            retriable=False,
+        )
+    return FileResponse(audio_path, media_type="audio/wav")

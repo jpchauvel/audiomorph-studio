@@ -24,7 +24,7 @@ export default function StudioPage() {
   const [isLoadingModels, setIsLoadingModels] = useState(true);
   const streamDisposeRef = useRef<(() => void) | null>(null);
 
-  const { jobId, phase, setJob, setPhase, setError, setResult, reset } = useGenerationStore();
+  const { jobId, phase, setJob, setPhase, setError, setResult, clearRun } = useGenerationStore();
 
   useEffect(() => {
     const api = typeof window !== 'undefined' ? window.electronAPI : undefined;
@@ -82,7 +82,7 @@ export default function StudioPage() {
     }
 
     try {
-      reset();
+      clearRun();
       const res = await window.electronAPI.request({
         method: 'POST',
         path: '/jobs/generate',

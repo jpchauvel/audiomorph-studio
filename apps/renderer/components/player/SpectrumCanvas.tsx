@@ -3,21 +3,39 @@ import { useEffect, useRef } from 'react';
 
 type Props = { audioElement?: HTMLAudioElement | null; width?: number; height?: number };
 
+type ElementGraph = {
+  ctx: AudioContext;
+  source: MediaElementAudioSourceNode;
+};
+
+const ELEMENT_GRAPHS = new WeakMap<HTMLAudioElement, ElementGraph>();
+
+function getOrCreateGraph(el: HTMLAudioElement): ElementGraph {
+  const existing = ELEMENT_GRAPHS.get(el);
+  if (existing && existing.ctx.state !== 'closed') {
+    return existing;
+  }
+  const ctx = new AudioContext();
+  const source = ctx.createMediaElementSource(el);
+  const graph: ElementGraph = { ctx, source };
+  ELEMENT_GRAPHS.set(el, graph);
+  return graph;
+}
+
 export function SpectrumCanvas({ audioElement, width = 300, height = 80 }: Props) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
   useEffect(() => {
     if (!audioElement || !canvasRef.current) return;
-    const ctx = new AudioContext();
+    const { ctx, source } = getOrCreateGraph(audioElement);
     const analyser = ctx.createAnalyser();
     analyser.fftSize = 512;
-    const source = ctx.createMediaElementSource(audioElement);
     source.connect(analyser);
     analyser.connect(ctx.destination);
     const data = new Uint8Array(analyser.frequencyBinCount);
     const canvas = canvasRef.current;
     const c = canvas.getContext('2d')!;
-    let raf: number;
+    let raf = 0;
 
     const draw = () => {
       raf = requestAnimationFrame(draw);
@@ -33,7 +51,12 @@ export function SpectrumCanvas({ audioElement, width = 300, height = 80 }: Props
     draw();
     return () => {
       cancelAnimationFrame(raf);
-      ctx.close();
+      try {
+        analyser.disconnect();
+      } catch {}
+      try {
+        source.disconnect(analyser);
+      } catch {}
     };
   }, [audioElement, width, height]);
 

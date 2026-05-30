@@ -15,10 +15,12 @@ export function WaveformPlayer({ audioUrl, onReady }: Props) {
 
   useEffect(() => {
     if (!containerRef.current) return;
-    let ws: WaveSurfer;
+    let cancelled = false;
+    let ws: WaveSurfer | null = null;
     import('wavesurfer.js').then(({ default: WaveSurfer }) => {
+      if (cancelled || !containerRef.current) return;
       ws = WaveSurfer.create({
-        container: containerRef.current!,
+        container: containerRef.current,
         waveColor: 'var(--color-primary)',
         progressColor: 'var(--color-accent)',
         cursorColor: 'var(--color-text)',
@@ -30,10 +32,11 @@ export function WaveformPlayer({ audioUrl, onReady }: Props) {
       });
       ws.load(audioUrl);
       ws.on('ready', () => {
+        if (!ws) return;
         setDuration(ws.getDuration());
         onReady?.();
       });
-      ws.on('audioprocess', () => setCurrentTime(ws.getCurrentTime()));
+      ws.on('audioprocess', () => ws && setCurrentTime(ws.getCurrentTime()));
       ws.on('play', () => setPlaying(true));
       ws.on('pause', () => setPlaying(false));
       wsRef.current = ws;
@@ -44,7 +47,12 @@ export function WaveformPlayer({ audioUrl, onReady }: Props) {
       }
     });
     return () => {
-      ws?.destroy();
+      cancelled = true;
+      const instance = ws ?? wsRef.current;
+      wsRef.current = null;
+      try {
+        instance?.destroy();
+      } catch {}
     };
   }, [audioUrl, onReady]);
 

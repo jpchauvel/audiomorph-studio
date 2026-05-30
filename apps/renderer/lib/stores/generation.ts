@@ -27,6 +27,7 @@ type GenerationStore = {
   setResult: (jobId: string) => void;
   setPromptDraft: (v: string) => void;
   setLyricsDraft: (v: string) => void;
+  clearRun: () => void;
   reset: () => void;
 };
 
@@ -56,6 +57,16 @@ export const useGenerationStore = create<GenerationStore>((set) => ({
   setResult: (resultJobId) => set({ phase: 'done', resultJobId }),
   setPromptDraft: (promptDraft) => set({ promptDraft }),
   setLyricsDraft: (lyricsDraft) => set({ lyricsDraft }),
+  clearRun: () =>
+    set({
+      jobId: null,
+      phase: 'idle',
+      step: 0,
+      totalSteps: 0,
+      etaS: null,
+      errorMsg: null,
+      resultJobId: null,
+    }),
   reset: () =>
     set({
       jobId: null,

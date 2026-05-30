@@ -18,7 +18,7 @@ export function ResultCard() {
 
   if (phase !== 'done' || !resultJobId) return null;
 
-  const mockAudioUrl = 'https://www.w3schools.com/html/horse.ogg';
+  const audioUrl = `audiomorph://jobs/${resultJobId}/audio`;
 
   return (
     <Card className="mt-6 border border-[var(--color-success)] bg-[var(--color-success)]/5">
@@ -35,7 +35,7 @@ export function ResultCard() {
           </code>
         </div>
 
-        <WaveformPlayer audioUrl={mockAudioUrl} />
+        <WaveformPlayer audioUrl={audioUrl} />
         <div className="flex justify-end">
           <Button onClick={() => setIsExportOpen(true)}>Export</Button>
         </div>

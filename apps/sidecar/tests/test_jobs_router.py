@@ -1,12 +1,15 @@
 from __future__ import annotations
 
 import asyncio
+from pathlib import Path
 from typing import Any
 from uuid import uuid4
 
+from fastapi.testclient import TestClient
 import pytest
 
 from audiomorph._errors import ApiError
+from audiomorph.app import create_app
 from audiomorph.routers import jobs as jobs_router
 from audiomorph.schemas import GenerationRequest, JobStatus
 
@@ -91,3 +94,47 @@ async def test_run_generation_still_handles_apierror(
     state = jobs_router._JOBS[job_id]
     assert state["status"] == JobStatus.failed.value
     assert state["error"]["code"] == "MODEL_NOT_FOUND"
+
+
+def test_get_job_audio_returns_wav_file(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    job_id = "job-audio-1"
+    job_dir = tmp_path / job_id
+    job_dir.mkdir()
+    audio_path = job_dir / "audio.wav"
+    wav_bytes = b"RIFF\x24\x00\x00\x00WAVEfake-pcm-data"
+    audio_path.write_bytes(wav_bytes)
+
+    import audiomorph.routers.jobs as jobs_mod
+
+    monkeypatch.setattr(jobs_mod, "get_jobs_dir", lambda: tmp_path)
+
+    app = create_app(auth_token="t")
+    with TestClient(app) as client:
+        r = client.get(
+            f"/jobs/{job_id}/audio",
+            headers={"X-Audiomorph-Token": "t"},
+        )
+
+    assert r.status_code == 200, r.text
+    assert r.headers["content-type"].startswith("audio/wav")
+    assert r.content == wav_bytes
+
+
+def test_get_job_audio_returns_404_when_missing(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    import audiomorph.routers.jobs as jobs_mod
+
+    monkeypatch.setattr(jobs_mod, "get_jobs_dir", lambda: tmp_path)
+
+    app = create_app(auth_token="t")
+    with TestClient(app) as client:
+        r = client.get(
+            "/jobs/missing-job/audio",
+            headers={"X-Audiomorph-Token": "t"},
+        )
+
+    assert r.status_code == 404
+    assert r.json()["code"] == "JOB_NOT_FOUND"
