@@ -1,9 +1,10 @@
 from __future__ import annotations
 
-from collections.abc import AsyncGenerator
+from collections.abc import AsyncGenerator, AsyncIterator
 
 # pyright: reportMissingImports=false, reportUnknownVariableType=false, reportUnknownParameterType=false, reportArgumentType=false
 import json
+from typing import Any
 
 from fastapi import APIRouter, Request, Response
 
@@ -20,7 +21,10 @@ except (
         ):
             async def _encode() -> AsyncGenerator[str, None]:
                 async for item in generator:
-                    payload = json.dumps(item.get("data", {}))
+                    data = item.get("data", {})
+                    payload = (
+                        data if isinstance(data, str) else json.dumps(data)
+                    )
                     yield f"event: {item.get('event', 'message')}\ndata: {payload}\n\n"
 
             super().__init__(_encode(), media_type="text/event-stream")
@@ -30,6 +34,17 @@ from audiomorph.models.manager import get_manager
 
 router = APIRouter(prefix="/models", tags=["models"])
 _MANAGER = get_manager()
+
+
+async def _serialize_sse(
+    gen: AsyncIterator[dict[str, Any]],
+) -> AsyncGenerator[dict[str, object], None]:
+    async for item in gen:
+        data = item.get("data", {})
+        yield {
+            "event": item.get("event", "message"),
+            "data": data if isinstance(data, str) else json.dumps(data),
+        }
 
 
 @router.get("")
@@ -81,4 +96,6 @@ async def delete_model(model_id: str) -> Response:
 
 @router.get("/jobs/{job_id}/events")
 async def stream_job(job_id: str) -> EventSourceResponse:
-    return EventSourceResponse(_MANAGER.stream_job_events(job_id))
+    return EventSourceResponse(
+        _serialize_sse(_MANAGER.stream_job_events(job_id))
+    )

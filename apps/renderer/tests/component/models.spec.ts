@@ -8,6 +8,29 @@ const mockModels = [
 
 test.beforeEach(async ({ page }) => {
   await installElectronApiMock(page);
+  await page.route('**/settings', async (route) => {
+    if (route.request().method() === 'GET') {
+      await route.fulfill({
+        json: {
+          hf_token_present: true,
+          openrouter_key_present: false,
+          first_run_completed: true,
+          cpu_fallback_enabled: false,
+          models_dir: '',
+          default_model_id: '',
+          theme: 'system',
+        },
+      });
+    }
+  });
+  await page.route('**/settings/hf_token_present', async (route) => {
+    if (route.request().method() === 'PUT') {
+      await route.fulfill({ status: 204 });
+    }
+  });
+  await page.route('**/verify', async (route) => {
+    await route.fulfill({ json: { valid: true, mismatches: [] } });
+  });
 });
 
 test('displays list of models', async ({ page }) => {
@@ -181,16 +204,42 @@ test('auto re-verifies verified models on mount', async ({ page }) => {
   expect(verifyCallCount).toBeGreaterThanOrEqual(1);
 });
 
+test('auto re-verifies partial models on mount (sidecar restart scenario)', async ({ page }) => {
+  const partialModels = [
+    {
+      id: 'partial-1',
+      repo_id: 'org/partial-1',
+      name: 'Partial 1',
+      size_gb: 1.0,
+      state: 'partial',
+    },
+  ];
+  let verifyCallCount = 0;
+  await page.route('**/models', async (route) => {
+    await route.fulfill({ json: partialModels });
+  });
+  await page.route('**/models/partial-1/verify', async (route) => {
+    if (route.request().method() === 'POST') {
+      verifyCallCount += 1;
+      await route.fulfill({ json: { valid: true, mismatches: [] } });
+    }
+  });
+
+  await page.goto('/models.html');
+  await page.waitForFunction(() => !!document.querySelector('[data-testid="route-ready"]'));
+  await page.waitForTimeout(200);
+
+  expect(verifyCallCount).toBeGreaterThanOrEqual(1);
+});
+
 test('HF dialog exposes Sign Out when token present and clears it', async ({ page }) => {
-  let putValue: string | undefined;
+  let putValue: unknown;
   await page.route('**/models', async (route) => {
     await route.fulfill({ json: mockModels });
   });
   await page.route('**/settings/hf_token_present', async (route) => {
-    if (route.request().method() === 'GET') {
-      await route.fulfill({ json: { value: 'true' } });
-    } else if (route.request().method() === 'PUT') {
-      const body = route.request().postDataJSON() as { value?: string } | null;
+    if (route.request().method() === 'PUT') {
+      const body = route.request().postDataJSON() as { value?: unknown } | null;
       putValue = body?.value;
       await route.fulfill({ status: 204 });
     }
@@ -206,7 +255,7 @@ test('HF dialog exposes Sign Out when token present and clears it', async ({ pag
   await signOut.click();
 
   await expect(page.locator('text=HuggingFace signed out')).toBeVisible();
-  expect(putValue).toBe('false');
+  expect(putValue).toBe(false);
 });
 
 test('shows HuggingFace Login button in header', async ({ page }) => {
@@ -220,26 +269,95 @@ test('shows HuggingFace Login button in header', async ({ page }) => {
 });
 
 test('saves HF token via vault when login dialog submitted', async ({ page }) => {
-  let putCalled = false;
+  let putValue: unknown;
   await page.route('**/models', async (route) => {
     await route.fulfill({ json: mockModels });
   });
+  await page.route('**/settings', async (route) => {
+    if (route.request().method() === 'GET') {
+      await route.fulfill({
+        json: {
+          hf_token_present: false,
+          openrouter_key_present: false,
+          first_run_completed: true,
+          cpu_fallback_enabled: false,
+          models_dir: '',
+          default_model_id: '',
+          theme: 'system',
+        },
+      });
+    }
+  });
   await page.route('**/settings/hf_token_present', async (route) => {
     if (route.request().method() === 'PUT') {
-      putCalled = true;
+      const body = route.request().postDataJSON() as { value?: unknown } | null;
+      putValue = body?.value;
       await route.fulfill({ status: 204 });
     }
   });
 
   await page.goto('/models.html');
 
-  await page.getByTestId('hf-login-button').click();
   await expect(page.getByTestId('hf-login-dialog')).toBeVisible();
   await page.getByTestId('hf-login-input').fill('hf_test_xyz');
   await page.getByTestId('hf-login-save').click();
 
   await expect(page.locator('text=HuggingFace token saved')).toBeVisible();
-  expect(putCalled).toBe(true);
+  expect(putValue).toBe(true);
+});
+
+test('auto-opens HF login dialog when no token saved on mount', async ({ page }) => {
+  await page.route('**/models', async (route) => {
+    await route.fulfill({ json: mockModels });
+  });
+  await page.route('**/settings', async (route) => {
+    if (route.request().method() === 'GET') {
+      await route.fulfill({
+        json: {
+          hf_token_present: false,
+          openrouter_key_present: false,
+          first_run_completed: true,
+          cpu_fallback_enabled: false,
+          models_dir: '',
+          default_model_id: '',
+          theme: 'system',
+        },
+      });
+    }
+  });
+
+  await page.goto('/models.html');
+
+  await expect(page.getByTestId('hf-login-dialog')).toBeVisible();
+});
+
+test('does NOT auto-open HF login dialog when token already saved', async ({ page }) => {
+  await page.route('**/models', async (route) => {
+    await route.fulfill({ json: mockModels });
+  });
+
+  await page.goto('/models.html');
+  await page.waitForFunction(() => !!document.querySelector('[data-testid="route-ready"]'));
+  await page.waitForTimeout(150);
+
+  await expect(page.getByTestId('hf-login-dialog')).not.toBeVisible();
+});
+
+test('HF login dialog renders CLI instructions block with huggingface-cli command', async ({
+  page,
+}) => {
+  await page.route('**/models', async (route) => {
+    await route.fulfill({ json: mockModels });
+  });
+
+  await page.goto('/models.html');
+  await page.getByTestId('hf-login-button').click();
+
+  const instructions = page.getByTestId('hf-login-instructions');
+  await expect(instructions).toBeVisible();
+  await expect(instructions).toContainText('huggingface-cli');
+  await expect(instructions).toContainText('login');
+  await expect(instructions).toContainText('huggingface.co/settings/tokens');
 });
 
 test('auto-opens HF login dialog when download fails with AUTH_REQUIRED', async ({ page }) => {

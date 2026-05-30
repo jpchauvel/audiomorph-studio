@@ -63,29 +63,34 @@ export default function ModelsPage() {
   const [hfTokenInput, setHfTokenInput] = useState('');
   const [hfSaving, setHfSaving] = useState(false);
   const [hfTokenPresent, setHfTokenPresent] = useState(false);
+  const [hfDialogDismissed, setHfDialogDismissed] = useState(false);
 
-  const refreshHfTokenPresent = async () => {
+  const refreshHfTokenPresent = async (): Promise<boolean> => {
     try {
       const res = await window.electronAPI.request({
         method: 'GET',
-        path: '/settings/hf_token_present',
+        path: '/settings',
       });
-      if (res.status < 200 || res.status >= 300) return;
-      const body = res.body as { value?: string } | null;
-      setHfTokenPresent(body?.value === 'true');
+      if (res.status < 200 || res.status >= 300) return false;
+      const body = res.body as Record<string, unknown> | null;
+      const present = body?.hf_token_present === true || body?.hf_token_present === 'true';
+      setHfTokenPresent(present);
+      return present;
     } catch {
       setHfTokenPresent(false);
+      return false;
     }
   };
 
   const signOutHf = async () => {
     try {
       await window.electronAPI.vault.delete('hf_token');
-      await window.electronAPI.request({
+      const res = await window.electronAPI.request({
         method: 'PUT',
         path: '/settings/hf_token_present',
-        body: { value: 'false' },
+        body: { value: false },
       });
+      if (res.status < 200 || res.status >= 300) throw new Error(`HTTP ${res.status}`);
       setHfTokenPresent(false);
       setHfDialogOpen(false);
       toast.success('HuggingFace signed out');
@@ -102,12 +107,13 @@ export default function ModelsPage() {
       const res = await window.electronAPI.request({
         method: 'PUT',
         path: '/settings/hf_token_present',
-        body: { value: 'true' },
+        body: { value: true },
       });
       if (res.status < 200 || res.status >= 300) throw new Error(`HTTP ${res.status}`);
       setHfTokenInput('');
       setHfTokenPresent(true);
       setHfDialogOpen(false);
+      setHfDialogDismissed(true);
       toast.success('HuggingFace token saved');
     } catch (e: unknown) {
       toast.error('Failed to save HuggingFace token: ' + errMessage(e));
@@ -144,9 +150,15 @@ export default function ModelsPage() {
   useEffect(() => {
     void (async () => {
       const items = await fetchModels();
-      await refreshHfTokenPresent();
-      const verified = items.filter((m) => m.state === 'verified');
-      await Promise.all(verified.map(silentReverify));
+      const present = await refreshHfTokenPresent();
+      if (!present && !hfDialogDismissed) {
+        setHfDialogOpen(true);
+      }
+      const candidates = items.filter((m) => m.state !== 'missing');
+      if (candidates.length > 0) {
+        await Promise.all(candidates.map(silentReverify));
+        await fetchModels();
+      }
     })();
   }, []);
 
@@ -348,7 +360,13 @@ export default function ModelsPage() {
         </Button>
       </div>
 
-      <Dialog open={hfDialogOpen} onOpenChange={setHfDialogOpen}>
+      <Dialog
+        open={hfDialogOpen}
+        onOpenChange={(open) => {
+          setHfDialogOpen(open);
+          if (!open) setHfDialogDismissed(true);
+        }}
+      >
         <DialogContent data-testid="hf-login-dialog">
           <DialogHeader>
             <DialogTitle>HuggingFace Login</DialogTitle>
@@ -357,6 +375,67 @@ export default function ModelsPage() {
               token is stored in your OS keychain and never leaves this machine.
             </DialogDescription>
           </DialogHeader>
+          <div
+            className="rounded-lg border border-border bg-card/60 p-5 text-sm space-y-4"
+            data-testid="hf-login-instructions"
+          >
+            <div>
+              <div className="font-semibold text-base text-text-base mb-2">How to get a token</div>
+              <ol className="list-decimal list-inside space-y-1.5 text-text-muted text-xs leading-relaxed">
+                <li>
+                  Open{' '}
+                  <code className="px-1.5 py-0.5 rounded bg-background text-text-base font-mono text-[11px]">
+                    https://huggingface.co/settings/tokens
+                  </code>{' '}
+                  in your browser and sign in.
+                </li>
+                <li>
+                  Click <strong className="text-text-base">New token</strong>, give it a name,
+                  choose role <strong className="text-text-base">read</strong>, and create.
+                </li>
+                <li>
+                  Copy the value starting with{' '}
+                  <code className="px-1.5 py-0.5 rounded bg-background text-text-base font-mono text-[11px]">
+                    hf_
+                  </code>{' '}
+                  and paste below.
+                </li>
+              </ol>
+            </div>
+            <div className="pt-4 border-t border-border">
+              <div className="font-semibold text-base text-text-base mb-2">
+                Or use the CLI{' '}
+                <span className="text-xs font-normal text-text-muted">(recommended)</span>
+              </div>
+              <pre
+                className="bg-[oklch(0.18_0.02_240)] text-[oklch(0.92_0.01_240)] rounded-md p-4 overflow-x-auto font-mono text-[12px] leading-6 border border-border"
+                style={{ tabSize: 2 }}
+              >
+                <span style={{ color: 'oklch(0.62 0.03 240)' }}>{'# install once'}</span>
+                {'\n'}
+                <span style={{ color: 'oklch(0.78 0.15 200)' }}>pip install</span>
+                {' -U '}
+                <span style={{ color: 'oklch(0.85 0.12 140)' }}>{'"huggingface_hub[cli]"'}</span>
+                {'\n\n'}
+                <span style={{ color: 'oklch(0.62 0.03 240)' }}>
+                  {'# login interactively (paste token when prompted)'}
+                </span>
+                {'\n'}
+                <span style={{ color: 'oklch(0.78 0.15 200)' }}>huggingface-cli</span>
+                {' login'}
+                {'\n\n'}
+                <span style={{ color: 'oklch(0.62 0.03 240)' }}>
+                  {'# verify + print the saved token to copy'}
+                </span>
+                {'\n'}
+                <span style={{ color: 'oklch(0.78 0.15 200)' }}>huggingface-cli</span>
+                {' whoami'}
+                {'\n'}
+                <span style={{ color: 'oklch(0.78 0.15 200)' }}>cat</span>
+                {' ~/.cache/huggingface/token'}
+              </pre>
+            </div>
+          </div>
           <div className="space-y-2">
             <Label htmlFor="hf-login-input">Access Token</Label>
             <Input
@@ -374,6 +453,7 @@ export default function ModelsPage() {
               onClick={() => {
                 setHfTokenInput('');
                 setHfDialogOpen(false);
+                setHfDialogDismissed(true);
               }}
             >
               Cancel

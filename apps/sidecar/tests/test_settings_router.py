@@ -99,11 +99,31 @@ def test_put_theme_invalid_value_returns_validation_error(
     assert resp.json()["code"] == "VALIDATION_ERROR"
 
 
-def test_put_bool_key_rejects_non_bool(client: TestClient) -> None:
+def test_put_bool_key_accepts_string_true_false(client: TestClient) -> None:
     resp = client.put(
         "/settings/hf_token_present",
         headers=AUTH_HEADERS,
         json={"value": "true"},
+    )
+    assert resp.status_code == 200
+    follow = client.get("/settings", headers=AUTH_HEADERS).json()
+    assert follow["hf_token_present"] is True
+
+    resp2 = client.put(
+        "/settings/hf_token_present",
+        headers=AUTH_HEADERS,
+        json={"value": "false"},
+    )
+    assert resp2.status_code == 200
+    follow2 = client.get("/settings", headers=AUTH_HEADERS).json()
+    assert follow2["hf_token_present"] is False
+
+
+def test_put_bool_key_rejects_non_bool_non_string(client: TestClient) -> None:
+    resp = client.put(
+        "/settings/hf_token_present",
+        headers=AUTH_HEADERS,
+        json={"value": 1},
     )
     assert resp.status_code == 422
     assert resp.json()["code"] == "VALIDATION_ERROR"

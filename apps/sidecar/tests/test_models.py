@@ -203,6 +203,22 @@ def test_models_router_endpoints_and_sse_stream(
                 if len(lines) >= 2:
                     break
             assert any(line.startswith("data:") for line in lines)
+            import json as _json
+
+            data_lines = [
+                _l[len("data:") :].strip()
+                for _l in lines
+                if _l.startswith("data:")
+            ]
+            assert data_lines
+            parsed = _json.loads(data_lines[0])
+            assert isinstance(parsed, dict), (
+                f"SSE data not JSON object. raw={data_lines[0]!r} "
+                f"parsed_type={type(parsed).__name__} parsed={parsed!r}"
+            )
+            assert "bytes_done" in parsed
+            assert "bytes_total" in parsed
+            assert "state" in parsed
 
         cancelled = client.delete(
             f"/models/HeartMuLa__HeartMuLaGen/download/{job_id}",

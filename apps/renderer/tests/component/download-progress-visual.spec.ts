@@ -15,6 +15,21 @@ const downloadingModel = [
 
 test.beforeEach(async ({ page }) => {
   await installElectronApiMock(page);
+  await page.route('**/settings', async (route) => {
+    if (route.request().method() === 'GET') {
+      await route.fulfill({
+        json: {
+          hf_token_present: true,
+          openrouter_key_present: false,
+          first_run_completed: true,
+          cpu_fallback_enabled: false,
+          models_dir: '',
+          default_model_id: '',
+          theme: 'system',
+        },
+      });
+    }
+  });
 });
 
 test('non-downloaded model shows visible progress UI during download', async ({ page }) => {

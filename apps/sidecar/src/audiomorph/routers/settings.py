@@ -60,13 +60,17 @@ def _is_absolute_path(value: str) -> bool:
 
 def _validate_value(key: str, value: Any) -> str:
     if key in _BOOL_KEYS:
-        if not isinstance(value, bool):
-            raise ApiError(
-                code="VALIDATION_ERROR",
-                message=f"Invalid value for {key}: expected bool",
-                retriable=False,
-            )
-        return "true" if value else "false"
+        if isinstance(value, bool):
+            return "true" if value else "false"
+        if isinstance(value, str):
+            normalized = value.strip().lower()
+            if normalized in ("true", "false"):
+                return normalized
+        raise ApiError(
+            code="VALIDATION_ERROR",
+            message=f"Invalid value for {key}: expected bool or 'true'/'false'",
+            retriable=False,
+        )
 
     if key in _ENUM_KEYS:
         allowed = _ENUM_KEYS[key]
