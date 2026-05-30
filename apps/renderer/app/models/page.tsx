@@ -149,6 +149,21 @@ export default function ModelsPage() {
     }
   };
 
+  const navigateIfAllVerified = (items: ModelInfo[]) => {
+    if (items.length > 0 && items.every((m) => m.state === 'verified')) {
+      toast.success('All models verified — opening Studio');
+      router.replace('/');
+      return true;
+    }
+    return false;
+  };
+
+  const reverifyAndMaybeNavigate = async (model: ModelInfo) => {
+    await silentReverify(model);
+    const items = await fetchModels();
+    navigateIfAllVerified(items);
+  };
+
   useEffect(() => {
     void (async () => {
       const items = await fetchModels();
@@ -162,10 +177,7 @@ export default function ModelsPage() {
         await Promise.all(candidates.map(silentReverify));
         finalItems = await fetchModels();
       }
-      if (finalItems.length > 0 && finalItems.every((m) => m.state === 'verified')) {
-        toast.success('All models verified — opening Studio');
-        router.replace('/');
-      }
+      navigateIfAllVerified(finalItems);
     })();
   }, []);
 
@@ -217,7 +229,7 @@ export default function ModelsPage() {
                 return n;
               });
               toast.success(`Downloaded ${model.name}`);
-              fetchModels();
+              void reverifyAndMaybeNavigate(model);
             } else if (data.state === 'failed') {
               dispose();
               setProgress(model.id, {

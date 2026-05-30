@@ -434,6 +434,47 @@ test('progress bar reflects bytes_done from SSE events', async ({ page }) => {
   await expect(card.locator('text=part-1.bin')).toBeVisible();
 });
 
+test('verifies after download completes and navigates when all verified', async ({ page }) => {
+  let modelsCall = 0;
+  let verifyCalls = 0;
+  await page.route('**/models', async (route) => {
+    modelsCall += 1;
+    if (modelsCall === 1) {
+      await route.fulfill({
+        json: [{ id: 'only', repo_id: 'org/only', name: 'Only', size_gb: 1, state: 'missing' }],
+      });
+    } else {
+      await route.fulfill({
+        json: [{ id: 'only', repo_id: 'org/only', name: 'Only', size_gb: 1, state: 'verified' }],
+      });
+    }
+  });
+  await page.route('**/models/only/download', async (route) => {
+    if (route.request().method() === 'POST') {
+      await route.fulfill({ json: { job_id: 'job-x', state: 'queued' } });
+    }
+  });
+  await page.route('**/models/jobs/job-x/events', async (route) => {
+    const body =
+      'event: progress\ndata: {"bytes_done":1024,"bytes_total":1024,"speed_mbps":2.5,"current_file":"all.bin","state":"completed"}\n\n';
+    await route.fulfill({ contentType: 'text/event-stream', body });
+  });
+  await page.route('**/models/only/verify', async (route) => {
+    if (route.request().method() === 'POST') {
+      verifyCalls += 1;
+      await route.fulfill({ json: { valid: true, mismatches: [] } });
+    }
+  });
+
+  await page.goto('/models.html');
+  await page.waitForFunction(() => !!document.querySelector('[data-testid="route-ready"]'));
+  const card = page.locator('.flex-col').filter({ hasText: 'Only' });
+  await card.getByRole('button', { name: 'Download' }).click();
+
+  await page.waitForURL((url) => !url.pathname.includes('/models'), { timeout: 5000 });
+  expect(verifyCalls).toBeGreaterThanOrEqual(1);
+});
+
 test('encodes slash in model id when downloading', async ({ page }) => {
   let encodedDownloadCalled = false;
   let rawSlashDownloadCalled = false;
