@@ -75,3 +75,102 @@ test('handles verify action', async ({ page }) => {
   expect(verifyCalled).toBe(true);
   await expect(page.locator('text=Model 2 is fully verified')).toBeVisible();
 });
+
+// Regression: FastAPI path params reject '/'. Slash-containing model
+// ids (e.g. HF org/repo form) MUST be encoded as '__' at the renderer.
+const slashModels = [
+  {
+    id: 'HeartMuLa/HeartMuLaGen',
+    repo_id: 'HeartMuLa/HeartMuLaGen',
+    name: 'HeartMuLa Gen',
+    size_gb: 1.0,
+    state: 'partial',
+  },
+];
+
+test('encodes slash in model id when verifying', async ({ page }) => {
+  let encodedVerifyCalled = false;
+  let rawSlashVerifyCalled = false;
+
+  await page.route('**/models', async (route) => {
+    await route.fulfill({ json: slashModels });
+  });
+  await page.route('**/models/HeartMuLa__HeartMuLaGen/verify', async (route) => {
+    if (route.request().method() === 'POST') {
+      encodedVerifyCalled = true;
+      await route.fulfill({ json: { valid: true, mismatches: [] } });
+    }
+  });
+  await page.route('**/models/HeartMuLa/HeartMuLaGen/verify', async (route) => {
+    rawSlashVerifyCalled = true;
+    await route.fulfill({ status: 404, json: { error: 'not found' } });
+  });
+
+  await page.goto('/models.html');
+
+  const card = page.locator('.flex-col').filter({ hasText: 'HeartMuLa Gen' });
+  await card.getByRole('button', { name: 'Verify' }).click();
+
+  expect(encodedVerifyCalled).toBe(true);
+  expect(rawSlashVerifyCalled).toBe(false);
+});
+
+test('encodes slash in model id when deleting', async ({ page }) => {
+  let encodedDeleteCalled = false;
+  let rawSlashDeleteCalled = false;
+
+  await page.route('**/models', async (route) => {
+    await route.fulfill({ json: slashModels });
+  });
+  await page.route('**/models/HeartMuLa__HeartMuLaGen', async (route) => {
+    if (route.request().method() === 'DELETE') {
+      encodedDeleteCalled = true;
+      await route.fulfill({ status: 204 });
+    }
+  });
+  await page.route('**/models/HeartMuLa/HeartMuLaGen', async (route) => {
+    if (route.request().method() === 'DELETE') {
+      rawSlashDeleteCalled = true;
+      await route.fulfill({ status: 404 });
+    }
+  });
+
+  await page.goto('/models.html');
+
+  const card = page.locator('.flex-col').filter({ hasText: 'HeartMuLa Gen' });
+  await card.getByRole('button', { name: 'Delete' }).click();
+  await expect(page.locator('text=Delete HeartMuLa Gen?')).toBeVisible();
+  await page.getByRole('button', { name: 'Delete', exact: true }).click();
+
+  expect(encodedDeleteCalled).toBe(true);
+  expect(rawSlashDeleteCalled).toBe(false);
+});
+
+test('encodes slash in model id when downloading', async ({ page }) => {
+  let encodedDownloadCalled = false;
+  let rawSlashDownloadCalled = false;
+
+  await page.route('**/models', async (route) => {
+    await route.fulfill({ json: slashModels });
+  });
+  await page.route('**/models/HeartMuLa__HeartMuLaGen/download', async (route) => {
+    if (route.request().method() === 'POST') {
+      encodedDownloadCalled = true;
+      await route.fulfill({ json: { job_id: 'job-xyz', state: 'queued' } });
+    }
+  });
+  await page.route('**/models/HeartMuLa/HeartMuLaGen/download', async (route) => {
+    if (route.request().method() === 'POST') {
+      rawSlashDownloadCalled = true;
+      await route.fulfill({ status: 404 });
+    }
+  });
+
+  await page.goto('/models.html');
+
+  const card = page.locator('.flex-col').filter({ hasText: 'HeartMuLa Gen' });
+  await card.getByRole('button', { name: 'Download' }).click();
+
+  expect(encodedDownloadCalled).toBe(true);
+  expect(rawSlashDownloadCalled).toBe(false);
+});

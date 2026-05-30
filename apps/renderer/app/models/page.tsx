@@ -35,6 +35,9 @@ type StreamError = { code: string; message: string };
 const errMessage = (e: unknown): string =>
   e instanceof Error ? e.message : typeof e === 'string' ? e : JSON.stringify(e);
 
+// FastAPI {model_id} path params reject '/'. Sidecar manager decodes '__'→'/'.
+const encodeModelId = (id: string): string => id.replace(/\//g, '__');
+
 export default function ModelsPage() {
   const {
     models,
@@ -69,7 +72,7 @@ export default function ModelsPage() {
     try {
       const res = await window.electronAPI.request({
         method: 'POST',
-        path: `/models/${model.id}/download`,
+        path: `/models/${encodeModelId(model.id)}/download`,
       });
       if (res.status < 200 || res.status >= 300) throw new Error(`HTTP ${res.status}`);
       const { job_id } = res.body as { job_id: string };
@@ -153,7 +156,7 @@ export default function ModelsPage() {
     try {
       await window.electronAPI.request({
         method: 'DELETE',
-        path: `/models/${modelId}/download/${job.jobId}`,
+        path: `/models/${encodeModelId(modelId)}/download/${job.jobId}`,
       });
       const handle = activeDownloads[modelId];
       if (handle) {
@@ -176,7 +179,7 @@ export default function ModelsPage() {
     try {
       const res = await window.electronAPI.request({
         method: 'POST',
-        path: `/models/${model.id}/verify`,
+        path: `/models/${encodeModelId(model.id)}/verify`,
       });
       if (res.status < 200 || res.status >= 300) throw new Error(`HTTP ${res.status}`);
       const result = res.body as { valid: boolean; mismatches?: unknown[] };
@@ -196,7 +199,7 @@ export default function ModelsPage() {
     try {
       const res = await window.electronAPI.request({
         method: 'DELETE',
-        path: `/models/${model.id}`,
+        path: `/models/${encodeModelId(model.id)}`,
       });
       if (res.status !== 204 && (res.status < 200 || res.status >= 300)) {
         throw new Error(`HTTP ${res.status}`);
