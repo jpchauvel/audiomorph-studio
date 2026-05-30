@@ -90,7 +90,11 @@ def main() -> int:
 
     app = create_app(auth_token=args.auth_token)
     config = uvicorn.Config(
-        app=app, host=args.host, port=args.port, log_level="warning"
+        app=app,
+        host=args.host,
+        port=args.port,
+        log_level="warning",
+        timeout_keep_alive=75,
     )
     config.fd = sock.fileno()
     server = uvicorn.Server(config=config)

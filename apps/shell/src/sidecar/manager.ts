@@ -110,6 +110,9 @@ export class SidecarManager extends EventEmitter {
   }
 
   public async start(): Promise<void> {
+    if (this.child && this.child.exitCode == null && this.port != null) {
+      return;
+    }
     this.shuttingDown = false;
     await this.reapZombieProcess();
     await this.spawnAndHandshake();

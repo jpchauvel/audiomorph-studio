@@ -310,6 +310,11 @@ export function registerIpcBridge(options: RegisterIpcBridgeOptions = {}): void 
         const headers: Record<string, string> = {
           'X-Audiomorph-Token': sidecar.getApiToken(),
           'Content-Type': 'application/json',
+          // Disable HTTP keep-alive: long idle gaps between /models (slow HF
+          // load) and /generate let uvicorn's default 5s keep-alive timeout
+          // FIN the pooled socket. Reusing it yields UND_ERR_SOCKET with
+          // bytesRead: 0. Localhost reconnect cost is negligible.
+          Connection: 'close',
         };
         await injectHfTokenIfModelsPath(headers, requestPath, vaultGet);
         const response = await fetchImpl(joinApiUrl(sidecar.getApiBaseUrl(), requestPath), {
