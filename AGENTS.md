@@ -95,6 +95,67 @@ See `docs/ci-cost-guards.md`.
 - Pre-commit (fast): trailing whitespace, EOF, yaml/toml/json, gitleaks, ruff, prettier, eslint.
 - Pre-push: typecheck, mypy (strict), bandit, `test:fast`. `--no-verify` is emergency-only; call it out in PR.
 
+## Debugging with Playwright (against `pnpm dev`)
+
+Two surfaces to debug: the **renderer in a browser** (fast, no Electron) and the **full Electron app** (real shell + real sidecar via `_electron` launcher).
+
+### Boot a dev instance
+
+```bash
+pnpm dev                         # root → forwards to @audiomorph/shell dev
+# Internally:
+#   1. pnpm run build:shell                     (typecheck + tsc shell)
+#   2. concurrently:
+#      - pnpm --filter renderer dev              → next dev on http://localhost:3000
+#      - node scripts/wait-for-url.mjs http://localhost:3000 60000
+#        && cross-env NODE_ENV=development electron dist/main.js
+#   3. Electron `main.ts` → SidecarManager.start() eagerly spawns Python sidecar
+WAIT_FOR_URL_VERBOSE=1 pnpm dev  # if it exits before Electron launches
+```
+
+Renderer dev port is always **`3000`** (Next default; every Playwright config targets `http://127.0.0.1:3000`).
+
+### Drive the renderer with Playwright (no Electron)
+
+While `pnpm dev` is running and the renderer compile is green, point any browser-mode Playwright run at `http://127.0.0.1:3000`:
+
+```bash
+# Codegen against the live renderer
+pnpm exec playwright codegen http://127.0.0.1:3000
+
+# Open Playwright Inspector against an existing test
+PWDEBUG=1 pnpm --filter renderer test:integration       # uses playwright.integration.config.ts
+PWDEBUG=1 pnpm --filter renderer test:visual            # uses playwright.visual.config.ts (auto-serves built `out/` if 3000 is free)
+```
+
+Renderer-only mode means `window.electronAPI` is undefined; renderer code must guard for it (see [`docs/sidecar-protocol.md`](./docs/sidecar-protocol.md) and the existing renderer bootstrap helper).
+
+### Drive the full Electron app with Playwright
+
+Electron is launched via Playwright's `_electron` launcher in [`packages/test-helpers/src/electron.ts`](./packages/test-helpers/src/electron.ts) — it spawns `apps/shell/node_modules/.bin/electron` with `apps/shell/dist/main.js` (or `apps/shell/out/main/main.js`) and `AUDIOMORPH_TEST_MODE=1` injected. **Do NOT run `pnpm dev` simultaneously** — both would race for port 3000 and spawn duplicate sidecars.
+
+```bash
+pnpm test:e2e                                                    # headless
+pnpm test:e2e:headed                                             # PWDEBUG=1 + --headed
+pnpm test:e2e:debug                                              # PWDEBUG=1 inspector
+cd apps/shell && pnpm exec playwright test --config=playwright.e2e.config.ts --ui   # Playwright UI mode
+```
+
+Prereqs: `pnpm build:all` (or at least `pnpm --filter @audiomorph/shell build:shell` + `pnpm --filter renderer build`), `apps/sidecar/.venv` with `audiomorph-sidecar` installed, and a warm HF cache (`pnpm test:hf:warm`). Sidecar handshake details: [`docs/sidecar-protocol.md`](./docs/sidecar-protocol.md).
+
+### Debug env vars
+
+| Var                             | Effect                                                                                       |
+| ------------------------------- | -------------------------------------------------------------------------------------------- |
+| `WAIT_FOR_URL_VERBOSE=1`        | Log every poll from `scripts/wait-for-url.mjs`                                               |
+| `PWDEBUG=1`                     | Open Playwright Inspector / pause on `page.pause()`                                          |
+| `AUDIOMORPH_TEST_MODE=1`        | Enable test-only IPC (`__audiomorph_test:get-sidecar-info`); set automatically by E2E helper |
+| `AUDIOMORPH_TEST_ELECTRON_BIN`  | Override Electron executable for `_electron` launches                                        |
+| `AUDIOMORPH_TEST_ELECTRON_MAIN` | Override path to compiled `main.js` for `_electron` launches                                 |
+| `HF_TOKEN`                      | HuggingFace credential for sidecar model loads (never log)                                   |
+
+Common gotchas in [`docs/testing.md`](./docs/testing.md) and the "Where to Look When…" table below.
+
 ## Where to Look When…
 
 - **Sidecar won't start** → `apps/shell/src/sidecar/manager.ts` + `userData/logs/sidecar-*.log` (tokens masked) + handshake file in `os.tmpdir()`.
