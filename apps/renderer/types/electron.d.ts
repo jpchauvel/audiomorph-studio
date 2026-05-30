@@ -25,6 +25,11 @@ declare global {
     __AUDIOMORPH_OPENROUTER_KEY__?: string;
     __AUDIOMORPH_IPC__?: AudiomorphTestIpc;
     folderOpenedPath?: string | null;
+    __SAVE_AS_DEFAULT__?: string | null;
+    __SAVE_AS_FILTERS__?: unknown;
+    __COPY_ARGS__?: { src: string; dst: string } | null;
+    __SHOW_IN_FOLDER_PATH__?: string | null;
+    __COPY_CALLED__?: boolean;
   }
 }
 

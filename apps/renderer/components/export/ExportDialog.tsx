@@ -45,11 +45,33 @@ export function ExportDialog({ open, onClose, jobId }: Props) {
         return;
       }
 
-      const { file_path } = res.body as { file_path: string };
-      toast.success(`Exported to ${file_path}`, {
+      const { file_path: sourcePath } = res.body as { file_path: string };
+
+      const formatLabel: Record<Format, string> = {
+        wav: 'WAV Audio',
+        mp3: 'MP3 Audio',
+        flac: 'FLAC Audio',
+      };
+      const save = await window.electronAPI.saveAs({
+        defaultPath: `audiomorph-${jobId.slice(0, 8)}.${format}`,
+        filters: [
+          { name: formatLabel[format], extensions: [format] },
+          { name: 'All Files', extensions: ['*'] },
+        ],
+      });
+
+      if (save.canceled || !save.filePath) {
+        toast.info('Export cancelled');
+        return;
+      }
+
+      await window.electronAPI.copyFile({ src: sourcePath, dst: save.filePath });
+
+      const destPath = save.filePath;
+      toast.success(`Exported to ${destPath}`, {
         action: {
           label: 'Show in Finder',
-          onClick: () => window.electronAPI.showItemInFolder({ filePath: file_path }),
+          onClick: () => window.electronAPI.showItemInFolder({ filePath: destPath }),
         },
       });
       onClose();
