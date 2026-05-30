@@ -146,6 +146,69 @@ test('encodes slash in model id when deleting', async ({ page }) => {
   expect(rawSlashDeleteCalled).toBe(false);
 });
 
+test('shows Download button disabled for verified models', async ({ page }) => {
+  await page.route('**/models', async (route) => {
+    await route.fulfill({ json: mockModels });
+  });
+  await page.route('**/models/model-1/verify', async (route) => {
+    await route.fulfill({ json: { valid: true, mismatches: [] } });
+  });
+
+  await page.goto('/models.html');
+
+  const card = page.locator('.flex-col').filter({ hasText: 'Model 1' });
+  const dlBtn = card.getByRole('button', { name: 'Download' });
+  await expect(dlBtn).toBeVisible();
+  await expect(dlBtn).toBeDisabled();
+});
+
+test('auto re-verifies verified models on mount', async ({ page }) => {
+  let verifyCallCount = 0;
+  await page.route('**/models', async (route) => {
+    await route.fulfill({ json: mockModels });
+  });
+  await page.route('**/models/model-1/verify', async (route) => {
+    if (route.request().method() === 'POST') {
+      verifyCallCount += 1;
+      await route.fulfill({ json: { valid: true, mismatches: [] } });
+    }
+  });
+
+  await page.goto('/models.html');
+  await page.waitForFunction(() => !!document.querySelector('[data-testid="route-ready"]'));
+  await page.waitForTimeout(200);
+
+  expect(verifyCallCount).toBeGreaterThanOrEqual(1);
+});
+
+test('HF dialog exposes Sign Out when token present and clears it', async ({ page }) => {
+  let putValue: string | undefined;
+  await page.route('**/models', async (route) => {
+    await route.fulfill({ json: mockModels });
+  });
+  await page.route('**/settings/hf_token_present', async (route) => {
+    if (route.request().method() === 'GET') {
+      await route.fulfill({ json: { value: 'true' } });
+    } else if (route.request().method() === 'PUT') {
+      const body = route.request().postDataJSON() as { value?: string } | null;
+      putValue = body?.value;
+      await route.fulfill({ status: 204 });
+    }
+  });
+
+  await page.goto('/models.html');
+
+  await page.getByTestId('hf-login-button').click();
+  await expect(page.getByTestId('hf-login-dialog')).toBeVisible();
+
+  const signOut = page.getByTestId('hf-signout');
+  await expect(signOut).toBeVisible();
+  await signOut.click();
+
+  await expect(page.locator('text=HuggingFace signed out')).toBeVisible();
+  expect(putValue).toBe('false');
+});
+
 test('shows HuggingFace Login button in header', async ({ page }) => {
   await page.route('**/models', async (route) => {
     await route.fulfill({ json: mockModels });

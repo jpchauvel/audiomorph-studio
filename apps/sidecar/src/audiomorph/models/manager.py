@@ -4,6 +4,7 @@ from __future__ import annotations
 import asyncio
 from collections.abc import AsyncIterator
 from concurrent.futures import ThreadPoolExecutor
+import contextlib
 import hashlib
 import os
 from pathlib import Path
@@ -435,8 +436,10 @@ class ModelDownloadManager:
         bytes_total = (
             int(override) if override is not None else status["bytes_total"]
         )
-        effective_file = current_file if current_file is not None else job.get(
-            "current_file"
+        effective_file = (
+            current_file
+            if current_file is not None
+            else job.get("current_file")
         )
         if current_file is not None:
             job["current_file"] = current_file
@@ -453,6 +456,26 @@ class ModelDownloadManager:
             payload["error_code"] = job["error_code"]
         self._job_events[job_id].put_nowait(payload)
 
+    async def _poll_file_progress(
+        self, job_id: str, current_file: str
+    ) -> None:
+        model_id = str(self._jobs[job_id]["model_id"])
+        model_dir = self.model_path(model_id)
+        last_bytes = await asyncio.to_thread(self._bytes_done, model_dir)
+        last_ts = time.monotonic()
+        while True:
+            await asyncio.sleep(0.4)
+            now_bytes = await asyncio.to_thread(self._bytes_done, model_dir)
+            now_ts = time.monotonic()
+            delta_b = max(0, now_bytes - last_bytes)
+            delta_t = max(1e-6, now_ts - last_ts)
+            speed_mbps = (delta_b / (1024 * 1024)) / delta_t
+            self._emit_progress(
+                job_id, current_file=current_file, speed_mbps=speed_mbps
+            )
+            last_bytes = now_bytes
+            last_ts = now_ts
+
     def _classify_hf_error(self, exc: BaseException) -> str | None:
         if isinstance(exc, GatedRepoError):
             return "AUTH_REQUIRED"
@@ -464,7 +487,12 @@ class ModelDownloadManager:
         if isinstance(exc, RepositoryNotFoundError):
             return "AUTH_REQUIRED"
         msg = str(exc).lower()
-        if "401" in msg or "403" in msg or "gated" in msg or "unauthorized" in msg:
+        if (
+            "401" in msg
+            or "403" in msg
+            or "gated" in msg
+            or "unauthorized" in msg
+        ):
             return "AUTH_REQUIRED"
         return None
 
@@ -503,9 +531,7 @@ class ModelDownloadManager:
                     total_bytes += size
             if total_bytes > 0:
                 job["bytes_total_override"] = total_bytes
-                self._emit_progress(
-                    job_id, current_file=None, speed_mbps=0.0
-                )
+                self._emit_progress(job_id, current_file=None, speed_mbps=0.0)
 
             last_bytes = self._bytes_done(model_dir)
             last_ts = time.monotonic()
@@ -522,14 +548,22 @@ class ModelDownloadManager:
                     self._emit_progress(
                         job_id, current_file=rel_str, speed_mbps=0.0
                     )
-                    await asyncio.to_thread(
-                        hf_hub_download,
-                        repo_id=model_id,
-                        filename=rel_str,
-                        local_dir=str(model_dir),
-                        token=token,
-                        etag_timeout=30,
+                    poller = asyncio.create_task(
+                        self._poll_file_progress(job_id, rel_str)
                     )
+                    try:
+                        await asyncio.to_thread(
+                            hf_hub_download,
+                            repo_id=model_id,
+                            filename=rel_str,
+                            local_dir=str(model_dir),
+                            token=token,
+                            etag_timeout=30,
+                        )
+                    finally:
+                        poller.cancel()
+                        with contextlib.suppress(asyncio.CancelledError):
+                            await poller
                     now = time.monotonic()
                     done = self._bytes_done(model_dir)
                     delta_bytes = max(0, done - last_bytes)

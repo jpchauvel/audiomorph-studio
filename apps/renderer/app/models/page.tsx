@@ -62,6 +62,37 @@ export default function ModelsPage() {
   const [hfDialogOpen, setHfDialogOpen] = useState(false);
   const [hfTokenInput, setHfTokenInput] = useState('');
   const [hfSaving, setHfSaving] = useState(false);
+  const [hfTokenPresent, setHfTokenPresent] = useState(false);
+
+  const refreshHfTokenPresent = async () => {
+    try {
+      const res = await window.electronAPI.request({
+        method: 'GET',
+        path: '/settings/hf_token_present',
+      });
+      if (res.status < 200 || res.status >= 300) return;
+      const body = res.body as { value?: string } | null;
+      setHfTokenPresent(body?.value === 'true');
+    } catch {
+      setHfTokenPresent(false);
+    }
+  };
+
+  const signOutHf = async () => {
+    try {
+      await window.electronAPI.vault.delete('hf_token');
+      await window.electronAPI.request({
+        method: 'PUT',
+        path: '/settings/hf_token_present',
+        body: { value: 'false' },
+      });
+      setHfTokenPresent(false);
+      setHfDialogOpen(false);
+      toast.success('HuggingFace signed out');
+    } catch (e: unknown) {
+      toast.error('Failed to sign out: ' + errMessage(e));
+    }
+  };
 
   const saveHfToken = async () => {
     if (!hfTokenInput.trim()) return;
@@ -75,6 +106,7 @@ export default function ModelsPage() {
       });
       if (res.status < 200 || res.status >= 300) throw new Error(`HTTP ${res.status}`);
       setHfTokenInput('');
+      setHfTokenPresent(true);
       setHfDialogOpen(false);
       toast.success('HuggingFace token saved');
     } catch (e: unknown) {
@@ -84,20 +116,38 @@ export default function ModelsPage() {
     }
   };
 
-  const fetchModels = async () => {
+  const fetchModels = async (): Promise<ModelInfo[]> => {
     try {
       const res = await window.electronAPI.request({ method: 'GET', path: '/models' });
       if (res.status < 200 || res.status >= 300) throw new Error(`HTTP ${res.status}`);
       const body = res.body as { items?: ModelInfo[] } | ModelInfo[] | null;
       const items = Array.isArray(body) ? body : (body?.items ?? []);
       setModels(items);
+      return items;
     } catch (e: unknown) {
       toast.error('Failed to fetch models: ' + errMessage(e));
+      return [];
+    }
+  };
+
+  const silentReverify = async (model: ModelInfo) => {
+    try {
+      await window.electronAPI.request({
+        method: 'POST',
+        path: `/models/${encodeModelId(model.id)}/verify`,
+      });
+    } catch {
+      void 0;
     }
   };
 
   useEffect(() => {
-    fetchModels();
+    void (async () => {
+      const items = await fetchModels();
+      await refreshHfTokenPresent();
+      const verified = items.filter((m) => m.state === 'verified');
+      await Promise.all(verified.map(silentReverify));
+    })();
   }, []);
 
   const anyDownloading = Object.values(progress).some((p) => p.state === 'downloading');
@@ -328,6 +378,11 @@ export default function ModelsPage() {
             >
               Cancel
             </Button>
+            {hfTokenPresent && (
+              <Button variant="destructive" onClick={signOutHf} data-testid="hf-signout">
+                Sign Out
+              </Button>
+            )}
             <Button
               onClick={saveHfToken}
               disabled={!hfTokenInput.trim() || hfSaving}
@@ -387,18 +442,14 @@ export default function ModelsPage() {
                   </Button>
                 ) : (
                   <>
-                    {(model.state === 'missing' ||
-                      model.state === 'partial' ||
-                      model.state === 'corrupted') && (
-                      <Button
-                        variant="default"
-                        size="sm"
-                        onClick={() => startDownload(model)}
-                        disabled={anyDownloading}
-                      >
-                        Download
-                      </Button>
-                    )}
+                    <Button
+                      variant="default"
+                      size="sm"
+                      onClick={() => startDownload(model)}
+                      disabled={model.state === 'verified' || anyDownloading}
+                    >
+                      Download
+                    </Button>
 
                     {model.state !== 'missing' && (
                       <>

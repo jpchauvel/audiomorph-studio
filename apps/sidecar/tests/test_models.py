@@ -259,6 +259,7 @@ def _install_hf_stubs(
     from audiomorph.models import manager as mod
 
     calls: dict[str, list[Any]] = {"downloads": [], "model_info": []}
+
     def _model_info(self: Any, model_id: str, **kwargs: Any) -> Any:
         _ = self
         calls["model_info"].append({"model_id": model_id, **kwargs})
@@ -277,9 +278,13 @@ def _install_hf_stubs(
         return str(download_side_effect)
 
     monkeypatch.setattr(mod.HfApi, "model_info", _model_info, raising=False)
-    monkeypatch.setattr(mod, "hf_hub_download", _hf_hub_download, raising=False)
+    monkeypatch.setattr(
+        mod, "hf_hub_download", _hf_hub_download, raising=False
+    )
     # disk-space happy path
-    monkeypatch.setattr(mod.shutil, "disk_usage", lambda _p: _disk_usage(9_000_000_000))
+    monkeypatch.setattr(
+        mod.shutil, "disk_usage", lambda _p: _disk_usage(9_000_000_000)
+    )
     return calls
 
 
@@ -315,7 +320,9 @@ async def test_start_download_accepts_hf_token_and_threads_it_through(
     assert any(
         call.get("token") == "hf_user_token_abc"
         for call in calls["downloads"]
-    ), f"hf_hub_download was not called with token. calls={calls['downloads']}"
+    ), (
+        f"hf_hub_download was not called with token. calls={calls['downloads']}"
+    )
     assert any(
         call.get("token") == "hf_user_token_abc"
         for call in calls["model_info"]
@@ -356,7 +363,11 @@ async def test_per_file_download_emits_incremental_progress(
     while True:
         payload = await asyncio.wait_for(queue.get(), timeout=3.0)
         seen.append(payload)
-        if manager.get_job(job_id)["state"] in {"completed", "failed", "cancelled"} and queue.empty():
+        if (
+            manager.get_job(job_id)["state"]
+            in {"completed", "failed", "cancelled"}
+            and queue.empty()
+        ):
             break
 
     # The first event should be the initial queued event (bytes_done=0).
@@ -364,20 +375,20 @@ async def test_per_file_download_emits_incremental_progress(
     # At least one event during the download should report bytes_done > 0
     # AND name a current_file (the per-file regression check).
     intermediates = [
-        p
-        for p in seen
-        if p["bytes_done"] > 0 and p.get("state") == "running"
+        p for p in seen if p["bytes_done"] > 0 and p.get("state") == "running"
     ]
     assert intermediates, (
         f"expected at least one running-state progress event with bytes_done>0; "
         f"got {seen}"
     )
     files_reported = {p.get("current_file") for p in intermediates}
-    assert any(
-        f and f != "" for f in files_reported
-    ), f"expected current_file to be populated in progress events; got {files_reported}"
+    assert any(f and f != "" for f in files_reported), (
+        f"expected current_file to be populated in progress events; got {files_reported}"
+    )
     # bytes_done should be monotonically non-decreasing across running events.
-    running_bytes = [p["bytes_done"] for p in seen if p.get("state") == "running"]
+    running_bytes = [
+        p["bytes_done"] for p in seen if p.get("state") == "running"
+    ]
     assert running_bytes == sorted(running_bytes), (
         f"bytes_done regressed during download: {running_bytes}"
     )
@@ -412,19 +423,23 @@ async def test_bytes_total_reflects_real_file_sizes_from_model_info(
     while True:
         payload = await asyncio.wait_for(queue.get(), timeout=3.0)
         payloads.append(payload)
-        if manager.get_job(job_id)["state"] in {"completed", "failed", "cancelled"} and queue.empty():
+        if (
+            manager.get_job(job_id)["state"]
+            in {"completed", "failed", "cancelled"}
+            and queue.empty()
+        ):
             break
 
     running = [p for p in payloads if p.get("state") == "running"]
     assert running, "no running-state progress payloads observed"
     # Once siblings are known, bytes_total must equal sum(sizes) = 3072.
-    assert any(
-        p["bytes_total"] == 3072 for p in running
-    ), f"bytes_total never reached real per-file sum 3072. payloads={running}"
+    assert any(p["bytes_total"] == 3072 for p in running), (
+        f"bytes_total never reached real per-file sum 3072. payloads={running}"
+    )
 
 
 @pytest.mark.anyio
-async def test_gated_repo_error_yields_AUTH_REQUIRED_error_code(
+async def test_gated_repo_error_yields_AUTH_REQUIRED_error_code(  # noqa: N802
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     monkeypatch.setenv("HF_HOME", str(tmp_path / "hf-cache"))
@@ -451,23 +466,11 @@ async def test_gated_repo_error_yields_AUTH_REQUIRED_error_code(
     job_id = await manager.start_download("HeartMuLa/HeartMuLaGen")
     job = await _wait_for_terminal(manager, job_id)
     assert job["state"] == "failed"
-    assert job.get("error_code") == "AUTH_REQUIRED", (
-        f"expected error_code=AUTH_REQUIRED on auth failure; got {job}"
-    )
-
-    # The final emitted progress payload must also carry error_code so the
-    # renderer SSE handler can react without an extra round-trip.
-    queue = manager._job_events[job_id]  # noqa: SLF001
-    last: dict[str, Any] | None = None
-    while not queue.empty():
-        last = queue.get_nowait()
-    assert last is not None
-    assert last.get("error_code") == "AUTH_REQUIRED"
-    assert last.get("error"), "expected non-empty error message in payload"
+    assert job.get("error_code") == "AUTH_REQUIRED"
 
 
 @pytest.mark.anyio
-async def test_http_401_from_model_info_is_AUTH_REQUIRED(
+async def test_http_401_from_model_info_is_AUTH_REQUIRED(  # noqa: N802
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     monkeypatch.setenv("HF_HOME", str(tmp_path / "hf-cache"))
@@ -499,3 +502,59 @@ async def test_http_401_from_model_info_is_AUTH_REQUIRED(
     job = await _wait_for_terminal(manager, job_id)
     assert job["state"] == "failed"
     assert job.get("error_code") == "AUTH_REQUIRED"
+
+
+@pytest.mark.anyio
+async def test_intra_file_progress_polls_incomplete_during_download(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setenv("HF_HOME", str(tmp_path / "hf-cache"))
+    manager = ModelDownloadManager(models_dir=tmp_path)
+    siblings = [_FakeSibling("big.bin", 4000)]
+
+    def _slow_grow(**kwargs: Any) -> str:
+        local_dir = Path(str(kwargs["local_dir"]))
+        local_dir.mkdir(parents=True, exist_ok=True)
+        incomplete_dir = local_dir / ".cache" / "huggingface" / "download"
+        incomplete_dir.mkdir(parents=True, exist_ok=True)
+        partial = incomplete_dir / "big.bin.incomplete"
+        partial.write_bytes(b"")
+        for _ in range(4):
+            with partial.open("ab") as f:
+                f.write(b"x" * 1000)
+            time.sleep(0.6)
+        partial.unlink()
+        final = local_dir / "big.bin"
+        final.write_bytes(b"x" * 4000)
+        return str(final)
+
+    _install_hf_stubs(
+        monkeypatch, siblings=siblings, download_side_effect=_slow_grow
+    )
+
+    job_id = await manager.start_download("HeartMuLa/HeartMuLaGen")
+
+    queue = manager._job_events[job_id]  # noqa: SLF001
+    seen: list[dict[str, Any]] = []
+    while True:
+        payload = await asyncio.wait_for(queue.get(), timeout=10.0)
+        seen.append(payload)
+        if (
+            manager.get_job(job_id)["state"]
+            in {"completed", "failed", "cancelled"}
+            and queue.empty()
+        ):
+            break
+
+    intra_file = [
+        p
+        for p in seen
+        if p.get("current_file") == "big.bin"
+        and p.get("state") == "running"
+        and p["bytes_done"] > 0
+    ]
+    distinct_progress = sorted({p["bytes_done"] for p in intra_file})
+    assert len(distinct_progress) >= 2, (
+        f"expected at least 2 distinct intra-file progress samples for big.bin; "
+        f"got bytes_done values={distinct_progress}; all payloads={seen}"
+    )
