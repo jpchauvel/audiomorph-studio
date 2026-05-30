@@ -51,10 +51,25 @@ export default function StudioPage() {
     const fetchModels = async (): Promise<Model[]> => {
       const res = await api.request({ method: 'GET', path: '/models' });
       if (res.status < 200 || res.status >= 300) {
-        throw new Error(`GET /models -> ${res.status}: ${JSON.stringify(res.body)}`);
+        throw new Error(`GET /models -> ${res.status}`);
       }
       const body = res.body as { items?: Model[] } | Model[] | null;
       return Array.isArray(body) ? body : (body?.items ?? []);
+    };
+
+    const fetchModelsWithRetry = async (): Promise<Model[]> => {
+      let lastErr: unknown = null;
+      for (let attempt = 0; attempt < 20; attempt += 1) {
+        try {
+          return await fetchModels();
+        } catch (err) {
+          lastErr = err;
+          const msg = err instanceof Error ? err.message : String(err);
+          if (!msg.includes('Sidecar is not ready')) throw err;
+          await new Promise<void>((r) => setTimeout(r, 500));
+        }
+      }
+      throw lastErr instanceof Error ? lastErr : new Error('Sidecar did not start in time');
     };
 
     const silentReverify = async (m: Model) => {
@@ -67,7 +82,7 @@ export default function StudioPage() {
 
     void (async () => {
       try {
-        const initial = await fetchModels();
+        const initial = await fetchModelsWithRetry();
         setHasDownloaded(initial.some((m) => m.state !== 'missing'));
         const reverifiable = initial.filter((m) => m.state !== 'missing');
         let latest = initial;
