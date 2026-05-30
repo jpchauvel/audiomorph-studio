@@ -17,6 +17,13 @@ extraResources:
     to: renderer/out
     filter:
       - '**/*'
+  # Bundled CPython 3.12 + sidecar deps. Produced per host platform by
+  # `node scripts/bundle-python.mjs` (invoked by dist:{mac,win,linux} scripts).
+  # Directory naming matches PLATFORM_MAP in src/sidecar/manager.ts.
+  - from: build/python
+    to: python
+    filter:
+      - '**/*'
 asar: true
 nodeGypRebuild: false
 npmRebuild: false

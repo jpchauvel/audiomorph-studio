@@ -247,7 +247,10 @@ export class SidecarManager extends EventEmitter {
       throw new Error(`Unsupported platform for sidecar runtime: ${process.platform}`);
     }
 
-    return path.join(process.resourcesPath, 'python', mapped, 'bin', 'python');
+    if (process.platform === 'win32') {
+      return path.join(process.resourcesPath, 'python', mapped, 'python.exe');
+    }
+    return path.join(process.resourcesPath, 'python', mapped, 'bin', 'python3');
   }
 
   private readHandshake(

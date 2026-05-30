@@ -15,9 +15,10 @@
     "build:renderer": "pnpm --filter renderer build",
     "build:all": "pnpm run build:renderer && pnpm run build:shell",
     "start": "electron dist/main.js",
-    "dist:mac": "pnpm run build:all && electron-builder --mac --config electron-builder.yml",
-    "dist:win": "pnpm run build:all && electron-builder --win --config electron-builder.yml",
-    "dist:linux": "pnpm run build:all && electron-builder --linux --config electron-builder.yml",
+    "bundle:python": "node ../../scripts/bundle-python.mjs",
+    "dist:mac": "pnpm run build:all && pnpm run bundle:python && electron-builder --mac --config electron-builder.yml",
+    "dist:win": "pnpm run build:all && pnpm run bundle:python && electron-builder --win --config electron-builder.yml",
+    "dist:linux": "pnpm run build:all && pnpm run bundle:python && electron-builder --linux --config electron-builder.yml",
     "test": "vitest run --reporter=junit --outputFile=../../.test-results/shell.xml",
     "test:e2e": "playwright test --config=playwright.e2e.config.ts",
     "typecheck": "tsc --noEmit -p tsconfig.json"
