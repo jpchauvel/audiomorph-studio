@@ -49,3 +49,13 @@ body {
   color: var(--color-text);
   font-family: var(--font-sans);
 }
+
+/* Electron drag region: interactive children must opt out via .no-drag. */
+.titlebar-drag {
+  -webkit-app-region: drag;
+  app-region: drag;
+}
+.no-drag {
+  -webkit-app-region: no-drag;
+  app-region: no-drag;
+}
