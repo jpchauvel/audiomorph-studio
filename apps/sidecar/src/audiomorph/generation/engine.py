@@ -186,6 +186,10 @@ class GenerationEngine:
     async def generate(
         self, req: GenerationRequest, job_id: str, progress_cb: Any
     ) -> GenerationResult:
+        self._logger.info(
+            "engine.generate.entered",
+            extra={"job_id": job_id, "model_id": req.model_id},
+        )
         if self._generation_lock.locked():
             raise GenerationBusyError(
                 code="VALIDATION_ERROR",
@@ -195,7 +199,12 @@ class GenerationEngine:
             )
 
         self._validate(req)
+        self._logger.info("engine.validate.ok", extra={"job_id": job_id})
         model_root = self._resolve_model_root(req.model_id)
+        self._logger.info(
+            "engine.model_root.resolved",
+            extra={"job_id": job_id, "model_root": str(model_root)},
+        )
         job_dir = get_jobs_dir() / job_id
         job_dir.mkdir(parents=True, exist_ok=True)
         output_path = job_dir / "audio.wav"
@@ -220,7 +229,14 @@ class GenerationEngine:
             )
 
         async with self._generation_lock:
+            self._logger.info(
+                "engine.lock.acquired", extra={"job_id": job_id}
+            )
             device, dtype, torch = self._pick_device()
+            self._logger.info(
+                "engine.device.picked",
+                extra={"job_id": job_id, "device": str(device)},
+            )
 
             torch.manual_seed(req.seed)
             if torch.cuda.is_available():

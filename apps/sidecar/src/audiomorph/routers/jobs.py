@@ -4,6 +4,7 @@ from __future__ import annotations
 import asyncio
 from collections.abc import AsyncGenerator
 import json
+import logging
 from typing import Any
 from uuid import uuid4
 
@@ -31,6 +32,8 @@ except (
 from audiomorph._errors import ApiError
 from audiomorph.generation import get_engine
 from audiomorph.schemas import GenerationRequest, JobStatus
+
+_logger = logging.getLogger("audiomorph.jobs")
 
 router = APIRouter(tags=["jobs"])
 
@@ -63,6 +66,11 @@ def _emit(job_id: str, event: str, data: dict[str, Any]) -> None:
 
 async def _run_generation(job_id: str, req: GenerationRequest) -> None:
     state = _job_state(job_id)
+    _logger.info(
+        "jobs.run_generation.entered job_id=%s model_id=%s",
+        job_id,
+        req.model_id,
+    )
     try:
         state["status"] = JobStatus.running.value
 
@@ -90,6 +98,19 @@ async def _run_generation(job_id: str, req: GenerationRequest) -> None:
         }
         _emit(job_id, "error", state["error"])
         raise
+    except Exception as exc:
+        _logger.exception("jobs.run_generation.unexpected job_id=%s", job_id)
+        state["status"] = JobStatus.failed.value
+        state["error"] = ApiError(
+            code="INTERNAL_ERROR",
+            message=f"Generation failed: {type(exc).__name__}",
+            retriable=False,
+            hint=(
+                "Check sidecar logs for the full traceback "
+                "(jobs.run_generation.unexpected)."
+            ),
+        ).envelope()
+        _emit(job_id, "error", state["error"])
     finally:
         _emit(job_id, "terminal", {"status": state["status"]})
 
