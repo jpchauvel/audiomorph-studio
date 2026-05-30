@@ -23,7 +23,7 @@ test.beforeAll(async () => {
   serverProcess = spawn('pnpm', ['dlx', 'serve@latest', outDir, '-l', '8080'], {
     stdio: 'pipe',
   });
-  await waitForServer('http://localhost:8080/first-run/index.html');
+  await waitForServer('http://127.0.0.1:3000/first-run.html');
 });
 
 test.afterAll(() => {
@@ -47,14 +47,14 @@ test.beforeEach(async ({ page }) => {
 });
 
 test('wizard renders step 1 on load', async ({ page }) => {
-  await page.goto(`http://localhost:8080/first-run/index.html`);
+  await page.goto(`http://127.0.0.1:3000/first-run.html`);
   await expect(page.getByTestId('first-run-wizard')).toBeVisible();
   await expect(page.getByTestId('step1-next')).toBeVisible();
   await page.screenshot({ path: '.sisyphus/evidence/task-W3.2-step1.png' });
 });
 
 test('step progression: 1 → 2 → 3', async ({ page }) => {
-  await page.goto(`http://localhost:8080/first-run/index.html`);
+  await page.goto(`http://127.0.0.1:3000/first-run.html`);
   await page.getByTestId('step1-next').click();
   await expect(page.getByTestId('pick-dir-btn')).toBeVisible();
   await page.screenshot({ path: '.sisyphus/evidence/task-W3.2-step2.png' });
@@ -79,7 +79,7 @@ test('low disk blocks next button', async ({ page }) => {
       getDiskFreeGb: async () => 5,
     };
   });
-  await page.goto(`http://localhost:8080/first-run/index.html`);
+  await page.goto(`http://127.0.0.1:3000/first-run.html`);
   await page.getByTestId('step1-next').click();
   await page.getByTestId('pick-dir-btn').click();
   await expect(page.getByTestId('low-disk-error')).toBeVisible();
@@ -92,6 +92,6 @@ test('redirect to / if already completed', async ({ page }) => {
   await page.route('**/first-run/status', (route) =>
     route.fulfill({ json: { completed: true, missing_steps: [] } }),
   );
-  await page.goto(`http://localhost:8080/first-run/index.html`);
+  await page.goto(`http://127.0.0.1:3000/first-run.html`);
   await expect(page).toHaveURL(/\/$|\/index\.html$/, { timeout: 10000 });
 });
