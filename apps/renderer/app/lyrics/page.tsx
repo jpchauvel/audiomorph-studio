@@ -49,17 +49,17 @@ export default function LyricsPage() {
         setTranscribing(false);
         return;
       }
-      const { job_id } = res.body as Record<string, unknown>;
+      const { job_id } = res.body as { job_id: string };
       setJobId(job_id);
 
       const dispose = window.electronAPI.stream(
         { streamId: `lyrics-job-${job_id}`, path: `/lyrics/jobs/${job_id}/events` },
         (e: { event: string; data: unknown }) => {
           if (e.event === 'progress') {
-            const d = e.data as Record<string, unknown>;
+            const d = e.data as { segments?: Segment[] };
             if (d.segments) setSegments(d.segments);
           } else if (e.event === 'done') {
-            const d = e.data as Record<string, unknown>;
+            const d = e.data as { segments?: Segment[] };
             const text = d.segments?.map((s: Segment) => s.text).join('\n') ?? '';
             setLyrics(text);
             setSegments(d.segments ?? []);
@@ -67,8 +67,8 @@ export default function LyricsPage() {
             dispose();
             streamDisposeRef.current = null;
           } else if (e.event === 'error') {
-            const d = e.data as Record<string, unknown>;
-            const msg = d ? d.message : 'Transcription error';
+            const d = e.data as { message?: string } | null;
+            const msg = d?.message ?? 'Transcription error';
             toast.error(msg);
             setTranscribing(false);
             dispose();

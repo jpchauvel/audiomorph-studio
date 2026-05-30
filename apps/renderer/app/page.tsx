@@ -82,22 +82,27 @@ export default function StudioPage() {
         throw new Error('Failed to start generation');
       }
 
-      const { job_id } = res.body as Record<string, unknown>;
+      const { job_id } = res.body as { job_id: string };
       setJob(job_id);
 
       const dispose = window.electronAPI.stream(
         { streamId: `job-events-${job_id}`, path: `/jobs/${job_id}/events` },
         (e: { event: string; data: unknown }) => {
           if (e.event === 'progress') {
-            const d = e.data as Record<string, unknown>;
-            setPhase(d.phase as GenPhase, d.step, d.total_steps, d.eta_s);
+            const d = e.data as {
+              phase: GenPhase;
+              step: number;
+              total_steps: number;
+              eta_s: number;
+            };
+            setPhase(d.phase, d.step, d.total_steps, d.eta_s);
           } else if (e.event === 'done') {
             setResult(job_id);
             dispose();
             streamDisposeRef.current = null;
           } else if (e.event === 'error') {
-            const msg = e.data ? (e.data as Record<string, unknown>).message : 'Generation failed';
-            setError(msg);
+            const msg = e.data ? (e.data as { message?: string }).message : 'Generation failed';
+            setError(msg ?? 'Generation failed');
             toast.error(`Error: ${msg}`);
             dispose();
             streamDisposeRef.current = null;
@@ -121,9 +126,10 @@ export default function StudioPage() {
         },
       );
       streamDisposeRef.current = dispose;
-    } catch (err: { message: string }) {
-      setError(err.message);
-      toast.error(err.message);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Generation failed';
+      setError(msg);
+      toast.error(msg);
     }
   };
 

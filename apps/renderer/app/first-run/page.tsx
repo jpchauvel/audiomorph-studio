@@ -28,7 +28,7 @@ export default function FirstRunPage() {
       .request({ method: 'GET', path: '/first-run/status' })
       .then((res: { status: number; body: unknown }) => {
         if (res.status >= 200 && res.status < 300) {
-          const data = res.body as Record<string, unknown>;
+          const data = res.body as { completed?: boolean };
           if (data.completed) router.replace('/');
         }
       })
@@ -72,7 +72,7 @@ export default function FirstRunPage() {
         path: `/models/${model.id}/download`,
       });
       if (res.status < 200 || res.status >= 300) throw new Error('HTTP Error');
-      const { job_id } = res.body as Record<string, unknown>;
+      const { job_id } = res.body as { job_id: string };
 
       setDownloadJob(model.id, {
         jobId: job_id,
@@ -87,7 +87,12 @@ export default function FirstRunPage() {
         { streamId: `download:${job_id}`, path: `/models/jobs/${job_id}/events` },
         (e: { event: string; data: unknown }) => {
           if (e.event === 'progress') {
-            const d = e.data as Record<string, unknown>;
+            const d = e.data as {
+              bytes_done: number;
+              total_bytes: number;
+              speed_mbps: number;
+              current_file: string;
+            };
             setDownloadJob(model.id, {
               bytesDone: d.bytes_done,
               totalBytes: d.total_bytes,
@@ -103,7 +108,7 @@ export default function FirstRunPage() {
               return n;
             });
           } else if (e.event === 'error') {
-            const msg = e.data ? (e.data as Record<string, unknown>).message : 'Download failed';
+            const msg = e.data ? (e.data as { message?: string }).message : 'Download failed';
             setDownloadJob(model.id, { state: 'error', error: msg });
             toast.error(`${model.name}: ${msg}`);
             dispose();

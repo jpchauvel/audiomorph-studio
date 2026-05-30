@@ -40,12 +40,12 @@ export function ExportDialog({ open, onClose, jobId }: Props) {
       });
 
       if (res.status < 200 || res.status >= 300) {
-        const err = (res.body as Record<string, unknown>) || {};
+        const err = (res.body as { message?: string; hint?: string } | null) || {};
         toast.error(err.message ?? 'Export failed', { description: err.hint });
         return;
       }
 
-      const { file_path } = res.body as Record<string, unknown>;
+      const { file_path } = res.body as { file_path: string };
       toast.success(`Exported to ${file_path}`, {
         action: {
           label: 'Show in Finder',

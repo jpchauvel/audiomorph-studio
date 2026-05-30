@@ -30,7 +30,7 @@ import {
   ModelInfo,
   DownloadProgress as _DownloadProgress,
 } from '@/lib/stores/models';
-import type { StreamError } from '@audiomorph/ipc-contracts';
+type StreamError = { code: string; message: string };
 
 const errMessage = (e: unknown): string =>
   e instanceof Error ? e.message : typeof e === 'string' ? e : JSON.stringify(e);

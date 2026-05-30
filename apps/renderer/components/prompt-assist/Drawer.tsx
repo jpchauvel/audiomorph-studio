@@ -44,7 +44,7 @@ export function PromptAssistDrawer() {
         .request({ method: 'GET', path: '/settings' })
         .then((res: { status: number; body: unknown }) => {
           if (res.status >= 200 && res.status < 300) {
-            const data = res.body as Record<string, unknown>;
+            const data = res.body as { openrouter_key_present?: string };
             setKeyPresent(data.openrouter_key_present === 'true');
           } else {
             setKeyPresent(false);

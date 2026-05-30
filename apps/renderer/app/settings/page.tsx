@@ -26,7 +26,12 @@ export default function SettingsPage() {
       try {
         const res = await window.electronAPI.request({ method: 'GET', path: '/settings' });
         if (res.status < 200 || res.status >= 300) throw new Error('Failed to fetch settings');
-        const data = res.body as Record<string, unknown>;
+        const data = res.body as {
+          models_dir?: string;
+          cpu_fallback_enabled?: string;
+          openrouter_key_present?: string;
+          hf_token_present?: string;
+        };
 
         if (data.models_dir) setModelsDir(data.models_dir);
         if (data.cpu_fallback_enabled) setCpuFallback(data.cpu_fallback_enabled === 'true');
