@@ -19,6 +19,8 @@ const encodeModelId = (id: string): string => id.replace(/\//g, '__');
 
 export default function StudioPage() {
   const [models, setModels] = useState<Model[]>([]);
+  const [pendingGenerationModel, setPendingGenerationModel] = useState<Model | null>(null);
+  const [isVerifyingNow, setIsVerifyingNow] = useState(false);
   const [hasDownloaded, setHasDownloaded] = useState(false);
   const [isLoadingModels, setIsLoadingModels] = useState(true);
   const streamDisposeRef = useRef<(() => void) | null>(null);
@@ -72,12 +74,16 @@ export default function StudioPage() {
           latest = await fetchModels();
           setHasDownloaded(latest.some((m) => m.state !== 'missing'));
         }
-        setModels(
-          latest.filter(
-            (m) =>
-              (m.state === 'verified' || m.state === 'partial') && m.role === 'generation',
-          ),
+        const verified = latest.filter(
+          (m) => m.state === 'verified' && m.role === 'generation',
         );
+        setModels(verified);
+        if (verified.length === 0) {
+          const pending = latest.find(
+            (m) => m.role === 'generation' && m.state !== 'missing',
+          );
+          setPendingGenerationModel(pending ?? null);
+        }
       } catch {
         toast.error('Failed to load models');
       } finally {
@@ -210,6 +216,35 @@ export default function StudioPage() {
     }
   };
 
+  const handleVerifyNow = async () => {
+    if (!pendingGenerationModel) return;
+    setIsVerifyingNow(true);
+    try {
+      const api = window.electronAPI;
+      const res = await api.request({
+        method: 'POST',
+        path: `/models/${encodeModelId(pendingGenerationModel.id)}/verify`,
+      });
+      const body = res.body as { valid?: boolean } | null;
+      if (!body?.valid) {
+        toast.error('Verification failed — open Models to redownload');
+        return;
+      }
+      const listRes = await api.request({ method: 'GET', path: '/models' });
+      const listBody = listRes.body as { items?: Model[] } | Model[] | null;
+      const latest = Array.isArray(listBody) ? listBody : (listBody?.items ?? []);
+      const verified = latest.filter(
+        (m) => m.state === 'verified' && m.role === 'generation',
+      );
+      setModels(verified);
+      if (verified.length > 0) setPendingGenerationModel(null);
+    } catch {
+      toast.error('Verification failed');
+    } finally {
+      setIsVerifyingNow(false);
+    }
+  };
+
   return (
     <div className="min-h-screen flex flex-col bg-[var(--color-surface)] text-[var(--color-text)]">
       <span hidden data-testid="route-ready" />
@@ -236,6 +271,24 @@ export default function StudioPage() {
             >
               Go to Models
             </Link>
+          </div>
+        ) : models.length === 0 && pendingGenerationModel ? (
+          <div className="flex flex-col items-center justify-center p-12 border border-dashed border-[var(--color-border)] rounded-2xl bg-[var(--color-surface-2)] w-full text-center">
+            <h2 className="text-xl font-semibold mb-2">
+              {pendingGenerationModel.name} needs verification
+            </h2>
+            <p className="text-[var(--color-text-muted)] mb-6 max-w-md">
+              Files are on disk but checksum verification hasn&apos;t completed. Run it now to
+              unlock the generation form.
+            </p>
+            <button
+              type="button"
+              onClick={handleVerifyNow}
+              disabled={isVerifyingNow}
+              className="px-6 py-2 rounded-lg bg-[var(--color-primary)] text-[var(--color-surface)] font-medium hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {isVerifyingNow ? 'Verifying…' : 'Verify now'}
+            </button>
           </div>
         ) : models.length === 0 ? (
           <div className="flex flex-col items-center justify-center p-12 border border-dashed border-[var(--color-border)] rounded-2xl bg-[var(--color-surface-2)] w-full text-center">
