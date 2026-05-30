@@ -58,12 +58,48 @@ def test_generation_persists_to_sqlite(
             "SELECT name FROM sqlite_master WHERE type='table'"
         )
         tables = {row[0] for row in cur.fetchall()}
+        table = next(
+            (t for t in tables if t.lower() in {"generation", "generations"}),
+            None,
+        )
+        assert table is not None, f"Expected generation table, got {tables}"
+        cur = conn.execute(
+            f"SELECT job_id, file_path FROM {table} WHERE job_id = ?",
+            (job_id,),
+        )
+        rows = cur.fetchall()
     finally:
         conn.close()
 
-    assert "generation" in {t.lower() for t in tables} or "generations" in {
-        t.lower() for t in tables
-    }, f"Expected generation table, got {tables}"
+    assert len(rows) == 1, f"Expected row for job_id={job_id}, got {rows}"
+    assert rows[0][0] == job_id
+    assert rows[0][1], "file_path must be persisted for export to work"
+
+
+def test_export_after_generation_finds_job(
+    app_client, auth_headers, stub_musicgen, sqlite_db, monkeypatch, tmp_path
+) -> None:
+    async def _fake_convert(
+        src: str, dst: str, fmt: str, kbps: int | None
+    ) -> None:
+        Path(dst).write_bytes(b"RIFFfakewav")  # noqa: ASYNC240
+
+    from audiomorph.services import ffmpeg as ffmpeg_service
+
+    monkeypatch.setattr(ffmpeg_service, "convert", _fake_convert)
+
+    job_id = _post_generation(app_client, auth_headers)
+    wait_for_job(app_client, f"/jobs/{job_id}", auth_headers)
+
+    resp = app_client.post(
+        "/export",
+        json={"job_id": job_id, "format": "wav"},
+        headers=auth_headers,
+    )
+    assert resp.status_code == 200, resp.text
+    body = resp.json()
+    assert body["format"] == "wav"
+    assert Path(body["file_path"]).exists()
 
 
 def test_generation_rejects_invalid_payload(app_client, auth_headers) -> None:

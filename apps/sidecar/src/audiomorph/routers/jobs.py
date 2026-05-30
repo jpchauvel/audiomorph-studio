@@ -31,6 +31,8 @@ except (
 
 
 from audiomorph._errors import ApiError
+from audiomorph.db import repo
+from audiomorph.db.session import session_scope
 from audiomorph.generation import get_engine
 from audiomorph.paths import get_jobs_dir
 from audiomorph.schemas import GenerationRequest, JobStatus
@@ -80,6 +82,8 @@ async def _run_generation(job_id: str, req: GenerationRequest) -> None:
             _emit(job_id, "progress", payload)
 
         result = await _ENGINE.generate(req, job_id, _progress)
+        with session_scope() as session:
+            repo.record_generation(session, result)
         state["status"] = JobStatus.completed.value
         state["result"] = result.model_dump()
         _emit(job_id, "done", state["result"])
