@@ -15,7 +15,6 @@ type Model = {
   state: string;
 };
 
-// FastAPI {model_id} path params reject '/'. Sidecar manager decodes '__'→'/'.
 const encodeModelId = (id: string): string => id.replace(/\//g, '__');
 
 export default function StudioPage() {
@@ -23,8 +22,21 @@ export default function StudioPage() {
   const [hasDownloaded, setHasDownloaded] = useState(false);
   const [isLoadingModels, setIsLoadingModels] = useState(true);
   const streamDisposeRef = useRef<(() => void) | null>(null);
+  const cancelRequestedRef = useRef(false);
 
-  const { jobId, phase, setJob, setPhase, setError, setResult, clearRun } = useGenerationStore();
+  const {
+    jobId,
+    phase,
+    numSongsTotal,
+    numSongsDone,
+    setJob,
+    setPhase,
+    setError,
+    setResult,
+    pushCompleted,
+    setBatch,
+    clearRun,
+  } = useGenerationStore();
 
   useEffect(() => {
     const api = typeof window !== 'undefined' ? window.electronAPI : undefined;
@@ -60,7 +72,12 @@ export default function StudioPage() {
           latest = await fetchModels();
           setHasDownloaded(latest.some((m) => m.state !== 'missing'));
         }
-        setModels(latest.filter((m) => m.state === 'verified' && m.role === 'generation'));
+        setModels(
+          latest.filter(
+            (m) =>
+              (m.state === 'verified' || m.state === 'partial') && m.role === 'generation',
+          ),
+        );
       } catch {
         toast.error('Failed to load models');
       } finally {
@@ -75,89 +92,114 @@ export default function StudioPage() {
     };
   }, []);
 
+  const runSingleSong = (
+    data: GenerationRequest,
+    seedOverride: number | undefined,
+  ): Promise<{ jobId: string }> =>
+    new Promise((resolve, reject) => {
+      const payload = { ...data, seed: seedOverride };
+      void (async () => {
+        try {
+          const res = await window.electronAPI.request({
+            method: 'POST',
+            path: '/jobs/generate',
+            body: payload,
+          });
+          if (res.status === 429) {
+            reject(new Error('Too many requests. A generation is already in flight.'));
+            return;
+          }
+          if (res.status < 200 || res.status >= 300) {
+            reject(new Error('Failed to start generation'));
+            return;
+          }
+          const { job_id } = res.body as { job_id: string };
+          setJob(job_id);
+
+          const dispose = window.electronAPI.stream(
+            { streamId: `job-events-${job_id}`, path: `/jobs/${job_id}/events` },
+            (e: { event: string; data: unknown }) => {
+              if (e.event === 'progress') {
+                const d = e.data as {
+                  phase: GenPhase;
+                  step: number;
+                  total_steps: number;
+                  eta_s: number;
+                };
+                setPhase(d.phase, d.step, d.total_steps, d.eta_s);
+              } else if (e.event === 'done') {
+                dispose();
+                streamDisposeRef.current = null;
+                resolve({ jobId: job_id });
+              } else if (e.event === 'error') {
+                const msg = e.data ? (e.data as { message?: string }).message : 'Generation failed';
+                dispose();
+                streamDisposeRef.current = null;
+                reject(new Error(msg ?? 'Generation failed'));
+              } else if (e.event === 'cancelled') {
+                dispose();
+                streamDisposeRef.current = null;
+                reject(new Error('cancelled'));
+              }
+            },
+            () => {
+              dispose();
+              streamDisposeRef.current = null;
+            },
+            (err: { message: string }) => {
+              dispose();
+              streamDisposeRef.current = null;
+              reject(new Error(err.message || 'Generation failed'));
+            },
+          );
+          streamDisposeRef.current = dispose;
+        } catch (err) {
+          reject(err instanceof Error ? err : new Error('Generation failed'));
+        }
+      })();
+    });
+
   const handleSubmit = async (data: GenerationRequest) => {
     if (phase !== 'idle' && phase !== 'done' && phase !== 'error' && phase !== 'cancelled') {
       toast.error('Generation already in progress');
       return;
     }
 
-    try {
-      clearRun();
-      const res = await window.electronAPI.request({
-        method: 'POST',
-        path: '/jobs/generate',
-        body: data,
-      });
+    const total = Math.max(1, Math.min(8, Math.trunc(data.num_songs)));
+    clearRun();
+    setBatch(total);
+    cancelRequestedRef.current = false;
 
-      if (res.status === 429) {
-        toast.error('Too many requests. A generation is already in flight.');
-        return;
-      }
-
-      if (res.status < 200 || res.status >= 300) {
-        throw new Error('Failed to start generation');
-      }
-
-      const { job_id } = res.body as { job_id: string };
-      setJob(job_id);
-
-      const dispose = window.electronAPI.stream(
-        { streamId: `job-events-${job_id}`, path: `/jobs/${job_id}/events` },
-        (e: { event: string; data: unknown }) => {
-          if (e.event === 'progress') {
-            const d = e.data as {
-              phase: GenPhase;
-              step: number;
-              total_steps: number;
-              eta_s: number;
-            };
-            setPhase(d.phase, d.step, d.total_steps, d.eta_s);
-          } else if (e.event === 'done') {
-            setResult(job_id);
-            dispose();
-            streamDisposeRef.current = null;
-          } else if (e.event === 'error') {
-            const msg = e.data ? (e.data as { message?: string }).message : 'Generation failed';
-            setError(msg ?? 'Generation failed');
-            toast.error(`Error: ${msg}`);
-            dispose();
-            streamDisposeRef.current = null;
-          } else if (e.event === 'cancelled') {
-            setPhase('cancelled');
-            toast.info('Generation cancelled');
-            dispose();
-            streamDisposeRef.current = null;
-          }
-        },
-        () => {
-          dispose();
-          streamDisposeRef.current = null;
-        },
-        (err: { message: string }) => {
-          const msg = err.message || 'Generation failed';
+    const baseSeed = data.seed;
+    for (let i = 0; i < total; i += 1) {
+      if (cancelRequestedRef.current) break;
+      const seedForSong = baseSeed !== undefined ? baseSeed + i : undefined;
+      try {
+        const { jobId: completedId } = await runSingleSong(data, seedForSong);
+        pushCompleted(completedId);
+        if (i === total - 1) {
+          setResult(completedId);
+          if (total > 1) toast.success(`Generated ${total} songs`);
+        }
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : 'Generation failed';
+        if (msg === 'cancelled') {
+          setPhase('cancelled');
+          toast.info('Generation cancelled');
+        } else {
           setError(msg);
           toast.error(`Error: ${msg}`);
-          dispose();
-          streamDisposeRef.current = null;
-        },
-      );
-      streamDisposeRef.current = dispose;
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : 'Generation failed';
-      setError(msg);
-      toast.error(msg);
+        }
+        return;
+      }
     }
   };
 
   const handleCancel = async () => {
+    cancelRequestedRef.current = true;
     if (!jobId) return;
-
     try {
-      await window.electronAPI.request({
-        method: 'DELETE',
-        path: `/jobs/${jobId}`,
-      });
-
+      await window.electronAPI.request({ method: 'DELETE', path: `/jobs/${jobId}` });
       if (streamDisposeRef.current) {
         streamDisposeRef.current();
         streamDisposeRef.current = null;
@@ -170,13 +212,10 @@ export default function StudioPage() {
 
   return (
     <div className="min-h-screen flex flex-col bg-[var(--color-surface)] text-[var(--color-text)]">
-      {/* AUDIOMORPH_TEST_MODE hook */}
       <span hidden data-testid="route-ready" />
-      <header className="px-8 py-6 border-b border-[var(--color-border)]">
-        <h1 className="text-2xl font-bold text-[var(--color-text)]">AudioMorph Studio</h1>
-      </header>
 
       <main className="flex-1 flex flex-col items-center p-8 max-w-4xl mx-auto w-full">
+        <h1 className="self-start text-2xl font-bold mb-6">AudioMorph Studio</h1>
         {isLoadingModels ? (
           <div className="py-20 text-[var(--color-text-muted)] animate-pulse">
             Loading studio...
@@ -188,8 +227,8 @@ export default function StudioPage() {
             </div>
             <h2 className="text-xl font-semibold mb-2">No models downloaded yet</h2>
             <p className="text-[var(--color-text-muted)] mb-6 max-w-md">
-              You need at least one verified model to start generating music. Please go to the
-              models page to download one.
+              You need at least one downloaded generation model to start. Open the Models page to
+              download HeartMuLaGen.
             </p>
             <Link
               href="/models"
@@ -199,14 +238,29 @@ export default function StudioPage() {
             </Link>
           </div>
         ) : models.length === 0 ? (
-          <div className="py-20 text-[var(--color-text-muted)] animate-pulse">
-            Verifying models...
+          <div className="flex flex-col items-center justify-center p-12 border border-dashed border-[var(--color-border)] rounded-2xl bg-[var(--color-surface-2)] w-full text-center">
+            <h2 className="text-xl font-semibold mb-2">No generation model ready</h2>
+            <p className="text-[var(--color-text-muted)] mb-6 max-w-md">
+              Models are downloaded but no generation-capable pipeline is available yet. Open the
+              Models page to verify or re-download HeartMuLaGen.
+            </p>
+            <Link
+              href="/models"
+              className="px-6 py-2 rounded-lg bg-[var(--color-primary)] text-[var(--color-surface)] font-medium hover:opacity-90 transition-opacity"
+            >
+              Open Models
+            </Link>
           </div>
         ) : (
           <div className="w-full flex flex-col gap-8">
             <GenerationForm models={models} onSubmit={handleSubmit} onCancel={handleCancel} />
 
             <div className="w-full max-w-2xl mx-auto flex flex-col">
+              {numSongsTotal > 1 && (numSongsDone > 0 || phase !== 'idle') && (
+                <div className="text-sm text-[var(--color-text-muted)] mb-2">
+                  Song {Math.min(numSongsDone + 1, numSongsTotal)} of {numSongsTotal}
+                </div>
+              )}
               <PhaseIndicator />
               <ResultCard />
             </div>

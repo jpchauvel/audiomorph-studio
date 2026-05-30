@@ -32,6 +32,7 @@ export type GenerationRequest = {
   seed: number | undefined;
   temperature: number;
   top_k: number;
+  num_songs: number;
 };
 
 type Props = {
@@ -54,6 +55,7 @@ export function GenerationForm({ models, onSubmit, onCancel }: Props) {
   const [modelId, setModelId] = useState(models[0]?.id || '');
   const [duration, setDuration] = useState(30);
   const [seed, setSeed] = useState('');
+  const [numSongs, setNumSongs] = useState(1);
 
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [temperature, setTemperature] = useState(1.0);
@@ -77,6 +79,7 @@ export function GenerationForm({ models, onSubmit, onCancel }: Props) {
       seed: seed.trim() ? parseInt(seed, 10) : undefined,
       temperature,
       top_k: topK,
+      num_songs: numSongs,
     });
   };
 
@@ -207,6 +210,30 @@ export function GenerationForm({ models, onSubmit, onCancel }: Props) {
           }
           min={1}
           max={240}
+          step={1}
+          disabled={isRunning}
+          className="py-2"
+        />
+      </div>
+
+      <div className="flex flex-col gap-4">
+        <div className="flex justify-between items-center">
+          <Label>
+            Number of songs: {numSongs}
+            {numSongs > 1 && (
+              <span className="ml-2 text-xs text-[var(--color-text-muted)]">
+                (generated sequentially)
+              </span>
+            )}
+          </Label>
+        </div>
+        <Slider
+          value={[numSongs]}
+          onValueChange={(vals: number | readonly number[]) =>
+            setNumSongs(Array.isArray(vals) ? (vals[0] ?? numSongs) : vals)
+          }
+          min={1}
+          max={8}
           step={1}
           disabled={isRunning}
           className="py-2"

@@ -19,12 +19,17 @@ type GenerationStore = {
   etaS: number | null;
   errorMsg: string | null;
   resultJobId: string | null;
+  completedJobIds: string[];
+  numSongsTotal: number;
+  numSongsDone: number;
   promptDraft: string;
   lyricsDraft: string;
   setJob: (jobId: string) => void;
   setPhase: (phase: GenPhase, step?: number, totalSteps?: number, etaS?: number | null) => void;
   setError: (msg: string) => void;
   setResult: (jobId: string) => void;
+  pushCompleted: (jobId: string) => void;
+  setBatch: (total: number) => void;
   setPromptDraft: (v: string) => void;
   setLyricsDraft: (v: string) => void;
   clearRun: () => void;
@@ -39,6 +44,9 @@ export const useGenerationStore = create<GenerationStore>((set) => ({
   etaS: null,
   errorMsg: null,
   resultJobId: null,
+  completedJobIds: [],
+  numSongsTotal: 1,
+  numSongsDone: 0,
   promptDraft: '',
   lyricsDraft: '',
   setJob: (jobId) =>
@@ -55,6 +63,13 @@ export const useGenerationStore = create<GenerationStore>((set) => ({
     set({ phase, step, totalSteps, etaS }),
   setError: (errorMsg) => set({ phase: 'error', errorMsg }),
   setResult: (resultJobId) => set({ phase: 'done', resultJobId }),
+  pushCompleted: (jobId) =>
+    set((s) => ({
+      completedJobIds: [...s.completedJobIds, jobId],
+      numSongsDone: s.numSongsDone + 1,
+    })),
+  setBatch: (numSongsTotal) =>
+    set({ numSongsTotal, numSongsDone: 0, completedJobIds: [] }),
   setPromptDraft: (promptDraft) => set({ promptDraft }),
   setLyricsDraft: (lyricsDraft) => set({ lyricsDraft }),
   clearRun: () =>
@@ -66,6 +81,8 @@ export const useGenerationStore = create<GenerationStore>((set) => ({
       etaS: null,
       errorMsg: null,
       resultJobId: null,
+      completedJobIds: [],
+      numSongsDone: 0,
     }),
   reset: () =>
     set({
@@ -76,6 +93,9 @@ export const useGenerationStore = create<GenerationStore>((set) => ({
       etaS: null,
       errorMsg: null,
       resultJobId: null,
+      completedJobIds: [],
+      numSongsTotal: 1,
+      numSongsDone: 0,
       promptDraft: '',
       lyricsDraft: '',
     }),

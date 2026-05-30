@@ -12,17 +12,12 @@ const WaveformPlayer = dynamic(
   { ssr: false },
 );
 
-export function ResultCard() {
-  const { phase, resultJobId } = useGenerationStore();
+function ResultCardSingle({ jobId, index, total }: { jobId: string; index: number; total: number }) {
   const [isExportOpen, setIsExportOpen] = useState(false);
   const [audioUrl, setAudioUrl] = useState<string | null>(null);
   const [audioError, setAudioError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (phase !== 'done' || !resultJobId) {
-      setAudioUrl(null);
-      return;
-    }
     const api = window.electronAPI;
     if (!api?.fetchAudio) {
       setAudioError('Audio bridge unavailable');
@@ -32,38 +27,38 @@ export function ResultCard() {
     let createdUrl: string | null = null;
     setAudioError(null);
     void api
-      .fetchAudio({ jobId: resultJobId })
-      .then(({ bytes, contentType }) => {
+      .fetchAudio({ jobId })
+      .then(({ bytes, contentType }: { bytes: Uint8Array; contentType: string }) => {
         if (cancelled) return;
-        const blob = new Blob([new Uint8Array(bytes)], { type: contentType });
+        const ab = new ArrayBuffer(bytes.byteLength);
+        new Uint8Array(ab).set(bytes);
+        const blob = new Blob([ab], { type: contentType });
         createdUrl = URL.createObjectURL(blob);
         setAudioUrl(createdUrl);
       })
       .catch((err: unknown) => {
         if (cancelled) return;
-        const msg = err instanceof Error ? err.message : String(err);
-        setAudioError(msg);
+        setAudioError(err instanceof Error ? err.message : String(err));
       });
     return () => {
       cancelled = true;
       if (createdUrl) URL.revokeObjectURL(createdUrl);
     };
-  }, [phase, resultJobId]);
-
-  if (phase !== 'done' || !resultJobId) return null;
+  }, [jobId]);
 
   return (
-    <Card className="mt-6 border border-[var(--color-success)] bg-[var(--color-success)]/5">
+    <Card className="border border-[var(--color-success)] bg-[var(--color-success)]/5">
       <CardHeader className="pb-3">
         <CardTitle className="text-[var(--color-success)] flex items-center gap-2">
-          <span>✓</span> Generation complete
+          <span>✓</span>
+          {total > 1 ? `Song ${index + 1} of ${total}` : 'Generation complete'}
         </CardTitle>
       </CardHeader>
       <CardContent className="flex flex-col gap-4">
         <div className="flex flex-col gap-1">
           <span className="text-xs text-[var(--color-text-muted)]">Job ID</span>
           <code className="text-sm px-2 py-1 rounded bg-[var(--color-surface-3)] text-[var(--color-text)]">
-            {resultJobId}
+            {jobId}
           </code>
         </div>
 
@@ -80,11 +75,19 @@ export function ResultCard() {
           <Button onClick={() => setIsExportOpen(true)}>Export</Button>
         </div>
       </CardContent>
-      <ExportDialog
-        open={isExportOpen}
-        onClose={() => setIsExportOpen(false)}
-        jobId={resultJobId}
-      />
+      <ExportDialog open={isExportOpen} onClose={() => setIsExportOpen(false)} jobId={jobId} />
     </Card>
+  );
+}
+
+export function ResultCard() {
+  const { completedJobIds, numSongsTotal } = useGenerationStore();
+  if (completedJobIds.length === 0) return null;
+  return (
+    <div className="mt-6 flex flex-col gap-4">
+      {completedJobIds.map((id, i) => (
+        <ResultCardSingle key={id} jobId={id} index={i} total={numSongsTotal} />
+      ))}
+    </div>
   );
 }
