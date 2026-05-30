@@ -3,12 +3,12 @@ Auto-generated Pydantic v2 models from TypeScript type contracts.
 DO NOT EDIT MANUALLY - regenerate with: pnpm --filter @audiomorph/shared-types gen:python
 """
 
-from enum import Enum
+from enum import StrEnum
 
 from pydantic import BaseModel
 
 
-class JobStatus(str, Enum):
+class JobStatus(StrEnum):
     """Job status enumeration"""
 
     pending = "pending"
@@ -18,7 +18,7 @@ class JobStatus(str, Enum):
     cancelled = "cancelled"
 
 
-class ExportFormat(str):
+class ExportFormat(StrEnum):
     """Supported audio export formats"""
 
     wav = "wav"

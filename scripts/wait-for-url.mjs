@@ -33,11 +33,13 @@ function probe() {
     const req = client.get(url, { timeout: 5_000 }, (res) => {
       res.resume();
       const ok = res.statusCode != null && res.statusCode < 400;
-      if (verbose) console.error(`[wait-for-url] status=${res.statusCode} ok=${ok} t=${Date.now() - t0}ms`);
+      if (verbose)
+        console.error(`[wait-for-url] status=${res.statusCode} ok=${ok} t=${Date.now() - t0}ms`);
       resolve(ok);
     });
     req.on('error', (err) => {
-      if (verbose) console.error(`[wait-for-url] error=${err.code ?? err.message} t=${Date.now() - t0}ms`);
+      if (verbose)
+        console.error(`[wait-for-url] error=${err.code ?? err.message} t=${Date.now() - t0}ms`);
       resolve(false);
     });
     req.on('timeout', () => {

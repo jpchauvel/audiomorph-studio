@@ -3,11 +3,9 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 
-const linkBase =
-  'no-drag px-3 py-1 rounded-md text-xs font-medium transition-colors';
+const linkBase = 'no-drag px-3 py-1 rounded-md text-xs font-medium transition-colors';
 const activeCls = 'bg-[var(--color-surface-3)] text-[var(--color-text)]';
-const inactiveCls =
-  'text-[var(--color-text-muted)] hover:text-[var(--color-text)]';
+const inactiveCls = 'text-[var(--color-text-muted)] hover:text-[var(--color-text)]';
 
 export function AppHeader() {
   const pathname = usePathname();

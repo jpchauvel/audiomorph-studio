@@ -68,8 +68,7 @@ export const useGenerationStore = create<GenerationStore>((set) => ({
       completedJobIds: [...s.completedJobIds, jobId],
       numSongsDone: s.numSongsDone + 1,
     })),
-  setBatch: (numSongsTotal) =>
-    set({ numSongsTotal, numSongsDone: 0, completedJobIds: [] }),
+  setBatch: (numSongsTotal) => set({ numSongsTotal, numSongsDone: 0, completedJobIds: [] }),
   setPromptDraft: (promptDraft) => set({ promptDraft }),
   setLyricsDraft: (lyricsDraft) => set({ lyricsDraft }),
   clearRun: () =>

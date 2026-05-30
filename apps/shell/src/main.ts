@@ -182,6 +182,7 @@ if (app && typeof app.whenReady === 'function' && !process.env.AUDIOMORPH_SHELL_
     const sidecar = SidecarManager.getInstance({ userDataPath: app.getPath('userData') });
     sidecar.start().catch((err: unknown) => {
       const message = err instanceof Error ? (err.stack ?? err.message) : String(err);
+      // eslint-disable-next-line no-console -- main-process startup failure must surface to stderr; logger may not be wired yet
       console.error(`[main] sidecar.start() failed: ${message}`);
     });
     registerIpcBridge();

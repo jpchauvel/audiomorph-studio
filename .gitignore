@@ -7,6 +7,7 @@ dist/
 out/
 .next/
 build/
+.omo/
 
 # Environment
 .env

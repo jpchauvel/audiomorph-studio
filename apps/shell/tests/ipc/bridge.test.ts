@@ -330,10 +330,7 @@ describe('IPC bridge', () => {
     });
 
     const handler = mocks.handlers.get('api:request')!;
-    await handler(
-      { sender: { send: vi.fn() } },
-      { method: 'GET', path: '/healthz' },
-    );
+    await handler({ sender: { send: vi.fn() } }, { method: 'GET', path: '/healthz' });
 
     expect(vaultGet).not.toHaveBeenCalled();
     const [, init] = mocks.fetch.mock.calls[0] as [string, RequestInit];
@@ -362,10 +359,7 @@ describe('IPC bridge', () => {
 
     const send = vi.fn();
     const handler = mocks.handlers.get('api:stream')!;
-    await handler(
-      { sender: { send } },
-      { streamId: 's-hf-1', path: '/models/jobs/abc/events' },
-    );
+    await handler({ sender: { send } }, { streamId: 's-hf-1', path: '/models/jobs/abc/events' });
     await vi.waitFor(() => {
       expect(send).toHaveBeenCalledWith('api:stream:end', { streamId: 's-hf-1' });
     });
@@ -383,10 +377,10 @@ describe('IPC bridge', () => {
     );
 
     const handler = mocks.handlers.get('api:fetchAudio')!;
-    const out = (await handler(
-      { sender: { send: vi.fn() } },
-      { jobId: 'abc-123' },
-    )) as { bytes: Uint8Array; contentType: string };
+    const out = (await handler({ sender: { send: vi.fn() } }, { jobId: 'abc-123' })) as {
+      bytes: Uint8Array;
+      contentType: string;
+    };
 
     const [url, init] = mocks.fetch.mock.calls[0] as [string, RequestInit];
     expect(url).toBe('http://127.0.0.1:40123/jobs/abc-123/audio');

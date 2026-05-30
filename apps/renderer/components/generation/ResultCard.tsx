@@ -12,7 +12,15 @@ const WaveformPlayer = dynamic(
   { ssr: false },
 );
 
-function ResultCardSingle({ jobId, index, total }: { jobId: string; index: number; total: number }) {
+function ResultCardSingle({
+  jobId,
+  index,
+  total,
+}: {
+  jobId: string;
+  index: number;
+  total: number;
+}) {
   const [isExportOpen, setIsExportOpen] = useState(false);
   const [audioUrl, setAudioUrl] = useState<string | null>(null);
   const [audioError, setAudioError] = useState<string | null>(null);
@@ -20,12 +28,15 @@ function ResultCardSingle({ jobId, index, total }: { jobId: string; index: numbe
   useEffect(() => {
     const api = window.electronAPI;
     if (!api?.fetchAudio) {
-      setAudioError('Audio bridge unavailable');
+      queueMicrotask(() => setAudioError('Audio bridge unavailable'));
       return;
     }
     let cancelled = false;
     let createdUrl: string | null = null;
-    setAudioError(null);
+    queueMicrotask(() => {
+      if (cancelled) return;
+      setAudioError(null);
+    });
     void api
       .fetchAudio({ jobId })
       .then(({ bytes, contentType }: { bytes: Uint8Array; contentType: string }) => {
@@ -63,10 +74,7 @@ function ResultCardSingle({ jobId, index, total }: { jobId: string; index: numbe
         </div>
 
         {audioError && (
-          <div
-            className="text-sm text-[var(--color-danger)]"
-            data-testid="result-card-audio-error"
-          >
+          <div className="text-sm text-[var(--color-danger)]" data-testid="result-card-audio-error">
             Failed to load audio: {audioError}
           </div>
         )}

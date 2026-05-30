@@ -25,10 +25,10 @@ except Exception:  # pragma: no cover - optional at test-runtime
                 "huggingface_hub is required for model metadata"
             )
 
-    def hf_hub_download(**_: Any) -> str:
+    def hf_hub_download(*_args: Any, **_kwargs: Any) -> str:
         raise RuntimeError("huggingface_hub is required for downloads")
 
-    def snapshot_download(**_: Any) -> str:
+    def snapshot_download(*_args: Any, **_kwargs: Any) -> str:
         raise RuntimeError("huggingface_hub is required for downloads")
 
 

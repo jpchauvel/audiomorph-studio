@@ -101,9 +101,7 @@ def test_download_forwards_hf_token_header_to_manager(
         captured["hf_token"] = hf_token
         return "fake-job-id"
 
-    monkeypatch.setattr(
-        models_router._MANAGER, "start_download", fake_start
-    )
+    monkeypatch.setattr(models_router._MANAGER, "start_download", fake_start)
 
     headers = {**auth_headers, "X-HuggingFace-Token": "hf_user_keychain_xyz"}
     resp = app_client.post(
@@ -126,9 +124,7 @@ def test_download_without_hf_token_header_passes_none(
         captured["hf_token"] = hf_token
         return "fake-job-id"
 
-    monkeypatch.setattr(
-        models_router._MANAGER, "start_download", fake_start
-    )
+    monkeypatch.setattr(models_router._MANAGER, "start_download", fake_start)
 
     resp = app_client.post(
         "/models/HeartMuLa__HeartMuLaGen/download", headers=auth_headers

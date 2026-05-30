@@ -279,8 +279,8 @@ def test_export_router_happy_path(
     async def _fake_convert(
         input_path: str, output_path: str, format: str, bitrate_kbps=None
     ):
-        Path(output_path).parent.mkdir(parents=True, exist_ok=True)
-        Path(output_path).write_bytes(b"ID3DATA" * 10)
+        Path(output_path).parent.mkdir(parents=True, exist_ok=True)  # noqa: ASYNC240
+        Path(output_path).write_bytes(b"ID3DATA" * 10)  # noqa: ASYNC240
 
     monkeypatch.setattr(
         export_router.ffmpeg_service, "convert", _fake_convert

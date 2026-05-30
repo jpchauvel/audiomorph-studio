@@ -12,31 +12,27 @@
  *
  * Exit codes: 0=clean, 1=secrets found, 2=script error.
  */
-import { promises as fs } from "node:fs";
-import * as path from "node:path";
-import * as process from "node:process";
+import { promises as fs } from 'node:fs';
+import * as path from 'node:path';
+import * as process from 'node:process';
 
-const REPO_ROOT = path.resolve(path.dirname(new URL(import.meta.url).pathname), "..");
+const REPO_ROOT = path.resolve(path.dirname(new URL(import.meta.url).pathname), '..');
 
 // NOTE: `.sisyphus/` is internal tooling (notepads, evidence, plans) — not CI
 // output. Evidence files intentionally contain real-shaped fake tokens as
 // documentation, so scanning them produces false positives. Only scan
 // genuine CI/test output directories.
-const SCAN_DIRS = [
-  ".test-results",
-  "playwright-report",
-  "test-results",
-];
+const SCAN_DIRS = ['.test-results', 'playwright-report', 'test-results'];
 
 const PATTERNS = [
-  { name: "OPENROUTER_KEY", re: /sk-or-v1-[A-Za-z0-9\-_]{20,}/g },
-  { name: "HUGGINGFACE_TOKEN", re: /hf_[A-Za-z0-9]{30,}/g },
-  { name: "BEARER_TOKEN", re: /Bearer [A-Za-z0-9\-._~+/]{20,}={0,2}/g },
+  { name: 'OPENROUTER_KEY', re: /sk-or-v1-[A-Za-z0-9\-_]{20,}/g },
+  { name: 'HUGGINGFACE_TOKEN', re: /hf_[A-Za-z0-9]{30,}/g },
+  { name: 'BEARER_TOKEN', re: /Bearer [A-Za-z0-9\-._~+/]{20,}={0,2}/g },
 ];
 
-const WHITELIST = "PLANTED-FAKE-TEST-TOKEN";
+const WHITELIST = 'PLANTED-FAKE-TEST-TOKEN';
 
-const BINARY_EXTS = new Set([".png", ".mp4", ".wav", ".jpg", ".jpeg", ".gif"]);
+const BINARY_EXTS = new Set(['.png', '.mp4', '.wav', '.jpg', '.jpeg', '.gif']);
 
 /** Suspicious-looking filenames worth flagging even for binary files. */
 function checkBinaryFilename(filePath) {
@@ -59,7 +55,7 @@ async function scanTextFile(filePath) {
   const matches = [];
   let content;
   try {
-    content = await fs.readFile(filePath, "utf8");
+    content = await fs.readFile(filePath, 'utf8');
   } catch {
     // Unreadable as utf8 — treat as binary, fall back to filename check
     return checkBinaryFilename(filePath);
@@ -90,7 +86,7 @@ async function scanDir(absDir) {
   try {
     entries = await fs.readdir(absDir, { recursive: true, withFileTypes: true });
   } catch (err) {
-    if (err.code === "ENOENT") return [];
+    if (err.code === 'ENOENT') return [];
     throw err;
   }
   const matches = [];
@@ -117,7 +113,7 @@ async function main() {
     allMatches.push(...found);
   }
   if (allMatches.length === 0) {
-    console.log("scrub-test-output: clean (0 secrets detected)");
+    console.log('scrub-test-output: clean (0 secrets detected)');
     return 0;
   }
   for (const m of allMatches) {
@@ -131,6 +127,6 @@ async function main() {
 main()
   .then((code) => process.exit(code))
   .catch((err) => {
-    console.error("scrub-test-output: script error:", err?.stack ?? err);
+    console.error('scrub-test-output: script error:', err?.stack ?? err);
     process.exit(2);
   });

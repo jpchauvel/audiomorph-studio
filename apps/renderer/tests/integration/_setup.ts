@@ -165,19 +165,19 @@ export function createSidecarFixture(
   } = {},
 ) {
   return base.extend<IntegrationFixtures>({
-    sidecar: async ({}, use) => {
+    sidecar: async ({}, run) => {
       const handle = await spawnSidecar({ extraEnv: opts.extraEnv });
-      await use(handle);
+      await run(handle);
       await handle.kill();
     },
 
-    staticServer: async ({}, use) => {
+    staticServer: async ({}, run) => {
       const handle = await startStaticServer(RENDERER_OUT_DIR);
-      await use(handle);
+      await run(handle);
       await handle.kill();
     },
-    apiBase: async ({ sidecar }, use) => {
-      await use(sidecar.baseUrl);
+    apiBase: async ({ sidecar }, run) => {
+      await run(sidecar.baseUrl);
     },
   });
 }

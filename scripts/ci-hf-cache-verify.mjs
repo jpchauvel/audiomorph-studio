@@ -11,29 +11,20 @@
  * Honors `HF_HOME` (defaults to `~/.cache/huggingface`) and
  * `AUDIOMORPH_MANIFEST_PATH`.
  */
-import { promises as fs } from "node:fs";
-import * as path from "node:path";
-import * as os from "node:os";
-import * as process from "node:process";
+import { promises as fs } from 'node:fs';
+import * as path from 'node:path';
+import * as os from 'node:os';
+import * as process from 'node:process';
 
-const REPO_ROOT = path.resolve(
-  path.dirname(new URL(import.meta.url).pathname),
-  ".."
-);
-const DEFAULT_MANIFEST = path.join(
-  REPO_ROOT,
-  "apps",
-  "sidecar",
-  "scripts",
-  "required-models.json"
-);
+const REPO_ROOT = path.resolve(path.dirname(new URL(import.meta.url).pathname), '..');
+const DEFAULT_MANIFEST = path.join(REPO_ROOT, 'apps', 'sidecar', 'scripts', 'required-models.json');
 
 function snapshotPath(hfHome, id, revision) {
-  const [org, name] = id.split("/");
+  const [org, name] = id.split('/');
   if (!org || !name) {
     throw new Error(`invalid model id (expected org/name): ${id}`);
   }
-  return path.join(hfHome, "hub", `models--${org}--${name}`, "snapshots", revision);
+  return path.join(hfHome, 'hub', `models--${org}--${name}`, 'snapshots', revision);
 }
 
 async function isDir(p) {
@@ -47,18 +38,18 @@ async function isDir(p) {
 
 async function main() {
   const manifestPath = process.env.AUDIOMORPH_MANIFEST_PATH || DEFAULT_MANIFEST;
-  const hfHome = process.env.HF_HOME || path.join(os.homedir(), ".cache", "huggingface");
+  const hfHome = process.env.HF_HOME || path.join(os.homedir(), '.cache', 'huggingface');
 
   let entries;
   try {
-    const raw = await fs.readFile(manifestPath, "utf8");
+    const raw = await fs.readFile(manifestPath, 'utf8');
     entries = JSON.parse(raw);
   } catch (err) {
     console.error(`ci-hf-cache-verify: cannot read manifest at ${manifestPath}: ${err.message}`);
     return 1;
   }
   if (!Array.isArray(entries)) {
-    console.error("ci-hf-cache-verify: manifest must be a JSON array of {id, revision, size_mb}");
+    console.error('ci-hf-cache-verify: manifest must be a JSON array of {id, revision, size_mb}');
     return 1;
   }
 
@@ -67,7 +58,7 @@ async function main() {
   for (const entry of entries) {
     if (!entry?.id || !entry?.revision) {
       console.error(`ci-hf-cache-verify: skipping malformed entry: ${JSON.stringify(entry)}`);
-      missing.push(entry?.id ?? "<unknown>");
+      missing.push(entry?.id ?? '<unknown>');
       continue;
     }
     const dir = snapshotPath(hfHome, entry.id, entry.revision);
@@ -86,7 +77,9 @@ async function main() {
     return 0;
   }
 
-  console.error(`ci-hf-cache-verify: MISSING — ${missing.length} of ${entries.length} model(s) not cached at ${hfHome}`);
+  console.error(
+    `ci-hf-cache-verify: MISSING — ${missing.length} of ${entries.length} model(s) not cached at ${hfHome}`,
+  );
   for (const m of missing) {
     console.error(`  ✗ ${m}`);
   }

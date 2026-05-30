@@ -43,8 +43,10 @@ export default function StudioPage() {
   useEffect(() => {
     const api = typeof window !== 'undefined' ? window.electronAPI : undefined;
     if (!api || typeof api.request !== 'function') {
-      setIsLoadingModels(false);
-      toast.error('Desktop bridge unavailable — please restart the app');
+      queueMicrotask(() => {
+        setIsLoadingModels(false);
+        toast.error('Desktop bridge unavailable — please restart the app');
+      });
       return;
     }
 
@@ -91,14 +93,10 @@ export default function StudioPage() {
           latest = await fetchModels();
           setHasDownloaded(latest.some((m) => m.state !== 'missing'));
         }
-        const verified = latest.filter(
-          (m) => m.state === 'verified' && m.role === 'generation',
-        );
+        const verified = latest.filter((m) => m.state === 'verified' && m.role === 'generation');
         setModels(verified);
         if (verified.length === 0) {
-          const pending = latest.find(
-            (m) => m.role === 'generation' && m.state !== 'missing',
-          );
+          const pending = latest.find((m) => m.role === 'generation' && m.state !== 'missing');
           setPendingGenerationModel(pending ?? null);
         }
       } catch (err) {
@@ -250,9 +248,7 @@ export default function StudioPage() {
       const listRes = await api.request({ method: 'GET', path: '/models' });
       const listBody = listRes.body as { items?: Model[] } | Model[] | null;
       const latest = Array.isArray(listBody) ? listBody : (listBody?.items ?? []);
-      const verified = latest.filter(
-        (m) => m.state === 'verified' && m.role === 'generation',
-      );
+      const verified = latest.filter((m) => m.state === 'verified' && m.role === 'generation');
       setModels(verified);
       if (verified.length > 0) setPendingGenerationModel(null);
     } catch {

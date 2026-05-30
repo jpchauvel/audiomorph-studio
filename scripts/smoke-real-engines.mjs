@@ -14,21 +14,18 @@
  *
  * No `shell: true` is used. The sidecar process is always killed on exit.
  */
-import { promises as fs } from "node:fs";
-import * as path from "node:path";
-import * as os from "node:os";
-import process from "node:process";
-import { spawn } from "node:child_process";
+import { promises as fs } from 'node:fs';
+import * as path from 'node:path';
+import * as os from 'node:os';
+import process from 'node:process';
+import { spawn } from 'node:child_process';
 
-const REPO_ROOT = path.resolve(
-  path.dirname(new URL(import.meta.url).pathname),
-  ".."
-);
+const REPO_ROOT = path.resolve(path.dirname(new URL(import.meta.url).pathname), '..');
 const MANIFEST_PATH =
   process.env.AUDIOMORPH_MANIFEST_PATH ||
-  path.join(REPO_ROOT, "apps", "sidecar", "scripts", "required-models.json");
-const SIDECAR_DIR = path.join(REPO_ROOT, "apps", "sidecar");
-const TEST_TOKEN = "test-token-deterministic-do-not-use-in-prod";
+  path.join(REPO_ROOT, 'apps', 'sidecar', 'scripts', 'required-models.json');
+const SIDECAR_DIR = path.join(REPO_ROOT, 'apps', 'sidecar');
+const TEST_TOKEN = 'test-token-deterministic-do-not-use-in-prod';
 const READY_TIMEOUT_MS = 30_000;
 const HEALTH_TIMEOUT_MS = 10_000;
 
@@ -36,18 +33,18 @@ let sidecarProc = null;
 function killSidecar() {
   if (sidecarProc && !sidecarProc.killed) {
     try {
-      sidecarProc.kill("SIGTERM");
+      sidecarProc.kill('SIGTERM');
     } catch {
       /* ignore */
     }
   }
 }
-process.on("exit", killSidecar);
-process.on("SIGINT", () => {
+process.on('exit', killSidecar);
+process.on('SIGINT', () => {
   killSidecar();
   process.exit(1);
 });
-process.on("SIGTERM", () => {
+process.on('SIGTERM', () => {
   killSidecar();
   process.exit(1);
 });
@@ -56,15 +53,9 @@ process.on("SIGTERM", () => {
 // Step 1: HF cache check (mirrors ci-hf-cache-verify.mjs logic).
 // ---------------------------------------------------------------------------
 function snapshotPath(hfHome, id, revision) {
-  const [org, name] = id.split("/");
+  const [org, name] = id.split('/');
   if (!org || !name) throw new Error(`invalid model id: ${id}`);
-  return path.join(
-    hfHome,
-    "hub",
-    `models--${org}--${name}`,
-    "snapshots",
-    revision
-  );
+  return path.join(hfHome, 'hub', `models--${org}--${name}`, 'snapshots', revision);
 }
 
 async function isDir(p) {
@@ -79,18 +70,17 @@ async function isDir(p) {
 async function checkCache() {
   let entries;
   try {
-    const raw = await fs.readFile(MANIFEST_PATH, "utf8");
+    const raw = await fs.readFile(MANIFEST_PATH, 'utf8');
     entries = JSON.parse(raw);
   } catch (err) {
     console.error(`smoke-real-engines: cannot read manifest at ${MANIFEST_PATH}: ${err.message}`);
     return { ok: false };
   }
   if (!Array.isArray(entries)) {
-    console.error("smoke-real-engines: manifest must be a JSON array");
+    console.error('smoke-real-engines: manifest must be a JSON array');
     return { ok: false };
   }
-  const hfHome =
-    process.env.HF_HOME || path.join(os.homedir(), ".cache", "huggingface");
+  const hfHome = process.env.HF_HOME || path.join(os.homedir(), '.cache', 'huggingface');
   const missing = [];
   for (const e of entries) {
     if (!e?.id || !e?.revision) {
@@ -106,7 +96,7 @@ async function checkCache() {
     return { ok: true };
   }
   console.error(
-    `smoke-real-engines: MISSING ${missing.length} of ${entries.length} model(s) at ${hfHome}`
+    `smoke-real-engines: MISSING ${missing.length} of ${entries.length} model(s) at ${hfHome}`,
   );
   for (const m of missing) console.error(`  ✗ ${m}`);
   console.error(`\nHint: run \`pnpm test:hf:warm\` to populate the cache.`);
@@ -118,19 +108,15 @@ async function checkCache() {
 // ---------------------------------------------------------------------------
 function spawnSidecarAndWaitReady() {
   return new Promise((resolve, reject) => {
-    const python = process.env.PYTHON || "python3";
-    sidecarProc = spawn(
-      python,
-      ["-m", "audiomorph.main", "--port", "0", "--token", TEST_TOKEN],
-      {
-        cwd: SIDECAR_DIR,
-        env: { ...process.env, AUDIOMORPH_TEST_MODE: "1" },
-        stdio: ["ignore", "pipe", "pipe"],
-      }
-    );
+    const python = process.env.PYTHON || 'python3';
+    sidecarProc = spawn(python, ['-m', 'audiomorph.main', '--port', '0', '--token', TEST_TOKEN], {
+      cwd: SIDECAR_DIR,
+      env: { ...process.env, AUDIOMORPH_TEST_MODE: '1' },
+      stdio: ['ignore', 'pipe', 'pipe'],
+    });
 
-    let stdoutBuf = "";
-    let stderrBuf = "";
+    let stdoutBuf = '';
+    let stderrBuf = '';
     let settled = false;
 
     const timer = setTimeout(() => {
@@ -138,21 +124,21 @@ function spawnSidecarAndWaitReady() {
       settled = true;
       reject(
         new Error(
-          `sidecar did not emit ready event within ${READY_TIMEOUT_MS}ms; stderr tail: ${stderrBuf.slice(-400)}`
-        )
+          `sidecar did not emit ready event within ${READY_TIMEOUT_MS}ms; stderr tail: ${stderrBuf.slice(-400)}`,
+        ),
       );
     }, READY_TIMEOUT_MS);
 
-    sidecarProc.stdout.on("data", (chunk) => {
-      stdoutBuf += chunk.toString("utf8");
+    sidecarProc.stdout.on('data', (chunk) => {
+      stdoutBuf += chunk.toString('utf8');
       let nl;
-      while ((nl = stdoutBuf.indexOf("\n")) !== -1) {
+      while ((nl = stdoutBuf.indexOf('\n')) !== -1) {
         const line = stdoutBuf.slice(0, nl).trim();
         stdoutBuf = stdoutBuf.slice(nl + 1);
         if (!line) continue;
         try {
           const evt = JSON.parse(line);
-          if (evt && evt.event === "listening" && typeof evt.port === "number") {
+          if (evt && evt.event === 'listening' && typeof evt.port === 'number') {
             if (settled) return;
             settled = true;
             clearTimeout(timer);
@@ -165,26 +151,26 @@ function spawnSidecarAndWaitReady() {
       }
     });
 
-    sidecarProc.stderr.on("data", (chunk) => {
-      stderrBuf += chunk.toString("utf8");
+    sidecarProc.stderr.on('data', (chunk) => {
+      stderrBuf += chunk.toString('utf8');
       if (stderrBuf.length > 4000) stderrBuf = stderrBuf.slice(-4000);
     });
 
-    sidecarProc.on("error", (err) => {
+    sidecarProc.on('error', (err) => {
       if (settled) return;
       settled = true;
       clearTimeout(timer);
       reject(new Error(`failed to spawn sidecar: ${err.message}`));
     });
 
-    sidecarProc.on("exit", (code, signal) => {
+    sidecarProc.on('exit', (code, signal) => {
       if (settled) return;
       settled = true;
       clearTimeout(timer);
       reject(
         new Error(
-          `sidecar exited before ready (code=${code} signal=${signal}); stderr tail: ${stderrBuf.slice(-400)}`
-        )
+          `sidecar exited before ready (code=${code} signal=${signal}); stderr tail: ${stderrBuf.slice(-400)}`,
+        ),
       );
     });
   });
@@ -198,8 +184,8 @@ async function healthCheck(port) {
   const t = setTimeout(() => ctrl.abort(), HEALTH_TIMEOUT_MS);
   try {
     const res = await fetch(`http://127.0.0.1:${port}/health`, {
-      method: "POST",
-      headers: { "X-Audiomorph-Token": TEST_TOKEN },
+      method: 'POST',
+      headers: { 'X-Audiomorph-Token': TEST_TOKEN },
       signal: ctrl.signal,
     });
     return { status: res.status };
@@ -226,7 +212,7 @@ async function main() {
   try {
     const { status } = await healthCheck(ready.port);
     if (status === 200) {
-      console.log("✅ Sidecar smoke: OK");
+      console.log('✅ Sidecar smoke: OK');
       return 0;
     }
     console.error(`smoke-real-engines: /health returned ${status}`);
