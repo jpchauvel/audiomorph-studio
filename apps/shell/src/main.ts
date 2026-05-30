@@ -31,6 +31,10 @@ import { disableAutoUpdater } from './updater/no-updater';
 
 disableAutoUpdater();
 
+if (app && typeof app.setName === 'function') {
+  app.setName('AudioMorph Studio');
+}
+
 const isDev = process.env.NODE_ENV === 'development';
 let mainWindow: BrowserWindow | null = null;
 

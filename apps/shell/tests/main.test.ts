@@ -8,6 +8,7 @@ vi.mock('electron', () => {
     getPath: vi.fn(() => '/tmp/audiomorph-test'),
     exit: vi.fn(),
     setPath: vi.fn(),
+    setName: vi.fn(),
   };
   const autoUpdater = {
     autoDownload: true,
@@ -84,5 +85,13 @@ describe('Electron shell main process', () => {
   it('resolves a renderer entry path under apps/renderer/out', async () => {
     const mod = await import('../src/main');
     expect(mod.resolveRendererEntry()).toMatch(/renderer\/out\/index\.html$/);
+  });
+
+  it('sets Electron app name to "AudioMorph Studio" so userData aligns with sidecar paths.py', async () => {
+    const electron = await import('electron');
+    await import('../src/main');
+    expect(electron.app.setName as ReturnType<typeof vi.fn>).toHaveBeenCalledWith(
+      'AudioMorph Studio',
+    );
   });
 });
