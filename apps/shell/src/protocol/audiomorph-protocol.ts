@@ -6,6 +6,7 @@ export interface AudiomorphProtocolDeps {
   getApiBaseUrl: () => string;
   getApiToken: () => string;
   fetchImpl?: typeof fetch;
+  logger?: (line: string) => void;
 }
 
 export function buildAudiomorphTargetUrl(requestUrl: string, apiBaseUrl: string): string {
@@ -24,6 +25,8 @@ export async function handleAudiomorphRequest(
 ): Promise<Response> {
   const fetchImpl = deps.fetchImpl ?? fetch;
   const target = buildAudiomorphTargetUrl(request.url, deps.getApiBaseUrl());
+  const logger = deps.logger;
+  logger?.(`[audiomorph] ${request.method} ${request.url} -> ${target}`);
   if (request.method === 'OPTIONS') {
     return new Response(null, {
       status: 204,
@@ -37,19 +40,29 @@ export async function handleAudiomorphRequest(
   const headers = new Headers(request.headers);
   headers.set('X-Audiomorph-Token', deps.getApiToken());
   headers.delete('authorization');
-  const upstream = await fetchImpl(target, {
-    method: request.method,
-    headers,
-    body: request.method === 'GET' || request.method === 'HEAD' ? undefined : request.body,
-  });
-  const outHeaders = new Headers(upstream.headers);
-  outHeaders.set('access-control-allow-origin', '*');
-  outHeaders.set('access-control-expose-headers', '*');
-  return new Response(upstream.body, {
-    status: upstream.status,
-    statusText: upstream.statusText,
-    headers: outHeaders,
-  });
+  try {
+    const upstream = await fetchImpl(target, {
+      method: request.method,
+      headers,
+      body: request.method === 'GET' || request.method === 'HEAD' ? undefined : request.body,
+    });
+    logger?.(`[audiomorph] upstream ${upstream.status} ${target}`);
+    const outHeaders = new Headers(upstream.headers);
+    outHeaders.set('access-control-allow-origin', '*');
+    outHeaders.set('access-control-expose-headers', '*');
+    return new Response(upstream.body, {
+      status: upstream.status,
+      statusText: upstream.statusText,
+      headers: outHeaders,
+    });
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    logger?.(`[audiomorph] upstream FAILED ${target}: ${msg}`);
+    return new Response(`upstream error: ${msg}`, {
+      status: 502,
+      headers: { 'access-control-allow-origin': '*' },
+    });
+  }
 }
 
 export function registerAudiomorphProtocol(protocol: Protocol, deps: AudiomorphProtocolDeps): void {

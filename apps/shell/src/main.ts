@@ -48,7 +48,7 @@ if (
         supportFetchAPI: true,
         stream: true,
         bypassCSP: true,
-        corsEnabled: false,
+        corsEnabled: true,
       },
     },
   ]);
@@ -212,6 +212,7 @@ if (app && typeof app.whenReady === 'function' && !process.env.AUDIOMORPH_SHELL_
         registerAudiomorphProtocol(protocol, {
           getApiBaseUrl: () => sidecar.getApiBaseUrl(),
           getApiToken: () => sidecar.getApiToken(),
+          logger: (line: string) => console.log(line),
         });
         console.log('[main] audiomorph:// protocol handler registered');
       } catch (err: unknown) {
