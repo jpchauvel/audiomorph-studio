@@ -54,6 +54,26 @@ def test_list_required_models_has_expected_repos(tmp_path: Path) -> None:
     ]
 
 
+def test_compose_replaces_broken_symlinks(tmp_path: Path) -> None:
+    src_repo = tmp_path / "HeartMuLa" / "HeartMuLaGen"
+    src_repo.mkdir(parents=True)
+    (src_repo / "tokenizer.json").write_text('{"v":1}')
+    (src_repo / "gen_config.json").write_text("{}")
+
+    composed = tmp_path / "_composed" / "HeartMuLaGen"
+    composed.mkdir(parents=True)
+    stale_target = tmp_path / "missing-blob"
+    (composed / "tokenizer.json").symlink_to(stale_target)
+    assert (composed / "tokenizer.json").is_symlink()
+    assert not (composed / "tokenizer.json").exists()
+
+    ModelDownloadManager(models_dir=tmp_path)
+
+    healed = composed / "tokenizer.json"
+    assert healed.exists()
+    assert healed.read_text() == '{"v":1}'
+
+
 def test_required_models_expose_role_for_pipeline_filtering(
     tmp_path: Path,
 ) -> None:

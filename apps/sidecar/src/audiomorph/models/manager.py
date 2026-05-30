@@ -271,7 +271,9 @@ class ModelDownloadManager:
         return max(revs, key=lambda p: p.stat().st_mtime)
 
     def _link_or_copy(self, src: Path, dst: Path) -> None:
-        if dst.exists() or dst.is_symlink():
+        if dst.is_symlink() and not dst.exists():
+            dst.unlink()
+        elif dst.exists():
             return
         dst.parent.mkdir(parents=True, exist_ok=True)
         resolved = src.resolve()
@@ -287,7 +289,9 @@ class ModelDownloadManager:
                 continue
             rel = entry.relative_to(snapshot)
             target = dest / rel
-            if target.exists() or target.is_symlink():
+            if target.is_symlink() and not target.exists():
+                target.unlink()
+            elif target.exists():
                 continue
             self._link_or_copy(entry, target)
             copied += 1
