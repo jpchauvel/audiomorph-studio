@@ -47,8 +47,8 @@ if (
         standard: true,
         supportFetchAPI: true,
         stream: true,
-        bypassCSP: false,
-        corsEnabled: true,
+        bypassCSP: true,
+        corsEnabled: false,
       },
     },
   ]);
@@ -213,6 +213,7 @@ if (app && typeof app.whenReady === 'function' && !process.env.AUDIOMORPH_SHELL_
           getApiBaseUrl: () => sidecar.getApiBaseUrl(),
           getApiToken: () => sidecar.getApiToken(),
         });
+        console.log('[main] audiomorph:// protocol handler registered');
       } catch (err: unknown) {
         const message = err instanceof Error ? (err.stack ?? err.message) : String(err);
         console.error(`[main] registerAudiomorphProtocol failed: ${message}`);

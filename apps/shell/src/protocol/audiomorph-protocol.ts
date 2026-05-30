@@ -24,13 +24,31 @@ export async function handleAudiomorphRequest(
 ): Promise<Response> {
   const fetchImpl = deps.fetchImpl ?? fetch;
   const target = buildAudiomorphTargetUrl(request.url, deps.getApiBaseUrl());
+  if (request.method === 'OPTIONS') {
+    return new Response(null, {
+      status: 204,
+      headers: {
+        'access-control-allow-origin': '*',
+        'access-control-allow-methods': 'GET, HEAD, OPTIONS',
+        'access-control-allow-headers': '*',
+      },
+    });
+  }
   const headers = new Headers(request.headers);
   headers.set('X-Audiomorph-Token', deps.getApiToken());
   headers.delete('authorization');
-  return fetchImpl(target, {
+  const upstream = await fetchImpl(target, {
     method: request.method,
     headers,
     body: request.method === 'GET' || request.method === 'HEAD' ? undefined : request.body,
+  });
+  const outHeaders = new Headers(upstream.headers);
+  outHeaders.set('access-control-allow-origin', '*');
+  outHeaders.set('access-control-expose-headers', '*');
+  return new Response(upstream.body, {
+    status: upstream.status,
+    statusText: upstream.statusText,
+    headers: outHeaders,
   });
 }
 
