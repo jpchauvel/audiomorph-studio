@@ -132,11 +132,10 @@ export default function StudioPage() {
                 streamDisposeRef.current = null;
                 resolve({ jobId: job_id });
               } else if (e.event === 'error') {
-                const raw = JSON.stringify(e.data);
                 const msg = e.data ? (e.data as { message?: string }).message : undefined;
                 dispose();
                 streamDisposeRef.current = null;
-                reject(new Error(msg ?? `SSE-error payload: ${raw}`));
+                reject(new Error(msg ?? 'Generation failed'));
               } else if (e.event === 'cancelled') {
                 dispose();
                 streamDisposeRef.current = null;
@@ -148,10 +147,9 @@ export default function StudioPage() {
               streamDisposeRef.current = null;
             },
             (err: { message?: string; code?: string }) => {
-              const raw = JSON.stringify(err);
               dispose();
               streamDisposeRef.current = null;
-              reject(new Error(err.message || `transport-error payload: ${raw}`));
+              reject(new Error(err.message || 'Generation failed'));
             },
           );
           streamDisposeRef.current = dispose;
