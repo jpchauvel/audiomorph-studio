@@ -226,6 +226,10 @@ class GenerationEngine:
             if torch.cuda.is_available():
                 torch.cuda.manual_seed_all(req.seed)
 
+            self._logger.info(
+                "engine.load.start",
+                extra={"model_id": req.model_id, "job_id": job_id},
+            )
             progress(1, 4, 2.0, "loading")
             pipe = await self._ensure_pipeline(
                 req.model_id,
@@ -233,6 +237,10 @@ class GenerationEngine:
                 device,
                 dtype,
                 torch,
+            )
+            self._logger.info(
+                "engine.load.end",
+                extra={"model_id": req.model_id, "job_id": job_id},
             )
 
             force_oom = os.environ.get("AUDIOMORPH_FORCE_OOM") == "1"
@@ -250,11 +258,58 @@ class GenerationEngine:
                         save_path=str(output_path),
                     )
 
+            heartbeat_interval = max(
+                0.05,
+                float(
+                    os.environ.get("AUDIOMORPH_HEARTBEAT_INTERVAL_S", "2.0")
+                ),
+            )
+
+            async def _run_invoke_with_heartbeat(duration_s: float) -> None:
+                invoke_task = asyncio.create_task(
+                    asyncio.to_thread(_invoke, duration_s)
+                )
+                try:
+                    while not invoke_task.done():
+                        try:
+                            await asyncio.wait_for(
+                                asyncio.shield(invoke_task),
+                                timeout=heartbeat_interval,
+                            )
+                        except TimeoutError:
+                            progress(
+                                2,
+                                4,
+                                max(0.1, float(req.duration_seconds)),
+                                "generating",
+                            )
+                            self._logger.info(
+                                "engine.invoke.heartbeat",
+                                extra={"job_id": job_id},
+                            )
+                    await invoke_task
+                except BaseException:
+                    if not invoke_task.done():
+                        invoke_task.cancel()
+                        with contextlib.suppress(BaseException):
+                            await invoke_task
+                    raise
+
             try:
                 progress(
                     2, 4, max(0.1, float(req.duration_seconds)), "generating"
                 )
-                await asyncio.to_thread(_invoke, req.duration_seconds)
+                self._logger.info(
+                    "engine.invoke.start",
+                    extra={
+                        "job_id": job_id,
+                        "duration_s": req.duration_seconds,
+                    },
+                )
+                await _run_invoke_with_heartbeat(req.duration_seconds)
+                self._logger.info(
+                    "engine.invoke.end", extra={"job_id": job_id}
+                )
             except asyncio.CancelledError:
                 self._cleanup_after_cancel(output_path)
                 raise

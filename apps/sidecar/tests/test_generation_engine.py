@@ -230,6 +230,43 @@ async def test_generation_engine_rejects_when_generation_lock_is_held(
 
 
 @pytest.mark.asyncio
+async def test_generation_engine_emits_heartbeat_while_invoke_is_slow(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from audiomorph.generation.engine import GenerationEngine
+
+    monkeypatch.setenv("AUDIOMORPH_DATA_DIR", str(tmp_path))
+    monkeypatch.setenv("AUDIOMORPH_HEARTBEAT_INTERVAL_S", "0.2")
+    (tmp_path / "models" / "test-model").mkdir(parents=True)
+    _install_fake_torch(monkeypatch)
+
+    def pipe_factory(*_a: object, **_k: object):
+        class Pipe:
+            def __call__(
+                self,
+                _inputs: dict[str, str],
+                *,
+                save_path: str,
+                **_kw: object,
+            ) -> None:
+                time.sleep(1.0)
+                Path(save_path).write_bytes(b"RIFF....WAVE")
+
+        return Pipe()
+
+    _install_fake_heartlib(monkeypatch, pipe_factory)
+    engine = GenerationEngine()
+    updates: list[dict[str, object]] = []
+    await engine.generate(_req(), "job-heartbeat", updates.append)
+
+    generating = [u for u in updates if u["phase"] == "generating"]
+    assert len(generating) >= 2, (
+        f"expected >=2 'generating' emissions, got {len(generating)}"
+    )
+
+
+@pytest.mark.asyncio
 async def test_generation_engine_model_not_found(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
