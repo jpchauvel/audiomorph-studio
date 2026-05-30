@@ -205,8 +205,15 @@ class ModelDownloadManager:
         bytes_done = self._bytes_done(model_dir)
         bytes_total = int(model["bytes_total"])
 
+        if safe == _GEN_COMPOSED_ID and not files:
+            composed = self.composed_generation_path()
+            composed_files = self._relative_files(composed)
+            if composed_files:
+                files = composed_files
+                bytes_done = self._bytes_done(composed)
+
         state = self._model_states.get(safe)
-        if not model_dir.exists() or not files:
+        if not files:
             state = "missing"
         elif state not in {"verified", "corrupted"}:
             state = "partial"
