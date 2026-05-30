@@ -56,6 +56,7 @@ async def list_models() -> dict[str, list[dict[str, object]]]:
             {
                 "id": model["id"],
                 "name": model["name"],
+                "role": model["role"],
                 "size_gb": model["size_gb"],
                 **status,
             }

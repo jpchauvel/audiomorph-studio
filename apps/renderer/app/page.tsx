@@ -11,6 +11,7 @@ import { ResultCard } from '@/components/generation/ResultCard';
 type Model = {
   id: string;
   name: string;
+  role?: string;
   state: string;
 };
 
@@ -59,7 +60,7 @@ export default function StudioPage() {
           latest = await fetchModels();
           setHasDownloaded(latest.some((m) => m.state !== 'missing'));
         }
-        setModels(latest.filter((m) => m.state === 'verified'));
+        setModels(latest.filter((m) => m.state === 'verified' && m.role === 'generation'));
       } catch {
         toast.error('Failed to load models');
       } finally {

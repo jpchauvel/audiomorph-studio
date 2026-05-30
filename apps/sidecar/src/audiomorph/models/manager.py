@@ -97,24 +97,28 @@ class ModelDownloadManager:
         {
             "id": _GEN_COMPOSED_ID,
             "name": "HeartMuLaGen",
+            "role": "generation",
             "size_gb": 4,
             "bytes_total": 4 * 1024 * 1024 * 1024,
         },
         {
             "id": _GEN_3B_REPO,
             "name": "HeartMuLa-oss-3B-happy-new-year",
+            "role": "component",
             "size_gb": 3,
             "bytes_total": 3 * 1024 * 1024 * 1024,
         },
         {
             "id": _GEN_CODEC_REPO,
             "name": "HeartCodec-oss-20260123",
+            "role": "component",
             "size_gb": 1,
             "bytes_total": 1 * 1024 * 1024 * 1024,
         },
         {
             "id": _TRANSCRIPTOR_REPO,
             "name": "HeartTranscriptor-oss",
+            "role": "transcription",
             "size_gb": 1,
             "bytes_total": 1 * 1024 * 1024 * 1024,
         },

@@ -54,6 +54,19 @@ def test_list_required_models_has_expected_repos(tmp_path: Path) -> None:
     ]
 
 
+def test_required_models_expose_role_for_pipeline_filtering(
+    tmp_path: Path,
+) -> None:
+    manager = ModelDownloadManager(models_dir=tmp_path)
+    roles = {m["id"]: m["role"] for m in manager.list_required_models()}
+    assert roles == {
+        "HeartMuLa/HeartMuLaGen": "generation",
+        "HeartMuLa/HeartMuLa-oss-3B-happy-new-year": "component",
+        "HeartMuLa/HeartCodec-oss-20260123": "component",
+        "HeartMuLa/HeartTranscriptor-oss": "transcription",
+    }
+
+
 @pytest.mark.anyio
 async def test_start_download_uses_resume_and_byok_token_with_global_single_flight(
     tmp_path: Path,
