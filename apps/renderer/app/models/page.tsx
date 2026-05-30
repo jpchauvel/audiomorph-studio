@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 import {
   Card,
@@ -49,6 +50,7 @@ const errMessage = (e: unknown): string =>
 const encodeModelId = (id: string): string => id.replace(/\//g, '__');
 
 export default function ModelsPage() {
+  const router = useRouter();
   const {
     models,
     progress,
@@ -155,9 +157,14 @@ export default function ModelsPage() {
         setHfDialogOpen(true);
       }
       const candidates = items.filter((m) => m.state !== 'missing');
+      let finalItems = items;
       if (candidates.length > 0) {
         await Promise.all(candidates.map(silentReverify));
-        await fetchModels();
+        finalItems = await fetchModels();
+      }
+      if (finalItems.length > 0 && finalItems.every((m) => m.state === 'verified')) {
+        toast.success('All models verified — opening Studio');
+        router.replace('/');
       }
     })();
   }, []);

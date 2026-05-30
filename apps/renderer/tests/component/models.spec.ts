@@ -204,6 +204,34 @@ test('auto re-verifies verified models on mount', async ({ page }) => {
   expect(verifyCallCount).toBeGreaterThanOrEqual(1);
 });
 
+test('auto-navigates to Studio when all required models are verified', async ({ page }) => {
+  const allVerified = [
+    { id: 'm-1', repo_id: 'org/m-1', name: 'M1', size_gb: 1, state: 'verified' },
+    { id: 'm-2', repo_id: 'org/m-2', name: 'M2', size_gb: 1, state: 'verified' },
+  ];
+  await page.route('**/models', async (route) => {
+    await route.fulfill({ json: allVerified });
+  });
+  await page.route('**/verify', async (route) => {
+    await route.fulfill({ json: { valid: true, mismatches: [] } });
+  });
+
+  await page.goto('/models.html');
+  await page.waitForURL((url) => !url.pathname.endsWith('/models.html'), { timeout: 5000 });
+  expect(page.url()).not.toContain('models.html');
+});
+
+test('does NOT auto-navigate when at least one model is not verified', async ({ page }) => {
+  await page.route('**/models', async (route) => {
+    await route.fulfill({ json: mockModels });
+  });
+
+  await page.goto('/models.html');
+  await page.waitForFunction(() => !!document.querySelector('[data-testid="route-ready"]'));
+  await page.waitForTimeout(500);
+  expect(page.url()).toMatch(/\/models(\.html)?$/);
+});
+
 test('auto re-verifies partial models on mount (sidecar restart scenario)', async ({ page }) => {
   const partialModels = [
     {
