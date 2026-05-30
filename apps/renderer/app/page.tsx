@@ -14,8 +14,11 @@ type Model = {
   state: string;
 };
 
+const encodeModelId = (id: string) => id.split('/').map(encodeURIComponent).join('/');
+
 export default function StudioPage() {
   const [models, setModels] = useState<Model[]>([]);
+  const [hasDownloaded, setHasDownloaded] = useState(false);
   const [isLoadingModels, setIsLoadingModels] = useState(true);
   const streamDisposeRef = useRef<(() => void) | null>(null);
 
@@ -29,28 +32,39 @@ export default function StudioPage() {
       return;
     }
 
-    try {
-      api
-        .request({ method: 'GET', path: '/models' })
-        .then((res: { status: number; body: unknown }) => {
-          if (res.status >= 200 && res.status < 300) {
-            const body = res.body as { items?: Model[] } | Model[] | null;
-            const items = Array.isArray(body) ? body : (body?.items ?? []);
-            setModels(items.filter((m) => m.state === 'verified'));
-          } else {
-            throw new Error('Failed to load models');
-          }
-        })
-        .catch(() => {
-          toast.error('Failed to load models');
-        })
-        .finally(() => {
-          setIsLoadingModels(false);
-        });
-    } catch {
-      setIsLoadingModels(false);
-      toast.error('Failed to load models');
-    }
+    const fetchModels = async (): Promise<Model[]> => {
+      const res = await api.request({ method: 'GET', path: '/models' });
+      if (res.status < 200 || res.status >= 300) throw new Error('Failed to load models');
+      const body = res.body as { items?: Model[] } | Model[] | null;
+      return Array.isArray(body) ? body : (body?.items ?? []);
+    };
+
+    const silentReverify = async (m: Model) => {
+      try {
+        await api.request({ method: 'POST', path: `/models/${encodeModelId(m.id)}/verify` });
+      } catch {
+        void 0;
+      }
+    };
+
+    void (async () => {
+      try {
+        const initial = await fetchModels();
+        setHasDownloaded(initial.some((m) => m.state !== 'missing'));
+        const reverifiable = initial.filter((m) => m.state !== 'missing');
+        let latest = initial;
+        if (reverifiable.length > 0) {
+          await Promise.all(reverifiable.map(silentReverify));
+          latest = await fetchModels();
+          setHasDownloaded(latest.some((m) => m.state !== 'missing'));
+        }
+        setModels(latest.filter((m) => m.state === 'verified'));
+      } catch {
+        toast.error('Failed to load models');
+      } finally {
+        setIsLoadingModels(false);
+      }
+    })();
 
     return () => {
       if (streamDisposeRef.current) {
@@ -165,7 +179,7 @@ export default function StudioPage() {
           <div className="py-20 text-[var(--color-text-muted)] animate-pulse">
             Loading studio...
           </div>
-        ) : models.length === 0 ? (
+        ) : models.length === 0 && !hasDownloaded ? (
           <div className="flex flex-col items-center justify-center p-12 border border-dashed border-[var(--color-border)] rounded-2xl bg-[var(--color-surface-2)] w-full text-center">
             <div className="w-16 h-16 bg-[var(--color-surface-3)] rounded-full flex items-center justify-center mb-4 text-2xl">
               📥
@@ -181,6 +195,10 @@ export default function StudioPage() {
             >
               Go to Models
             </Link>
+          </div>
+        ) : models.length === 0 ? (
+          <div className="py-20 text-[var(--color-text-muted)] animate-pulse">
+            Verifying models...
           </div>
         ) : (
           <div className="w-full flex flex-col gap-8">

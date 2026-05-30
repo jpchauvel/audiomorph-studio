@@ -37,6 +37,48 @@ test.describe('Generation Studio', () => {
     await expect(page.locator('text=Go to Models')).toBeVisible();
   });
 
+  test('reverifies partial models on mount and shows generation form (no Go to Models)', async ({
+    page,
+  }) => {
+    let modelsHits = 0;
+    let verifyHits = 0;
+    await page.route('**/models', async (route) => {
+      modelsHits += 1;
+      const state = modelsHits === 1 ? 'partial' : 'verified';
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify([{ id: 'mm-1', name: 'Mock Model', state }]),
+      });
+    });
+    await page.route('**/models/mm-1/verify', async (route) => {
+      if (route.request().method() === 'POST') {
+        verifyHits += 1;
+        await route.fulfill({ json: { valid: true, mismatches: [] } });
+      }
+    });
+
+    await page.goto('/');
+
+    await expect(page.locator('text=Generate')).toBeVisible();
+    await expect(page.locator('text=Go to Models')).not.toBeVisible();
+    expect(verifyHits).toBeGreaterThanOrEqual(1);
+  });
+
+  test('Go to Models empty state only when manifest has zero models at all', async ({ page }) => {
+    await page.route('**/models', async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify([]),
+      });
+    });
+    await page.goto('/');
+
+    await expect(page.locator('text=No models downloaded yet')).toBeVisible();
+    await expect(page.locator('text=Go to Models')).toBeVisible();
+  });
+
   test('submit flow with mocked SSE phase transitions', async ({ page }) => {
     await page.route('**/jobs/generate', async (route) => {
       const body = JSON.parse(route.request().postData() || '{}');
