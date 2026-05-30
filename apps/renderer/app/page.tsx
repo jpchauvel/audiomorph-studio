@@ -50,7 +50,9 @@ export default function StudioPage() {
 
     const fetchModels = async (): Promise<Model[]> => {
       const res = await api.request({ method: 'GET', path: '/models' });
-      if (res.status < 200 || res.status >= 300) throw new Error('Failed to load models');
+      if (res.status < 200 || res.status >= 300) {
+        throw new Error(`GET /models -> ${res.status}: ${JSON.stringify(res.body)}`);
+      }
       const body = res.body as { items?: Model[] } | Model[] | null;
       return Array.isArray(body) ? body : (body?.items ?? []);
     };
@@ -84,8 +86,8 @@ export default function StudioPage() {
           );
           setPendingGenerationModel(pending ?? null);
         }
-      } catch {
-        toast.error('Failed to load models');
+      } catch (err) {
+        toast.error(err instanceof Error ? err.message : 'Failed to load models');
       } finally {
         setIsLoadingModels(false);
       }
